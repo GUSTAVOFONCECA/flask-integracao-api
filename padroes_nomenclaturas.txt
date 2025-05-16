@@ -1,7 +1,0 @@
-| Ação             | Prefixo sugerido   | Exemplo de função                                    |
-| ---------------- | ------------------ | ---------------------------------------------------- |
-| Buscar (GET)     | `get_` ou `fetch_` | `get_company_info()` <br> `fetch_company_data()`     |
-| Processar        | `process_`         | `process_revenue(payload)`                           |
-| Enviar (POST)    | `send_` ou `post_` | `send_processed_revenue()` <br> `post_to_external()` |
-| Atualizar (PUT)  | `update_`          | `update_company_info()`                              |
-| Deletar (DELETE) | `delete_`          | `delete_old_records()`                              / |
