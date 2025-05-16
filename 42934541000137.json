@@ -1,0 +1,146 @@
+{
+  "cnpj_raiz": "42934541",
+  "razao_social": "RAVC PARTICIPACOES LTDA",
+  "capital_social": "100000.00",
+  "responsavel_federativo": "",
+  "atualizado_em": "2025-05-10T03:00:00.000Z",
+  "porte": {
+    "id": "01",
+    "descricao": "Micro Empresa"
+  },
+  "natureza_juridica": {
+    "id": "2062",
+    "descricao": "Sociedade Empresária Limitada"
+  },
+  "qualificacao_do_responsavel": {
+    "id": 49,
+    "descricao": "Sócio-Administrador "
+  },
+  "socios": [
+    {
+      "cpf_cnpj_socio": "***097411**",
+      "nome": "ANNA CAROLINA FONSECA BAILONI FERNANDES",
+      "tipo": "Pessoa Física",
+      "data_entrada": "2021-07-30",
+      "cpf_representante_legal": "***000000**",
+      "nome_representante": null,
+      "faixa_etaria": "31 a 40 anos",
+      "atualizado_em": "2025-02-08T03:00:00.000Z",
+      "pais_id": "1058",
+      "qualificacao_socio": {
+        "id": 49,
+        "descricao": "Sócio-Administrador "
+      },
+      "qualificacao_representante": null,
+      "pais": {
+        "id": "1058",
+        "iso2": "BR",
+        "iso3": "BRA",
+        "nome": "Brasil",
+        "comex_id": "105"
+      }
+    },
+    {
+      "cpf_cnpj_socio": "***771921**",
+      "nome": "RODRIGO AUGUSTO FERNANDES",
+      "tipo": "Pessoa Física",
+      "data_entrada": "2021-07-30",
+      "cpf_representante_legal": "***000000**",
+      "nome_representante": null,
+      "faixa_etaria": "41 a 50 anos",
+      "atualizado_em": "2025-02-08T03:00:00.000Z",
+      "pais_id": "1058",
+      "qualificacao_socio": {
+        "id": 49,
+        "descricao": "Sócio-Administrador "
+      },
+      "qualificacao_representante": null,
+      "pais": {
+        "id": "1058",
+        "iso2": "BR",
+        "iso3": "BRA",
+        "nome": "Brasil",
+        "comex_id": "105"
+      }
+    }
+  ],
+  "simples": null,
+  "estabelecimento": {
+    "cnpj": "42934541000137",
+    "atividades_secundarias": [
+      {
+        "id": "6810201",
+        "secao": "L",
+        "divisao": "68",
+        "grupo": "68.1",
+        "classe": "68.10-2",
+        "subclasse": "6810-2/01",
+        "descricao": "Compra e venda de imóveis próprios"
+      },
+      {
+        "id": "6822600",
+        "secao": "L",
+        "divisao": "68",
+        "grupo": "68.2",
+        "classe": "68.22-6",
+        "subclasse": "6822-6/00",
+        "descricao": "Gestão e administração da propriedade imobiliária"
+      }
+    ],
+    "cnpj_raiz": "42934541",
+    "cnpj_ordem": "0001",
+    "cnpj_digito_verificador": "37",
+    "tipo": "Matriz",
+    "nome_fantasia": "RAVC PARTICIPACOES",
+    "situacao_cadastral": "Ativa",
+    "data_situacao_cadastral": "2021-07-30",
+    "data_inicio_atividade": "2021-07-30",
+    "nome_cidade_exterior": null,
+    "tipo_logradouro": "RUA",
+    "logradouro": "T 46",
+    "numero": "118",
+    "complemento": "SALA  02                  QUADRAR 12                LOTE  24",
+    "bairro": "SETOR OESTE",
+    "cep": "74125200",
+    "ddd1": "62",
+    "telefone1": "32812352",
+    "ddd2": null,
+    "telefone2": null,
+    "ddd_fax": null,
+    "fax": null,
+    "email": "societario@logicassessoria.com.br",
+    "situacao_especial": null,
+    "data_situacao_especial": null,
+    "atualizado_em": "2025-02-08T03:00:00.000Z",
+    "atividade_principal": {
+      "id": "6462000",
+      "secao": "K",
+      "divisao": "64",
+      "grupo": "64.6",
+      "classe": "64.62-0",
+      "subclasse": "6462-0/00",
+      "descricao": "Holdings de instituições não financeiras"
+    },
+    "pais": {
+      "id": "1058",
+      "iso2": "BR",
+      "iso3": "BRA",
+      "nome": "Brasil",
+      "comex_id": "105"
+    },
+    "estado": {
+      "id": 9,
+      "nome": "Goiás",
+      "sigla": "GO",
+      "ibge_id": 52
+    },
+    "cidade": {
+      "id": 5418,
+      "nome": "Goiânia",
+      "ibge_id": 5208707,
+      "siafi_id": "9373"
+    },
+    "motivo_situacao_cadastral": null,
+    "inscricoes_estaduais": []
+  }
+}
