@@ -30,6 +30,7 @@ load_dotenv()
 
 
 class Config:
+    LOG_FILE: str = "app.log"
     ENV = os.getenv("FLASK_ENV", "production").lower()
     SECRET_KEY = os.getenv("SECRET_KEY")
     WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET")
@@ -42,13 +43,13 @@ class Config:
         """
         Valida as variáveis de ambiente obrigatórias.
         Lança um erro se alguma variável obrigatória estiver faltando.
-        
+
             :params:
                 :cls:  :class:`Config`  # noqa: E1101
                 :type:  :class:`Config`
-                
+
                 Classe Config
-            
+
             :return:
                 None
 
@@ -63,8 +64,30 @@ class Config:
 
 
 class ColorFormatter(logging.Formatter):
-    """Formatação colorida para o terminal"""
+    """Formata mensagens de log com cores ANSI para saída no terminal.
+      
+    Esta classe herda de :class:`logging.Formatter` e adiciona cores ANSI para diferentes
+    níveis de log. Atribui esquemas de cores distintos para DEBUG, INFO, WARNING, ERROR e CRITICAL.
 
+    :ivar grey: Código ANSI para texto cinza, defaults to "\x1b[38;20m"
+    :vartype grey: str, optional
+    :ivar green: Código ANSI para texto verde, defaults to "\x1b[32;20m"
+    :vartype green: str, optional
+    :ivar yellow: Código ANSI para texto amarelo, defaults to "\x1b[33;20m"
+    :vartype yellow: str, optional
+    :ivar red: Código ANSI para texto vermelho, defaults to "\x1b[31;20m"
+    :vartype red: str, optional
+    :ivar bold_red: Código ANSI para texto vermelho em negrito, defaults to "\x1b[31;1m"
+    :vartype bold_red: str, optional
+    :ivar reset: Código ANSI para resetar formatação, defaults to "\x1b[0m"
+    :vartype reset: str, optional
+    :ivar FORMAT: Template base para formatação das mensagens, defaults to 
+        "%(asctime)s | %(levelname)-8s | %(module)s:%(lineno)d - %(message)s"
+    :vartype FORMAT: str, optional
+    :ivar FORMATS: Mapeamento de formatos por nível de logging, defaults to dicionário
+        com combinações de cores por nível
+    :vartype FORMATS: dict, optional
+    """
     grey = "\x1b[38;20m"
     green = "\x1b[32;20m"
     yellow = "\x1b[33;20m"
@@ -84,6 +107,19 @@ class ColorFormatter(logging.Formatter):
     }
 
     def format(self, record):
+        """Formata o registro de log aplicando a cor correspondente ao nível.
+        
+        :param record: Registro de log a ser formatado
+        :type record: :class:`logging.LogRecord`
+        :return: Mensagem de log formatada com cores ANSI
+        :rtype: str
+        :raises ValueError: Se o nível de log não estiver mapeado em FORMATS
+        
+        Exemplo de uso:
+            >>> formatter = ColorFormatter()
+            >>> log_record = logger.makeRecord("test", logging.INFO, __file__, 42, "Test message", (), None)
+            >>> colored_message = formatter.format(log_record)
+        """
         formatter = logging.Formatter(
             self.FORMATS[record.levelno], datefmt="%Y-%m-%d %H:%M:%S"
         )
@@ -91,7 +127,21 @@ class ColorFormatter(logging.Formatter):
 
 
 def configure_logging(app):
-    """Configuração avançada de logging"""
+    """
+    Configura o sistema de logging da aplicação com handlers para arquivo e console.
+    Cria estrutura de diretórios e arquivos de log com formatação específica.
+
+        :params:
+            :app: :class:`Flask`
+                Instância da aplicação Flask
+
+        :return:
+            None
+
+        :raises OSError: Se falhar ao criar diretório de logs
+        :raises IOError: Se falhar ao escrever no arquivo de log
+        :raises EnvironmentError: Se ocorrer erro geral de ambiente
+    """
     try:
         # Limpar handlers existentes
         app.logger.handlers.clear()

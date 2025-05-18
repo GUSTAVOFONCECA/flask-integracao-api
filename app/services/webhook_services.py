@@ -2,6 +2,7 @@
 Service for managing webhooks and subprocess of getting CNPJ data processing
 and posting to Bitrix24.
 """
+
 # app/routes/webhook_services.py
 
 import hmac
@@ -20,9 +21,9 @@ logger = logging.getLogger(__name__)
 def validate_api_key(f):
     @wraps(f)
     def decorated(*args, **kwargs):
-        api_key = request.headers.get("X-API-Key")
-        if api_key != Config.API_KEY:
-            return jsonify({"error": "Unauthorized"}), 401
+        key = request.headers.get("X-API-Key")
+        if key != Config.API_KEY:
+            return jsonify({"error": "Chave de API inválida"}), 401
         return f(*args, **kwargs)
 
     return decorated
@@ -70,15 +71,17 @@ def get_cnpj_receita(cnpj: str) -> None:
         data = response.json()
 
         if "error" in data:
-            logger.critical("\n❌ Erro na requisição API:\n%s\n",
-                            json.dumps({data['error']}, indent=2, ensure_ascii=False))
+            logger.critical(
+                "\n❌ Erro na requisição API:\n%s\n",
+                json.dumps({data["error"]}, indent=2, ensure_ascii=False),
+            )
         else:
             logger.info(
                 "\n✅ Sucesso na consulta do CNPJ %s\nPayload:\n%s\n",
                 cnpj,
-                json.dumps(data, indent=2, ensure_ascii=False)
+                json.dumps(data, indent=2, ensure_ascii=False),
             )
-            
+
             return data
 
     except requests.exceptions.RequestException as e:
@@ -106,8 +109,8 @@ def update_company_process_cnpj(raw_cnpj_json: dict, id_empresa: str) -> dict:
     endereco = f"{tipo_logradouro} {logradouro}, N° {numero}, {complemento}".strip()
 
     # Inscrição estadual
-    inscricoes = company.get("inscricoes_estaduais", [])
-    inscricao_estadual = inscricoes[0] if inscricoes else "Não Contribuinte"
+    inscricoes = company.get("inscricoes_estaduais", [])[0]
+    inscricao_estadual = inscricoes.get("inscricao_estadual", None) if inscricoes else "Não Contribuinte"
 
     # CNPJ formatado
     cnpj_formatado = re.sub(
@@ -156,7 +159,7 @@ def update_company_process_cnpj(raw_cnpj_json: dict, id_empresa: str) -> dict:
 
     logger.info(
         "\n✅ Processed data:\n%s\n",
-        json.dumps(processed_data, indent=2, ensure_ascii=False)
+        json.dumps(processed_data, indent=2, ensure_ascii=False),
     )
     return processed_data
 
@@ -176,11 +179,13 @@ def post_destination_api(processed_data: dict, api_url: str) -> dict:
 
         logger.info(
             "\n✅ Validação CNPJ concluída\n• Empresa: %s\n• Resposta: %s\n",
-            json.dumps([
-                processed_data['fields']["UF_CRM_1708977581412"],  # cnpj
-                processed_data['fields']["TITLE"]  # nome
-            ]),
-            json.dumps(response_data, indent=2, ensure_ascii=False)
+            json.dumps(
+                [
+                    processed_data["fields"]["UF_CRM_1708977581412"],  # cnpj
+                    processed_data["fields"]["TITLE"],  # nome
+                ]
+            ),
+            json.dumps(response_data, indent=2, ensure_ascii=False),
         )
 
         return response_data

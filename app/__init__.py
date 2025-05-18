@@ -1,6 +1,6 @@
 # app/__init__.py
 from flask import Flask
-from flask_talisman import Talisman
+from flask_talisman import Talisman # type: ignore
 from app.config import Config, configure_logging
 from app.routes import api_routes, webhook_routes
 
@@ -8,16 +8,6 @@ from app.routes import api_routes, webhook_routes
 def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
-
-    # Configuração de segurança
-    Talisman(
-        app,
-        content_security_policy={
-            "default-src": "'self'",
-            "script-src": "'self' 'unsafe-inline'",
-            "style-src": "'self' 'unsafe-inline'",
-        },
-    )
 
     # Configurar logging
     configure_logging(app)
