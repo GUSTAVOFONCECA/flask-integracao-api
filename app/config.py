@@ -1,10 +1,30 @@
+"""
+Configuração do aplicativo Flask com logging avançado e validação de ambiente.
+Esta configuração inclui:
+- Carregamento de variáveis de ambiente usando dotenv.
+- Configuração de logging com formatação colorida para o terminal e arquivo.
+- Validação de variáveis de ambiente obrigatórias.
+- Configuração de um manipulador de log rotativo para arquivos.
+- Configuração de um manipulador de log para o console em modo de desenvolvimento.
+- Validação de configuração no início do aplicativo.
+- Tratamento de exceções durante a configuração.
+# Configuração de logging avançada
+- Limpeza de manipuladores de log existentes.
+- Criação de diretório de logs se não existir.
+- Configuração de formato de log para arquivo e console.
+- Configuração de níveis de log para diferentes ambientes (desenvolvimento e produção).
+- Registro de informações iniciais no log, incluindo ambiente e arquivo de log.
+- Tratamento de exceções durante a configuração de logging.
+- Validação de configuração no início do aplicativo.
+"""
+
 # app/config.py
 import os
 import sys
-from datetime import datetime
-from dotenv import load_dotenv
 import logging
 from logging.handlers import RotatingFileHandler
+from datetime import datetime
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -19,6 +39,23 @@ class Config:
 
     @classmethod
     def validate(cls):
+        """
+        Valida as variáveis de ambiente obrigatórias.
+        Lança um erro se alguma variável obrigatória estiver faltando.
+        
+            :params:
+                :cls:  :class:`Config`  # noqa: E1101
+                :type:  :class:`Config`
+                
+                Classe Config
+            
+            :return:
+                None
+
+            :raises EnvironmentError: Se alguma variável obrigatória estiver faltando.
+            :raises TypeError: Se alguma variável obrigatória não for do tipo string.
+            :raises ValueError: Se alguma variável obrigatória estiver vazia.
+        """
         required = ["SECRET_KEY", "WEBHOOK_SECRET", "API_KEY"]
         missing = [var for var in required if not getattr(cls, var)]
         if missing:
@@ -35,7 +72,9 @@ class ColorFormatter(logging.Formatter):
     bold_red = "\x1b[31;1m"
     reset = "\x1b[0m"
 
-    FORMAT = "%(asctime)s | %(levelname)-8s [%(name)s] | %(module)s:%(lineno)d %(message)s"
+    FORMAT = (
+        "%(asctime)s | %(levelname)-8s [%(name)s] | %(module)s:%(lineno)d %(message)s"
+    )
     FORMATS = {
         logging.DEBUG: grey + FORMAT + reset,
         logging.INFO: green + FORMAT + reset,
@@ -64,7 +103,8 @@ def configure_logging(app):
         # Configurar formato do arquivo (corrigido)
         file_formatter = logging.Formatter(
             "[%(asctime)s] %(levelname)-8s [%(name)s]\n"
-            "PID: %(process)-6d | TID: %(thread)-11d | %(module)-s.%(funcName)-s Line: %(lineno)-d\n"
+            "PID: %(process)-6d | TID: %(thread)-11d | "
+            "%(module)-s.%(funcName)-s Line: %(lineno)-d\n"
             ">> %(message)s\n"
             f"{"-" * 85}",
             datefmt="%Y-%m-%d %H:%M:%S",
@@ -116,6 +156,6 @@ def configure_logging(app):
         # Validar configuração
         Config.validate()
 
-    except Exception as e:
+    except (OSError, IOError, EnvironmentError) as e:
         print(f"\n❌ Falha crítica na configuração:\n{str(e)}\n")
         sys.exit(1)

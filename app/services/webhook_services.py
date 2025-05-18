@@ -1,10 +1,15 @@
+"""
+Service for managing webhooks and subprocess of getting CNPJ data processing
+and posting to Bitrix24.
+"""
 # app/routes/webhook_services.py
+
 import hmac
 import re
-import requests
 import json
 import logging
 from functools import wraps
+import requests
 from flask import request, jsonify
 from app.config import Config
 
@@ -24,8 +29,33 @@ def validate_api_key(f):
 
 
 def verify_webhook_signature(data, signature):
-    expected = hmac.new(Config.WEBHOOK_SECRET.encode(), data, "sha256").hexdigest()
-    return hmac.compare_digest(expected, signature)
+    """
+    Verify webhook signature using HMAC-SHA256.
+
+    Args:
+        data: The raw request data
+        signature: The signature from request headers
+
+    Returns:
+        bool: True if signatures match, False otherwise
+    """
+    if not Config.WEBHOOK_SECRET:
+        logger.error("WEBHOOK_SECRET not configured")
+        return False
+
+    if not data or not signature:
+        logger.error("Missing data or signature")
+        return False
+
+    try:
+        expected = hmac.new(
+            Config.WEBHOOK_SECRET.encode("utf-8"), data, "sha256"
+        ).hexdigest()
+        return hmac.compare_digest(expected, signature)
+
+    except (TypeError, ValueError) as e:
+        logger.error("Error verifying signature: %s", str(e))
+        return False
 
 
 def get_cnpj_receita(cnpj: str) -> None:
@@ -40,20 +70,19 @@ def get_cnpj_receita(cnpj: str) -> None:
         data = response.json()
 
         if "error" in data:
-            logger.critical(f"\n❌ Erro na requisição API:\n{data['error']}\n")
+            logger.critical("\n❌ Erro na requisição API:\n%s\n",
+                            json.dumps({data['error']}, indent=2, ensure_ascii=False))
         else:
             logger.info(
-                f"\n✅ Sucesso na consulta do CNPJ {cnpj}\nPayload:\n{json.dumps(data, indent=2, ensure_ascii=False)}\n"
+                "\n✅ Sucesso na consulta do CNPJ %s\nPayload:\n%s\n",
+                cnpj,
+                json.dumps(data, indent=2, ensure_ascii=False)
             )
-            """
-            with open(f"{cnpj_int}.json", "w", encoding="utf-8") as file:
-                file.write(json.dumps(data, indent=2, ensure_ascii=False))
-                file.close()
-            """
+            
             return data
 
     except requests.exceptions.RequestException as e:
-        logger.critical(f"\n❌ Exceção na requisição API:\n{e}\n")
+        logger.critical("\n❌ Exceção na requisição API:\n%s\n", str(e))
 
 
 def update_company_process_cnpj(raw_cnpj_json: dict, id_empresa: str) -> dict:
@@ -126,12 +155,14 @@ def update_company_process_cnpj(raw_cnpj_json: dict, id_empresa: str) -> dict:
     }
 
     logger.info(
-        f"\n✅ Processed data:\n{json.dumps(processed_data, indent=2, ensure_ascii=False)}\n"
+        "\n✅ Processed data:\n%s\n",
+        json.dumps(processed_data, indent=2, ensure_ascii=False)
     )
     return processed_data
 
 
 def post_destination_api(processed_data: dict, api_url: str) -> dict:
+    response = None
     try:
         response = requests.post(api_url, json=processed_data, timeout=10)
         response.raise_for_status()
@@ -144,21 +175,23 @@ def post_destination_api(processed_data: dict, api_url: str) -> dict:
         }
 
         logger.info(
-            "\n✅ Validação CNPJ concluída"
-            f"\n• Empresa: {json.dumps([
-                                        processed_data['fields']["UF_CRM_1708977581412"], # cnpj
-                                        processed_data['fields']["TITLE"]  # nome
-                                    ])
-                        }"
-            f"\n• Resposta: {json.dumps(response_data, indent=2, ensure_ascii=False)}\n"
+            "\n✅ Validação CNPJ concluída\n• Empresa: %s\n• Resposta: %s\n",
+            json.dumps([
+                processed_data['fields']["UF_CRM_1708977581412"],  # cnpj
+                processed_data['fields']["TITLE"]  # nome
+            ]),
+            json.dumps(response_data, indent=2, ensure_ascii=False)
         )
 
         return response_data
 
     except requests.exceptions.JSONDecodeError:
         logger.warning("\n⚠️ Resposta não é JSON válido, retornando texto\n")
-        return {"content": response.text}
+        return {"content": response.text} if response else {"error": "No response"}
+    except requests.exceptions.Timeout:
+        logger.error("\n❌ Timeout na requisição\n")
+        return {"error": "Timeout"}
 
     except requests.exceptions.RequestException as e:
-        logger.error(f"\n❌ Erro na requisição:\n{str(e)}\n")
+        logger.error("\n❌ Erro na requisição:\n%s\n", str(e))
         return {"error": str(e)}

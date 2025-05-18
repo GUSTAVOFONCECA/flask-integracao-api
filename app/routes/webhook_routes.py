@@ -1,4 +1,8 @@
+"""
+Webhook routes for Flask integration with Bitrix24 and validation.
+"""
 # app/routes/webhook_routes.py
+
 import json
 import logging
 from flask import Blueprint, request, jsonify
@@ -38,12 +42,26 @@ def post_webhook_valida_cnpj_receita():
     cnpj = request.args.get("CNPJ")
     id_card_crm = request.args.get("idCardCRM")
 
+    # logger.info(f"\nRequest:\n{request}\n")
     logger.info(
-        f"\n✅ Income webhook!\nRequest:\n{request}\nidEmpresa:  {id_empresa}\nCNPJ:       {cnpj}\nidCardCRM:  {id_card_crm}\n"
+        "\n✅ Income webhook!\nRequest:\n%s\nidEmpresa:  %s\nCNPJ:       %s\nidCardCRM:  %s\n",
+        request,
+        id_empresa,
+        cnpj,
+        id_card_crm,
     )
+
+    # Garantir que id_empresa e cnpj não são None antes de prosseguir
+    if id_empresa is None:
+        return jsonify({"error": "idEmpresa não pode ser None"}), 400
+    if cnpj is None:
+        return jsonify({"error": "CNPJ não pode ser None"}), 400
 
     # Consulta API CNPJ receita, processa e post dados para contrato na entidade "empresa"(company)
     raw_cnpj_json = get_cnpj_receita(cnpj)
+    if raw_cnpj_json is None:
+        logger.error("Erro ao consultar CNPJ na Receita: resposta vazia ou inválida.")
+        return jsonify({"error": "Erro ao consultar CNPJ na Receita Federal"}), 502
     data = update_company_process_cnpj(
         raw_cnpj_json=raw_cnpj_json, id_empresa=id_empresa
     )
