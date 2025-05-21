@@ -20,7 +20,7 @@ def create_app():
     try:
         Config.validate()
     except EnvironmentError as e:
-        app.logger.critical(f"{str(e)}")
+        app.logger.critical("%s", str(e))
         raise
 
     return app

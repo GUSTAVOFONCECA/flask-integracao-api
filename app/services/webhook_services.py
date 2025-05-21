@@ -89,70 +89,78 @@ def get_cnpj_receita(cnpj: str) -> None:
 
 
 def update_company_process_cnpj(raw_cnpj_json: dict, id_empresa: str) -> dict:
-
-    # Extrair dados do estabelecimento
+    # Extrair dados do estabelecimento com tratamento de valores nulos
     company = raw_cnpj_json.get("estabelecimento", {})
 
-    # Complemento tratado
-    complemento_raw = company.get("complemento", "")
-    complemento = re.sub(r"\s{2,}", " ", complemento_raw).strip()
+    # Tratamento para todos os campos string
+    def safe_get(data, key, default=""):
+        value = data.get(key)
+        return str(value).strip() if value is not None else default
 
-    # Componentes de endereço
-    tipo_logradouro = company.get("tipo_logradouro", "")
-    logradouro = company.get("logradouro", "")
-    numero = company.get("numero", "")
-    bairro = company.get("bairro", "")
+    # Tratamento para campos aninhados
     cidade = company.get("cidade", {}).get("nome", "")
     estado = company.get("estado", {}).get("nome", "")
 
-    # Endereço completo
-    endereco = f"{tipo_logradouro} {logradouro}, N° {numero}, {complemento}".strip()
+    # Componentes de endereço com tratamento
+    complemento_raw = safe_get(company, "complemento")
+    tipo_logradouro = safe_get(company, "tipo_logradouro")
+    logradouro = safe_get(company, "logradouro")
+    numero = safe_get(company, "numero")
+    bairro = safe_get(company, "bairro")
 
-    # Inscrição estadual
-    inscricoes = company.get("inscricoes_estaduais", [])[0]
-    inscricao_estadual = inscricoes.get("inscricao_estadual", None) if inscricoes else "Não Contribuinte"
+    # Tratamento de complemento
+    complemento = re.sub(r"\s{2,}", " ", complemento_raw).strip()
 
-    # CNPJ formatado
+    # Endereço completo com tratamento de componentes vazios
+    endereco_parts = [
+        tipo_logradouro,
+        logradouro,
+        f"N° {numero}" if numero else "",
+        complemento,
+    ]
+    endereco = ", ".join(filter(None, endereco_parts)).strip(", ")
+
+    # Tratamento de inscrições estaduais
+    inscricoes = company.get("inscricoes_estaduais", [])
+    inscricao_estadual = "Não Contribuinte"
+
+    if inscricoes:
+        primeira_inscricao = inscricoes[0]
+        inscricao_estadual = safe_get(
+            primeira_inscricao, "inscricao_estadual", "Não Contribuinte"
+        )
+
+    # Formatação de CNPJ e CEP com tratamento
     cnpj_formatado = re.sub(
         r"(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})",
         r"\1.\2.\3/\4-\5",
-        company.get("cnpj", ""),
+        safe_get(company, "cnpj"),
     )
 
-    # CEP formatado
-    cep_formatado = re.sub(
-        r"(\d{2})(\d{3})(\d{3})", r"\1.\2-\3", company.get("cep", "")
+    cep_formatado = (
+        re.sub(
+            r"(\d{5})(\d{3})",
+            r"\1-\2",
+            safe_get(company, "cep").zfill(8),  # Garante 8 dígitos
+        )
+        if safe_get(company, "cep")
+        else ""
     )
 
-    # Mapeamento dos campos do CRM
-    fields_mapping = [
-        "id",  # str(id_empresa)
-        "UF_CRM_1708977581412",  # cnpj
-        "TITLE",  # nome
-        "UF_CRM_1709838249844",  # nome_fantasia
-        "ADDRESS",  # endereco
-        "ADDRESS_REGION",  # bairro (não uso region, pois pode ser utilizado para estratégias de comercialização)
-        "ADDRESS_CITY",  # cidade
-        "ADDRESS_PROVINCE",  # estado
-        "ADDRESS_POSTAL_CODE",  # cep
-        "UF_CRM_1710938520402",  # inscricao_estadual
-        "UF_CRM_1720974662288",  # empresa sincronizada com a receita
-    ]
-
-    # Dados processados
+    # Mapeamento seguro dos campos
     processed_data = {
-        fields_mapping[0]: str(id_empresa),
+        "id": str(id_empresa),
         "fields": {
-            fields_mapping[1]: cnpj_formatado,
-            fields_mapping[2]: raw_cnpj_json.get("razao_social", ""),
-            fields_mapping[3]: company.get("nome_fantasia", ""),
-            fields_mapping[4]: endereco,
-            fields_mapping[5]: bairro,
-            fields_mapping[6]: cidade,
-            fields_mapping[7]: estado,
-            fields_mapping[8]: cep_formatado,
-            fields_mapping[9]: inscricao_estadual,
-            fields_mapping[10]: "Y",
+            "UF_CRM_1708977581412": cnpj_formatado,
+            "TITLE": safe_get(raw_cnpj_json, "razao_social"),
+            "UF_CRM_1709838249844": safe_get(company, "nome_fantasia"),
+            "ADDRESS": endereco,
+            "ADDRESS_REGION": bairro,
+            "ADDRESS_CITY": cidade,
+            "ADDRESS_PROVINCE": estado,
+            "ADDRESS_POSTAL_CODE": cep_formatado,
+            "UF_CRM_1710938520402": inscricao_estadual,
+            "UF_CRM_1720974662288": "Y",
         },
         "params": {"REGISTER_SONET_EVENT": "N"},
     }
