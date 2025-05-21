@@ -1,24 +1,42 @@
+# app/routes/webhook_services.py
+
 """
-Service for managing webhooks and subprocess of getting CNPJ data processing
-and posting to Bitrix24.
+Módulo para gerenciamento de webhooks e processamento de dados de CNPJ para integração com Bitrix24.
 """
 
-# app/routes/webhook_services.py
 
 import hmac
 import re
 import json
 import logging
 from functools import wraps
+from typing import Optional, Dict
 import requests
 from flask import request, jsonify
 from app.config import Config
-
 
 logger = logging.getLogger(__name__)
 
 
 def validate_api_key(f):
+    """Decorador para validação de chave API nas requisições.
+
+    :param f: Função a ser decorada
+    :type f: function
+    :return: Função decorada com validação de chave API
+    :rtype: function
+    :raises JSONResponse: Retorna erro 401 se a chave for inválida
+
+    .. rubric:: Exemplo de Uso
+
+    .. code-block:: python
+
+        @api_bp.route("/endpoint")
+        @validate_api_key
+        def meu_endpoint():
+            return jsonify({"status": "ok"})
+    """
+
     @wraps(f)
     def decorated(*args, **kwargs):
         key = request.headers.get("X-API-Key")
@@ -29,182 +47,209 @@ def validate_api_key(f):
     return decorated
 
 
-def verify_webhook_signature(data, signature):
+def verify_webhook_signature(signature: str) -> bool:
+    """Verifica a assinatura HMAC-SHA256 de um webhook.
+
+    :param signature: Assinatura do cabeçalho da requisição
+    :type signature: str
+    :return: True se as assinaturas coincidirem, False caso contrário
+    :rtype: bool
+    :raises ValueError: Se ocorrer erro na geração da assinatura
+
+    .. note::
+        Requer a configuração da variável WEBHOOK_SECRET no ambiente
     """
-    Verify webhook signature using HMAC-SHA256.
-
-    Args:
-        data: The raw request data
-        signature: The signature from request headers
-
-    Returns:
-        bool: True if signatures match, False otherwise
-    """
-    if not Config.WEBHOOK_SECRET:
-        logger.error("WEBHOOK_SECRET not configured")
-        return False
-
-    if not data or not signature:
-        logger.error("Missing data or signature")
+    if not Config.BITRIX_WEBHOOK_TOKEN:
+        logger.error("BITRIX_WEBHOOK_TOKEN não configurado")
         return False
 
     try:
-        expected = hmac.new(
-            Config.WEBHOOK_SECRET.encode("utf-8"), data, "sha256"
-        ).hexdigest()
-        return hmac.compare_digest(expected, signature)
-
+        return hmac.compare_digest(Config.BITRIX_WEBHOOK_TOKEN, signature)
     except (TypeError, ValueError) as e:
-        logger.error("Error verifying signature: %s", str(e))
+        logger.error("Erro na verificação de assinatura: %s", str(e))
+        logger.debug("Assinatura\n %s", signature)
         return False
 
 
-def get_cnpj_receita(cnpj: str) -> None:
-    cnpj_int = re.sub(pattern=r"[\.\/-]", repl="", string=str(cnpj))
+def get_cnpj_receita(cnpj: str) -> Optional[Dict]:
+    """Obtém dados de CNPJ da API pública da Receita WS.
 
+    :param cnpj: CNPJ a ser consultado (formatado ou não)
+    :type cnpj: str
+    :return: Dados do CNPJ ou None em caso de erro
+    :rtype: dict or None
+    :raises requests.exceptions.RequestException: Em caso de erro na requisição
+
+    .. rubric:: Exemplo de Retorno
+
+    .. code-block:: json
+
+        {
+            "estabelecimento": {
+                "cnpj": "33380510000190",
+                "nome_fantasia": "EMPRESA EXEMPLO",
+                ...
+            }
+        }
+    """
+    cnpj_int = re.sub(r"[\.\/-]", "", str(cnpj))
     url = f"https://publica.cnpj.ws/cnpj/{cnpj_int}"
 
     try:
         response = requests.get(url=url, timeout=60)
         response.raise_for_status()
-
         data = response.json()
 
         if "error" in data:
-            logger.critical(
-                "\n❌ Erro na requisição API:\n%s\n",
-                json.dumps({data["error"]}, indent=2, ensure_ascii=False),
-            )
-        else:
-            logger.info(
-                "\n✅ Sucesso na consulta do CNPJ %s\nPayload:\n%s\n",
-                cnpj,
-                json.dumps(data, indent=2, ensure_ascii=False),
-            )
+            logger.error("Erro na API: %s", json.dumps(data["error"], indent=2))
+            return None
 
-            return data
+        logger.info("Dados CNPJ %s obtidos com sucesso", cnpj)
+        logger.debug("\nPayload:\n%s", json.dumps(data, indent=2, ensure_ascii=False))
+        return data
 
     except requests.exceptions.RequestException as e:
-        logger.critical("\n❌ Exceção na requisição API:\n%s\n", str(e))
+        logger.error("Falha na requisição: %s", str(e))
+        return None
 
 
-def update_company_process_cnpj(raw_cnpj_json: dict, id_empresa: str) -> dict:
-    # Extrair dados do estabelecimento com tratamento de valores nulos
+def _safe_get(data: Dict, key: str, default: str = "") -> str:
+    """Obtém valor de dicionário com tratamento seguro.
+
+    :param data: Dicionário de origem
+    :type data: dict
+    :param key: Chave a ser buscada
+    :type key: str
+    :param default: Valor padrão caso a chave não exista, defaults to ""
+    :type default: str, optional
+    :return: Valor formatado como string ou valor padrão
+    :rtype: str
+    """
+    value = data.get(key)
+    return str(value).strip() if value is not None else default
+
+
+def update_company_process_cnpj(raw_cnpj_json: Dict, id_empresa: str) -> Dict:
+    """Processa dados de CNPJ para formato compatível com Bitrix24.
+
+    :param raw_cnpj_json: Dados brutos da API da Receita
+    :type raw_cnpj_json: dict
+    :param id_empresa: ID da empresa no sistema Bitrix24
+    :type id_empresa: str
+    :return: Dados processados no formato do Bitrix24
+    :rtype: dict
+
+    .. rubric:: Estrutura do Retorno
+
+    .. code-block:: python
+
+        {
+            "id": "123",
+            "fields": {
+                "UF_CRM_1708977581412": "33.380.510/0001-90",
+                "TITLE": "RAZÃO SOCIAL",
+                ...
+            }
+        }
+    """
     company = raw_cnpj_json.get("estabelecimento", {})
 
-    # Tratamento para todos os campos string
-    def safe_get(data, key, default=""):
-        value = data.get(key)
-        return str(value).strip() if value is not None else default
-
-    # Tratamento para campos aninhados
-    cidade = company.get("cidade", {}).get("nome", "")
-    estado = company.get("estado", {}).get("nome", "")
-
-    # Componentes de endereço com tratamento
-    complemento_raw = safe_get(company, "complemento")
-    tipo_logradouro = safe_get(company, "tipo_logradouro")
-    logradouro = safe_get(company, "logradouro")
-    numero = safe_get(company, "numero")
-    bairro = safe_get(company, "bairro")
-
-    # Tratamento de complemento
-    complemento = re.sub(r"\s{2,}", " ", complemento_raw).strip()
-
-    # Endereço completo com tratamento de componentes vazios
-    endereco_parts = [
-        tipo_logradouro,
-        logradouro,
-        f"N° {numero}" if numero else "",
-        complemento,
-    ]
-    endereco = ", ".join(filter(None, endereco_parts)).strip(", ")
-
-    # Tratamento de inscrições estaduais
-    inscricoes = company.get("inscricoes_estaduais", [])
-    inscricao_estadual = "Não Contribuinte"
-
-    if inscricoes:
-        primeira_inscricao = inscricoes[0]
-        inscricao_estadual = safe_get(
-            primeira_inscricao, "inscricao_estadual", "Não Contribuinte"
+    # Processamento de dados
+    endereco = ", ".join(
+        filter(
+            None,
+            [
+                f"{_safe_get(company, 'tipo_logradouro')} {_safe_get(company, 'logradouro')}",
+                (
+                    f"N° {_safe_get(company, 'numero')}"
+                    if _safe_get(company, "numero")
+                    else ""
+                ),
+                (
+                    re.sub(r"\s{2,}", " ", _safe_get(company, "complemento")).strip()
+                    if _safe_get(company, "complemento")
+                    else ""
+                ),
+            ],
         )
+    ).strip(", ")
 
-    # Formatação de CNPJ e CEP com tratamento
+    # Formatação de campos específicos
     cnpj_formatado = re.sub(
         r"(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})",
         r"\1.\2.\3/\4-\5",
-        safe_get(company, "cnpj"),
+        _safe_get(company, "cnpj"),
     )
 
-    cep_formatado = (
-        re.sub(
-            r"(\d{5})(\d{3})",
-            r"\1-\2",
-            safe_get(company, "cep").zfill(8),  # Garante 8 dígitos
-        )
-        if safe_get(company, "cep")
-        else ""
-    )
-
-    # Mapeamento seguro dos campos
     processed_data = {
         "id": str(id_empresa),
         "fields": {
             "UF_CRM_1708977581412": cnpj_formatado,
-            "TITLE": safe_get(raw_cnpj_json, "razao_social"),
-            "UF_CRM_1709838249844": safe_get(company, "nome_fantasia"),
+            "TITLE": _safe_get(raw_cnpj_json, "razao_social"),
+            "UF_CRM_1709838249844": _safe_get(company, "nome_fantasia"),
             "ADDRESS": endereco,
-            "ADDRESS_REGION": bairro,
-            "ADDRESS_CITY": cidade,
-            "ADDRESS_PROVINCE": estado,
-            "ADDRESS_POSTAL_CODE": cep_formatado,
-            "UF_CRM_1710938520402": inscricao_estadual,
+            "ADDRESS_REGION": _safe_get(company, "bairro"),
+            "ADDRESS_CITY": company.get("cidade", {}).get("nome", ""),
+            "ADDRESS_PROVINCE": company.get("estado", {}).get("nome", ""),
+            "ADDRESS_POSTAL_CODE": re.sub(
+                r"(\d{5})(\d{3})", r"\1-\2", _safe_get(company, "cep")
+            ),
+            "UF_CRM_1710938520402": next(
+                (
+                    _safe_get(insc, "inscricao_estadual")
+                    for insc in company.get("inscricoes_estaduais", [])[:1]
+                ),
+                "Não Contribuinte",
+            ),
             "UF_CRM_1720974662288": "Y",
         },
         "params": {"REGISTER_SONET_EVENT": "N"},
     }
 
-    logger.info(
+    logger.debug(
         "\n✅ Processed data:\n%s\n",
         json.dumps(processed_data, indent=2, ensure_ascii=False),
     )
+
     return processed_data
 
 
-def post_destination_api(processed_data: dict, api_url: str) -> dict:
-    response = None
+def post_destination_api(processed_data: Dict, api_url: str) -> Dict:
+    """Envia dados processados para API de destino.
+
+    :param processed_data: Dados processados para envio
+    :type processed_data: dict
+    :param api_url: URL da API de destino
+    :type api_url: str
+    :return: Resposta da API com status e conteúdo
+    :rtype: dict
+
+    :raises requests.exceptions.RequestException: Em caso de erro na requisição
+
+    .. rubric:: Exemplo de Resposta
+
+    .. code-block:: python
+
+        {
+            "status_code": 200,
+            "headers": {...},
+            "content": {...}
+        }
+    """
     try:
         response = requests.post(api_url, json=processed_data, timeout=10)
         response.raise_for_status()
 
-        # Extrair dados relevantes da resposta
-        response_data = {
+        return {
             "status_code": response.status_code,
             "headers": dict(response.headers),
-            "content": response.json(),  # Ou response.text se não for JSON
+            "content": response.json(),
         }
 
-        logger.info(
-            "\n✅ Validação CNPJ concluída\n• Empresa: %s\n• Resposta: %s\n",
-            json.dumps(
-                [
-                    processed_data["fields"]["UF_CRM_1708977581412"],  # cnpj
-                    processed_data["fields"]["TITLE"],  # nome
-                ]
-            ),
-            json.dumps(response_data, indent=2, ensure_ascii=False),
-        )
-
-        return response_data
-
     except requests.exceptions.JSONDecodeError:
-        logger.warning("\n⚠️ Resposta não é JSON válido, retornando texto\n")
-        return {"content": response.text} if response else {"error": "No response"}
-    except requests.exceptions.Timeout:
-        logger.error("\n❌ Timeout na requisição\n")
-        return {"error": "Timeout"}
+        logger.warning("Resposta não é JSON válido")
+        return {"content": response.text} if response else {"error": "Sem resposta"}
 
     except requests.exceptions.RequestException as e:
-        logger.error("\n❌ Erro na requisição:\n%s\n", str(e))
+        logger.error("Erro na requisição: %s", str(e))
         return {"error": str(e)}

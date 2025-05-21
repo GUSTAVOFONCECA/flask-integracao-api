@@ -1,19 +1,36 @@
 """
-Service for managing localtunnel subprocess and URL acquisition.
+Service for managing localtunnel subprocess and automatic URL acquisition.
+If the tunnel process dies, it will be restarted automatically.
 """
+
 # app/services/tunnel_service.py
 
-import sys
+
 import time
 import logging
 import subprocess
 import threading
+from typing import Optional
 from app.config import Config
 
 logger = logging.getLogger(__name__)
 
+TUNNEL_SUBDOMAIN = "logic-1997"
+TUNNEL_RETRY_INTERVAL = 5  # segundos entre tentativas
+TUNNEL_CHECK_INTERVAL = 10  # intervalo para verificar se o túnel ainda está ativo
+
 
 def _monitor_output(stream, url_event, url_container, subdomain, is_error=False):
+    """
+    Monitor a given output stream (stdout/stderr) of the tunnel process.
+
+    Args:
+        stream: Stream to monitor (stdout or stderr).
+        url_event: Event used to signal that the URL has been found.
+        url_container: Mutable container to store the URL.
+        subdomain: Expected subdomain in the tunnel URL.
+        is_error: If True, logs the output as error.
+    """
     while True:
         raw_line = stream.readline()
         if not raw_line:
@@ -40,27 +57,61 @@ def _monitor_output(stream, url_event, url_container, subdomain, is_error=False)
                 logger.warning("\n⚠️ Subdomínio incorreto: %s\n", url_candidate)
 
 
-def _start_tunnel_process(command):
+def _start_tunnel_process(command) -> subprocess.Popen:
+    """
+    Start the localtunnel subprocess.
+
+    Args:
+        command: Command list to execute the tunnel.
+
+    Returns:
+        subprocess.Popen: The started process.
+    """
     return subprocess.Popen(
         command,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
-        bufsize=1,
-        shell=True,
+        shell=True,  # Para OS windows
     )
 
 
-def start_localtunnel():
-    """Inicia o túnel com 3 tentativas e verificação de subdomínio"""
+def _run_tunnel_loop():
+    """
+    Loop infinito para manter o túnel ativo. Reinicia automaticamente se falhar.
+    """
+    while True:
+        result = _try_start_tunnel()
+        if result is not None:
+            process = result["process"]
+            url = result["url"]
+            logger.info("🌐 Túnel ativo: %s", url)
+
+            # Monitora o processo
+            while process.poll() is None:
+                time.sleep(TUNNEL_CHECK_INTERVAL)
+
+            logger.warning("⚠️ Túnel encerrado inesperadamente. Reiniciando...")
+
+        else:
+            logger.error(
+                "❌ Falha ao iniciar o túnel. Tentando novamente em %ds...",
+                TUNNEL_RETRY_INTERVAL,
+            )
+
+        time.sleep(TUNNEL_RETRY_INTERVAL)
+
+
+def _try_start_tunnel() -> Optional[dict]:
+    """
+    Tenta iniciar o túnel localtunnel até 3 vezes e retorna o processo e URL se bem-sucedido.
+    """
     max_attempts = 3
-    subdomain = "logic-1997"
+    subdomain = TUNNEL_SUBDOMAIN
 
     for attempt in range(1, max_attempts + 1):
         process = None
         try:
-            logger.info(
-                "\n🚀 Tentativa %d/%d de iniciar o túnel\n", attempt, max_attempts
-            )
+            logger.info("🚀 Tentativa %d/%d de iniciar o túnel", attempt, max_attempts)
 
             command = [
                 "lt",
@@ -76,62 +127,41 @@ def start_localtunnel():
             process = _start_tunnel_process(command)
 
             url_event = threading.Event()
-            url_container = [None]  # Use a mutable container to share url
+            url_container = [None]
 
-            stdout_thread = threading.Thread(
+            threading.Thread(
                 target=_monitor_output,
-                args=(
-                    process.stdout,
-                    url_event,
-                    url_container,
-                    subdomain,
-                    False,
-                ),
+                args=(process.stdout, url_event, url_container, subdomain, False),
                 daemon=True,
-            )
-            stderr_thread = threading.Thread(
+            ).start()
+            threading.Thread(
                 target=_monitor_output,
-                args=(
-                    process.stderr,
-                    url_event,
-                    url_container,
-                    subdomain,
-                    True,
-                ),
+                args=(process.stderr, url_event, url_container, subdomain, True),
                 daemon=True,
-            )
-            stdout_thread.start()
-            stderr_thread.start()
+            ).start()
 
             if url_event.wait(timeout=60):
                 url = url_container[0]
-                if isinstance(url, str):
-                    if subdomain in str(url):
-                        logger.info("\n✅ Túnel estabelecido: %s\n", url)
-                        return {"process": process, "url": url}
-                    else:
-                        logger.warning("\n⚠️ Subdomínio não encontrado na URL\n")
-                        raise RuntimeError("Subdomínio inválido")
+                if isinstance(url, str) and subdomain in str(url):
+                    return {"process": process, "url": url}
                 else:
-                    logger.warning("\n⚠️ URL inválida recebida: %s\n", repr(url))
-                    raise RuntimeError("URL inválida recebida")
+                    raise RuntimeError("URL inválida ou subdomínio incorreto")
 
-        except RuntimeError as e:
-            logger.warning("\n⚠️ Falha na tentativa %d:\n%s\n", attempt, str(e))
-            if process is not None and process.poll() is None:
+            raise RuntimeError("Timeout esperando URL")
+
+        except (subprocess.SubprocessError, RuntimeError, UnicodeDecodeError, OSError) as e:
+            logger.warning("⚠️ Falha na tentativa %d: %s", attempt, str(e))
+            if process and process.poll() is None:
                 process.terminate()
                 process.wait()
-            if attempt == max_attempts:
-                logger.critical("\n❌ Todas as tentativas falharam\n")
-                sys.exit(1)
             time.sleep(2**attempt)
-            continue
 
-        except (OSError, subprocess.SubprocessError) as e:
-            logger.critical("\n❌ Erro inesperado:\n%s", str(e), exc_info=True)
-            if process is not None and process.poll() is None:
-                process.terminate()
-                process.wait()
-            sys.exit(1)
+    return None
 
-    sys.exit(1)
+
+def start_localtunnel():
+    """
+    Inicia a thread que mantém o túnel LocalTunnel sempre ativo.
+    """
+    tunnel_thread = threading.Thread(target=_run_tunnel_loop, daemon=True)
+    tunnel_thread.start()

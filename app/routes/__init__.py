@@ -1,3 +1,11 @@
 # app/routes/__init__.py
-from app.routes.api_routes import api_bp
-from app.routes.webhook_routes import webhook_bp
+"""
+Pacote de rotas da aplicação.
+"""
+from .api_routes import api_bp
+from .webhook_routes import webhook_bp
+
+__all__ = [
+    "api_bp",
+    "webhook_bp",
+]

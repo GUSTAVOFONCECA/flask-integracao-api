@@ -11,7 +11,6 @@ import signal
 import atexit
 import threading
 import time
-from subprocess import Popen
 from waitress import serve
 from app import create_app
 from app.services.tunnel_service import start_localtunnel
@@ -28,7 +27,6 @@ class AppManager:
     """
 
     def __init__(self):
-        self.tunnel: dict[str, Popen] = None  # type: ignore
         self.flask_app = create_app()
 
     def run_flask_server(self):
@@ -63,9 +61,7 @@ class AppManager:
         2. Finaliza a aplicação Flask
         3. Encerra o processo com código 0
         """
-        self.flask_app.logger.info("\nℹ️ Encerrando aplicação...\n")
-        if self.tunnel and self.tunnel["process"]:
-            self.tunnel["process"].terminate()
+        self.flask_app.logger.info("ℹ️ Encerrando aplicação...")
         sys.exit(0)
 
 
@@ -92,7 +88,7 @@ def main() -> None:
 
         # Configurar ambiente
         Config.ENV = "development"
-        flask_app = create_app()  # Já registra os blueprints
+        flask_app = manager.flask_app
 
         # Testar endpoints ANTES de iniciar o servidor
         print("🔥 Testando health check da API...")
@@ -119,23 +115,17 @@ def main() -> None:
         flask_thread = threading.Thread(target=manager.run_flask_server, daemon=True)
         flask_thread.start()
 
-        manager.tunnel = start_localtunnel()
-        if not manager.tunnel:
-            raise RuntimeError("Falha ao iniciar o túnel localtunnel")
-
+        start_localtunnel()
         manager.flask_app.logger.info(
-            "\n✅ Túnel iniciado: %s\n", manager.tunnel["url"]
+            "✅ Túnel iniciado (monitoramento automático ativado)"
         )
 
         # Loop único de monitoramento
         while True:
             if not flask_thread.is_alive():
-                raise RuntimeError("Servidor Flask parou inesperadamente")
-
-            if manager.tunnel["process"].poll() is not None:
-                raise RuntimeError("Túnel encerrado inesperadamente")
-
+                raise RuntimeError("❌ Servidor Flask parou inesperadamente")
             time.sleep(5)
+
     except (RuntimeError, ConnectionError, AssertionError) as e:
         if manager and manager.flask_app:
             manager.flask_app.logger.critical("\n❌ Falha crítica:\n%s\n", str(e))
