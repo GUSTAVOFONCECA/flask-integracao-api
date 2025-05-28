@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 @webhook_bp.route("/consulta-receita", methods=["POST"])
-def post_webhook_valida_cnpj_receita():
+def post_valida_cnpj_receita_bitrix():
     """Endpoint para validação de CNPJ via webhook.
 
     :formparam idEmpresa: ID da empresa no sistema Bitrix24 (obrigatório)
@@ -52,36 +52,12 @@ def post_webhook_valida_cnpj_receita():
             }
         }
     """
-    # ─── DEBUG: tudo que chega na requisição ──────────────────────────────
-    # Query string (args)
-    logger.debug("→ Query String args: %s", request.args.to_dict(flat=False))
-    # Cabeçalhos
-    logger.debug("→ Headers: %s", dict(request.headers))
-    # Payload raw
-    logger.debug("→ Raw Data: %r", request.get_data())
-    # JSON (se houver)
-    try:
-        json_payload = request.get_json(silent=True)
-    except BadRequest as e:
-        json_payload = f"<invalid JSON: {e}>"
-    logger.debug("→ JSON: %s", json_payload)
-    # Form fields (application/x-www-form-urlencoded ou multipart/form-data)
-    logger.debug("→ Form: %s", request.form.to_dict(flat=False))
-    # Arquivos (se houver upload)
-    logger.debug("→ Files: %s", list(request.files.keys()))
-    # Valores combinados (args + form)
-    logger.debug("→ Values (args+form): %s", request.values.to_dict(flat=False))
-    # ───────────────────────────────────────────────────────────────────────
-
     # Obter a assinatura DO FORMULÁRIO (não do header)
     signature = request.form.get("auth[member_id]", "")
 
     # Validar usando os dados BRUTOS da requisição (já URL-decoded)
     if not verify_webhook_signature(signature):
-        logger.warning(
-            "⚠️ Assinatura inválida | Recebida: %s",
-            signature
-        )
+        logger.warning("⚠️ Assinatura inválida | Recebida: %s", signature)
         return jsonify({"error": "Assinatura inválida"}), 403
     # Validar parâmetros obrigatórios
     required_params = ["idEmpresa", "CNPJ"]
@@ -132,3 +108,72 @@ def post_webhook_valida_cnpj_receita():
     except (KeyError, ValueError, TypeError) as e:
         logger.critical("❌ Erro crítico no processamento: %s", str(e))
         return jsonify({"error": "Erro interno no processamento"}), 500
+
+
+@webhook_bp.route("/aviso-certificado", methods=["POST"])
+def post_envia_comunicado_para_cliente_bitrix() -> dict:
+    # ─── DEBUG: tudo que chega na requisição ──────────────────────────────
+    # Query string (args)
+    logger.debug("→ Query String args: %s", request.args.to_dict(flat=False))
+    # Cabeçalhos
+    logger.debug("→ Headers: %s", dict(request.headers))
+    # Payload raw
+    logger.debug("→ Raw Data: %r", request.get_data())
+    # JSON (se houver)
+    try:
+        json_payload = request.get_json(silent=True)
+    except BadRequest as e:
+        json_payload = f"<invalid JSON: {e}>"
+    logger.debug("→ JSON: %s", json_payload)
+    # Form fields (application/x-www-form-urlencoded ou multipart/form-data)
+    logger.debug("→ Form: %s", request.form.to_dict(flat=False))
+    # Arquivos (se houver upload)
+    logger.debug("→ Files: %s", list(request.files.keys()))
+    # Valores combinados (args + form)
+    logger.debug("→ Values (args+form): %s", request.values.to_dict(flat=False))
+
+
+@webhook_bp.route("/renova-certificado", methods=["POST"])
+def post_renova_certificado_digisac():
+    # ─── DEBUG: tudo que chega na requisição ──────────────────────────────
+    # Query string (args)
+    logger.debug("→ Query String args: %s", request.args.to_dict(flat=False))
+    # Cabeçalhos
+    logger.debug("→ Headers: %s", dict(request.headers))
+    # Payload raw
+    logger.debug("→ Raw Data: %r", request.get_data())
+    # JSON (se houver)
+    try:
+        json_payload = request.get_json(silent=True)
+    except BadRequest as e:
+        json_payload = f"<invalid JSON: {e}>"
+    logger.debug("→ JSON: %s", json_payload)
+    # Form fields (application/x-www-form-urlencoded ou multipart/form-data)
+    logger.debug("→ Form: %s", request.form.to_dict(flat=False))
+    # Arquivos (se houver upload)
+    logger.debug("→ Files: %s", list(request.files.keys()))
+    # Valores combinados (args + form)
+    logger.debug("→ Values (args+form): %s", request.values.to_dict(flat=False))
+
+
+@webhook_bp.route("/nao-renova-certificado", methods=["POST"])
+def post_nao_renova_certificado_digisac():
+    # ─── DEBUG: tudo que chega na requisição ──────────────────────────────
+    # Query string (args)
+    logger.debug("→ Query String args: %s", request.args.to_dict(flat=False))
+    # Cabeçalhos
+    logger.debug("→ Headers: %s", dict(request.headers))
+    # Payload raw
+    logger.debug("→ Raw Data: %r", request.get_data())
+    # JSON (se houver)
+    try:
+        json_payload = request.get_json(silent=True)
+    except BadRequest as e:
+        json_payload = f"<invalid JSON: {e}>"
+    logger.debug("→ JSON: %s", json_payload)
+    # Form fields (application/x-www-form-urlencoded ou multipart/form-data)
+    logger.debug("→ Form: %s", request.form.to_dict(flat=False))
+    # Arquivos (se houver upload)
+    logger.debug("→ Files: %s", list(request.files.keys()))
+    # Valores combinados (args + form)
+    logger.debug("→ Values (args+form): %s", request.values.to_dict(flat=False))

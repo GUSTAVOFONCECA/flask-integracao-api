@@ -253,3 +253,5 @@ def post_destination_api(processed_data: Dict, api_url: str) -> Dict:
     except requests.exceptions.RequestException as e:
         logger.error("Erro na requisição: %s", str(e))
         return {"error": str(e)}
+
+###############################################################################
