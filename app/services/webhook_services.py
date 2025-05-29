@@ -9,6 +9,7 @@ import hmac
 import re
 import json
 import logging
+from datetime import datetime, timedelta
 from functools import wraps
 from typing import Optional, Dict
 import requests
@@ -254,4 +255,132 @@ def post_destination_api(processed_data: Dict, api_url: str) -> Dict:
         logger.error("Erro na requisição: %s", str(e))
         return {"error": str(e)}
 
+
 ###############################################################################
+URL_DIGISAC = "https://logicassessoria.digisac.chat"
+BASE_API = f"{URL_DIGISAC}/api/v1"
+CLIENT_ID = "api"
+CLIENT_SECRET = "secret"
+
+# Variável global para armazenamento de tokens
+digisac_tokens = {"access_token": None, "refresh_token": None, "expires_at": None}
+
+
+def get_auth_headers():
+    """Retorna headers de autenticação com token válido"""
+    # Verifica se o token precisa ser renovado
+    if not digisac_tokens["access_token"] or (
+        digisac_tokens["expires_at"]
+        and datetime.utcnow() > digisac_tokens["expires_at"]
+    ):
+        refresh_tokens()
+
+    return {
+        "Authorization": f"Bearer {digisac_tokens['access_token']}",
+        "Content-Type": "application/json",
+    }
+
+
+def refresh_tokens():
+    """Atualiza tokens usando refresh token ou credenciais"""
+    if digisac_tokens["refresh_token"]:
+        new_tokens = refresh_auth_digisac(digisac_tokens["refresh_token"])
+    else:
+        username = Config.DIGISAC_USER
+        password = Config.DIGISAC_PASSWORD
+        new_tokens = get_auth_digisac(username, password)
+
+    if "error" in new_tokens:
+        raise Exception(f"Falha na autenticação: {new_tokens['error']}")
+
+    # Atualiza tokens globais
+    digisac_tokens["access_token"] = new_tokens["access_token"]
+    digisac_tokens["refresh_token"] = new_tokens["refresh_token"]
+    digisac_tokens["expires_at"] = datetime.utcnow() + timedelta(
+        seconds=new_tokens["expires_in"] - 60
+    )
+
+
+def get_auth_digisac(username: str, password: str) -> dict:
+    """Obtém tokens de autenticação"""
+    url = f"{URL_DIGISAC}/api/v1/oauth/token"
+    payload = {
+        "grant_type": "password",
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+        "username": username,
+        "password": password,
+    }
+    try:
+        response = requests.post(url, data=payload)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        logger.error(f"❌ Erro na autenticação: {str(e)}")
+        return {"error": str(e)}
+
+
+def refresh_auth_digisac(refresh_token: str) -> dict:
+    """Renova tokens de acesso"""
+    url = f"{URL_DIGISAC}/api/v1/oauth/token"
+    payload = {
+        "grant_type": "refresh_token",
+        "client_id": CLIENT_ID,
+        "client_secret": CLIENT_SECRET,
+        "refresh_token": refresh_token,
+    }
+    try:
+        response = requests.post(url, data=payload)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        logger.error(f"❌ Erro no refresh: {str(e)}")
+        return {"error": str(e)}
+
+
+def transfer_ticket_digisac(
+    contact_id: str, department_id: str, user_id: str, comments: str
+) -> dict:
+    """Transfere ticket no Digisac"""
+    url = f"{BASE_API}/contacts/{contact_id}/ticket/transfer"
+    payload = {"departmentId": department_id, "userId": user_id, "comments": comments}
+
+    try:
+        resp = requests.post(url, headers=get_auth_headers(), json=payload)
+        resp.raise_for_status()
+        return resp.json()
+    except requests.RequestException as e:
+        logger.error(f"❌ [TRANSFER] Erro: {e}")
+        return {"error": str(e)}
+
+
+def send_message_digisac(
+    contact_id: str,
+    user_id: str,
+    department_id: str,
+    contact_name: str,
+    company_name: str,
+) -> dict:
+    """Envia mensagem automática via Digisac"""
+    url = f"{BASE_API}/messages"
+    payload = {
+        "text": (
+            f"Olá {contact_name}, o certificado da empresa {company_name} "
+            "irá expirar dentro de 15 dias.\n"
+            "Deseja renovar seu certificado? (Digite a opção)\n\n"
+            "1 - Sim\n"
+            "2 - Não"
+        ),
+        "contactId": contact_id,
+        "userId": user_id,
+        "ticketDepartmentId": department_id,
+        "origin": "bot",
+    }
+
+    try:
+        resp = requests.post(url, headers=get_auth_headers(), json=payload)
+        resp.raise_for_status()
+        return resp.json()
+    except requests.RequestException as e:
+        logger.error(f"❌ [MSG] Erro: {e}")
+        return {"error": str(e)}

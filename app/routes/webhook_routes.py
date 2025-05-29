@@ -12,6 +12,8 @@ from app.services.webhook_services import (
     update_company_process_cnpj,
     post_destination_api,
     verify_webhook_signature,
+    send_message_digisac,
+    transfer_ticket_digisac,
 )
 
 webhook_bp = Blueprint("webhook", __name__)
@@ -111,49 +113,104 @@ def post_valida_cnpj_receita_bitrix():
 
 
 @webhook_bp.route("/aviso-certificado", methods=["POST"])
-def post_envia_comunicado_para_cliente_bitrix() -> dict:
-    # ─── DEBUG: tudo que chega na requisição ──────────────────────────────
-    # Query string (args)
-    logger.debug("→ Query String args: %s", request.args.to_dict(flat=False))
-    # Cabeçalhos
-    logger.debug("→ Headers: %s", dict(request.headers))
-    # Payload raw
-    logger.debug("→ Raw Data: %r", request.get_data())
-    # JSON (se houver)
+def post_envia_comunicado_para_cliente_bitrix():
+    """Envia comunicação de expiração de certificado"""
+    # Log detalhado da requisição
+    logger.debug(f"→ Headers: {dict(request.headers)}")
+    logger.debug(f"→ Raw Data: {request.get_data()!r}")
+
     try:
-        json_payload = request.get_json(silent=True)
-    except BadRequest as e:
-        json_payload = f"<invalid JSON: {e}>"
-    logger.debug("→ JSON: %s", json_payload)
-    # Form fields (application/x-www-form-urlencoded ou multipart/form-data)
-    logger.debug("→ Form: %s", request.form.to_dict(flat=False))
-    # Arquivos (se houver upload)
-    logger.debug("→ Files: %s", list(request.files.keys()))
-    # Valores combinados (args + form)
-    logger.debug("→ Values (args+form): %s", request.values.to_dict(flat=False))
+        data = request.get_json()
+        logger.debug(f"→ JSON: {data}")
+    except BadRequest:
+        return jsonify({"error": "Invalid JSON"}), 400
+
+    # Extrair parâmetros necessários
+    required = [
+        "contact_id",
+        "user_id",
+        "department_id",
+        "contact_name",
+        "company_name",
+    ]
+    if not all(key in data for key in required):
+        return jsonify({"error": "Missing required parameters"}), 400
+
+    # Enviar mensagem
+    result = send_message_digisac(
+        contact_id=data["contact_id"],
+        user_id=data["user_id"],
+        department_id=data["department_id"],
+        contact_name=data["contact_name"],
+        company_name=data["company_name"],
+    )
+
+    if "error" in result:
+        return jsonify(result), 500
+
+    return (
+        jsonify(
+            {
+                "status": "success",
+                "message": "Comunicação enviada",
+                "digisac_response": result,
+            }
+        ),
+        200,
+    )
 
 
 @webhook_bp.route("/renova-certificado", methods=["POST"])
 def post_renova_certificado_digisac():
-    # ─── DEBUG: tudo que chega na requisição ──────────────────────────────
-    # Query string (args)
-    logger.debug("→ Query String args: %s", request.args.to_dict(flat=False))
-    # Cabeçalhos
-    logger.debug("→ Headers: %s", dict(request.headers))
-    # Payload raw
-    logger.debug("→ Raw Data: %r", request.get_data())
-    # JSON (se houver)
+    """Processa resposta de renovação de certificado"""
+    # Log detalhado da requisição
+    logger.debug(f"→ Headers: {dict(request.headers)}")
+    logger.debug(f"→ Raw Data: {request.get_data()!r}")
+
     try:
-        json_payload = request.get_json(silent=True)
-    except BadRequest as e:
-        json_payload = f"<invalid JSON: {e}>"
-    logger.debug("→ JSON: %s", json_payload)
-    # Form fields (application/x-www-form-urlencoded ou multipart/form-data)
-    logger.debug("→ Form: %s", request.form.to_dict(flat=False))
-    # Arquivos (se houver upload)
-    logger.debug("→ Files: %s", list(request.files.keys()))
-    # Valores combinados (args + form)
-    logger.debug("→ Values (args+form): %s", request.values.to_dict(flat=False))
+        data = request.get_json()
+        logger.debug(f"→ JSON: {data}")
+    except BadRequest:
+        return jsonify({"error": "Invalid JSON"}), 400
+
+    # Verificar se é mensagem válida
+    if data.get("origin") != "contact" or "text" not in data:
+        return jsonify({"status": "ignored"}), 200
+
+    # Processar resposta
+    resposta = data["text"].strip()
+    contact_id = data.get("contactId")
+    ticket = data.get("ticket", {})
+
+    if resposta == "1":  # Cliente quer renovar
+        result = transfer_ticket_digisac(
+            contact_id=contact_id,
+            department_id=Config.RENOVACAO_DEPARTMENT_ID,
+            user_id=None,
+            comments="Cliente solicitou renovação de certificado",
+        )
+
+        if "error" in result:
+            return jsonify(result), 500
+
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "message": "Ticket transferido para renovação",
+                    "digisac_response": result,
+                }
+            ),
+            200,
+        )
+
+    elif resposta == "2":  # Cliente não quer renovar
+        return (
+            jsonify({"status": "success", "message": "Cliente recusou renovação"}),
+            200,
+        )
+
+    return jsonify({"status": "ignored"}), 200
 
 
 @webhook_bp.route("/nao-renova-certificado", methods=["POST"])
