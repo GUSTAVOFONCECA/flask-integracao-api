@@ -12,6 +12,7 @@ from app.services.webhook_services import (
     update_company_process_cnpj,
     post_destination_api,
     verify_webhook_signature,
+    get_contact_id_by_number,
     send_message_digisac,
     transfer_ticket_digisac,
 )
@@ -83,7 +84,7 @@ def post_valida_cnpj_receita_bitrix():
         cnpj = request.args["CNPJ"]
 
         logger.info(
-            "ℹ️ Nova requisição de validação - ID Empresa: %s, CNPJ: %s",
+            "ℹ️ Nova requisição de validação de CNPJ - ID Empresa: %s, CNPJ: %s",
             id_empresa,
             cnpj,
         )
@@ -115,44 +116,71 @@ def post_valida_cnpj_receita_bitrix():
 @webhook_bp.route("/aviso-certificado", methods=["POST"])
 def post_envia_comunicado_para_cliente_bitrix():
     """Envia comunicação de expiração de certificado"""
-    # Log detalhado da requisição
-    logger.debug(f"→ Headers: {dict(request.headers)}")
-    logger.debug(f"→ Raw Data: {request.get_data()!r}")
+    # ID departamento fixo certificação digital
+    department_id = "154521dc-71c0-4117-a697-bd978cd442aa"
 
-    try:
-        data = request.get_json()
-        logger.debug(f"→ JSON: {data}")
-    except BadRequest:
-        return jsonify({"error": "Invalid JSON"}), 400
+    # Obter a assinatura DO FORMULÁRIO (não do header)
+    signature = request.form.get("auth[member_id]", "")
 
-    # Extrair parâmetros necessários
-    required = [
-        "contact_id",
-        "user_id",
-        "department_id",
-        "contact_name",
-        "company_name",
-    ]
-    if not all(key in data for key in required):
-        return jsonify({"error": "Missing required parameters"}), 400
+    # Validar usando os dados BRUTOS da requisição (já URL-decoded)
+    if not verify_webhook_signature(signature):
+        logger.warning("⚠️ Assinatura inválida | Recebida: %s", signature)
+        return jsonify({"error": "Assinatura inválida"}), 403
+    # Validar parâmetros obrigatórios
+    required_params = ["companyName", "contactName", "contactNumber", "daysToExpire"]
+    missing = [param for param in required_params if not request.args.get(param)]
+
+    if missing:
+        logger.error("❌ Parâmetros obrigatórios faltando: %s", missing)
+        return (
+            jsonify(
+                {"error": f"Parâmetros obrigatórios faltando: {', '.join(missing)}"}
+            ),
+            400,
+        )
+
+    # Get params da query da request
+    company_name = request.args["companyName"]
+    contact_name = request.args["contactName"]
+    contact_number = request.args["contactNumber"]
+    days_to_expire = request.args["daysToExpire"]
+
+    logger.info(
+        "ℹ️ Nova requisição de aviso do vencimento de CD\n"
+        "Empresa: %s\nContato: %s\nNúmero: %s\nDias para expirar: %s",
+        company_name,
+        contact_name,
+        contact_number,
+        days_to_expire,
+    )
+
+    # Buscar contact ID - FUNÇÃO ATUALIZADA
+    contact_id = get_contact_id_by_number(contact_number)
+
+    if not contact_id:
+        logger.error("❌ Contact ID não encontrado para o número: %s", contact_number)
+        return jsonify({"error": "Número não encontrado no sistema"}), 404
+
+    # ID do departamento fixo certificação digital
+    department_id = "154521dc-71c0-4117-a697-bd978cd442aa"
 
     # Enviar mensagem
     result = send_message_digisac(
-        contact_id=data["contact_id"],
-        user_id=data["user_id"],
-        department_id=data["department_id"],
-        contact_name=data["contact_name"],
-        company_name=data["company_name"],
+        contact_id=contact_id,
+        department_id=department_id,
+        contact_name=contact_name,
+        company_name=company_name,
     )
 
     if "error" in result:
+        logger.error("❌ Falha ao enviar mensagem: %s", result["error"])
         return jsonify(result), 500
 
     return (
         jsonify(
             {
                 "status": "success",
-                "message": "Comunicação enviada",
+                "message": "Mensagem enviada com sucesso",
                 "digisac_response": result,
             }
         ),
@@ -163,54 +191,10 @@ def post_envia_comunicado_para_cliente_bitrix():
 @webhook_bp.route("/renova-certificado", methods=["POST"])
 def post_renova_certificado_digisac():
     """Processa resposta de renovação de certificado"""
+    certificado_department_id = "154521dc-71c0-4117-a697-bd978cd442aa"
     # Log detalhado da requisição
     logger.debug(f"→ Headers: {dict(request.headers)}")
     logger.debug(f"→ Raw Data: {request.get_data()!r}")
-
-    try:
-        data = request.get_json()
-        logger.debug(f"→ JSON: {data}")
-    except BadRequest:
-        return jsonify({"error": "Invalid JSON"}), 400
-
-    # Verificar se é mensagem válida
-    if data.get("origin") != "contact" or "text" not in data:
-        return jsonify({"status": "ignored"}), 200
-
-    # Processar resposta
-    resposta = data["text"].strip()
-    contact_id = data.get("contactId")
-    ticket = data.get("ticket", {})
-
-    if resposta == "1":  # Cliente quer renovar
-        result = transfer_ticket_digisac(
-            contact_id=contact_id,
-            department_id=Config.RENOVACAO_DEPARTMENT_ID,
-            user_id=None,
-            comments="Cliente solicitou renovação de certificado",
-        )
-
-        if "error" in result:
-            return jsonify(result), 500
-
-        return (
-            jsonify(
-                {
-                    "status": "success",
-                    "message": "Ticket transferido para renovação",
-                    "digisac_response": result,
-                }
-            ),
-            200,
-        )
-
-    elif resposta == "2":  # Cliente não quer renovar
-        return (
-            jsonify({"status": "success", "message": "Cliente recusou renovação"}),
-            200,
-        )
-
-    return jsonify({"status": "ignored"}), 200
 
 
 @webhook_bp.route("/nao-renova-certificado", methods=["POST"])

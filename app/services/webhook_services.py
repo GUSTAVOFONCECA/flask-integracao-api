@@ -4,11 +4,12 @@
 Módulo para gerenciamento de webhooks e processamento de dados de CNPJ para integração com Bitrix24.
 """
 
-
+import os
 import hmac
 import re
 import json
 import logging
+from urllib.parse import urlparse, parse_qs, unquote_plus
 from datetime import datetime, timedelta
 from functools import wraps
 from typing import Optional, Dict
@@ -291,12 +292,12 @@ def refresh_tokens():
         new_tokens = get_auth_digisac(username, password)
 
     if "error" in new_tokens:
-        raise Exception(f"Falha na autenticação: {new_tokens['error']}")
+        raise RuntimeError(f"Falha na autenticação: {new_tokens['error']}")
 
     # Atualiza tokens globais
     digisac_tokens["access_token"] = new_tokens["access_token"]
     digisac_tokens["refresh_token"] = new_tokens["refresh_token"]
-    digisac_tokens["expires_at"] = datetime.utcnow() + timedelta(
+    digisac_tokens["expires_at"] = datetime.today() + timedelta(
         seconds=new_tokens["expires_in"] - 60
     )
 
@@ -338,6 +339,53 @@ def refresh_auth_digisac(refresh_token: str) -> dict:
         return {"error": str(e)}
 
 
+def get_contact_id_by_number(contact_number: str) -> str | None:
+    """
+    Busca o contactId no JSON de contatos pelo número de telefone,
+    considerando a possível presença do nono dígito.
+
+    :param contact_number: Número do contato no formato recebido (ex: "Trabalho:  5562993159124")
+    :return: contactId ou None se não encontrar
+    """
+    # Caminho para o arquivo JSON
+    contacts_json_path = os.path.join(
+        os.getcwd(), "..", "database", "digisac_contacts.json"
+    )
+
+    try:
+        # 1. Extrair apenas dígitos do número recebido
+        raw_digits = re.sub(r"\D", "", contact_number)
+
+        # 2. Gerar versões alternativas do número
+        possible_numbers = [raw_digits]
+
+        # Se tiver 13 dígitos (com nono dígito), criar versão sem o 9º
+        if len(raw_digits) == 13:
+            # Formato: 55 (DDI) + 62 (DDD) + 9 (nono) + 93159124 (número)
+            # Versão sem nono dígito: 55 + 62 + 93159124 → 556293159124
+            without_ninth = raw_digits[:4] + raw_digits[5:]
+            possible_numbers.append(without_ninth)
+
+        # 3. Carregar contatos do JSON
+        with open(contacts_json_path, "r", encoding="utf-8") as f:
+            contacts = json.load(f)
+
+        # 4. Buscar correspondência
+        for contact in contacts:
+            contact_num = contact.get("data", {}).get("number", "")
+            # Remover não-dígitos para comparar
+            contact_digits = re.sub(r"\D", "", contact_num)
+
+            if contact_digits in possible_numbers:
+                return contact.get("id")
+
+        return None
+
+    except (FileNotFoundError, json.JSONDecodeError, OSError) as e:
+        logger.error("❌ Erro ao buscar contactId: %s", str(e))
+        return None
+
+
 def transfer_ticket_digisac(
     contact_id: str, department_id: str, user_id: str, comments: str
 ) -> dict:
@@ -356,7 +404,7 @@ def transfer_ticket_digisac(
 
 def send_message_digisac(
     contact_id: str,
-    user_id: str,
+    # user_id: str,
     department_id: str,
     contact_name: str,
     company_name: str,
@@ -372,7 +420,7 @@ def send_message_digisac(
             "2 - Não"
         ),
         "contactId": contact_id,
-        "userId": user_id,
+        # "userId": user_id,
         "ticketDepartmentId": department_id,
         "origin": "bot",
     }

@@ -51,6 +51,8 @@ class Config:
     BITRIX_WEBHOOK_URL: str = os.getenv("BITRIX_WEBHOOK_URL", "")
     BITRIX_WEBHOOK_TOKEN: str = os.getenv("BITRIX_WEBHOOK_TOKEN", "")
     TUNNEL_PORT: int = 5478
+    DIGISAC_USER: str = os.getenv("DIGISAC_USER", "")
+    DIGISAC_PASSWORD: str = os.getenv("DIGISAC_PASSWORD", "")
 
     @classmethod
     def validate(cls) -> None:

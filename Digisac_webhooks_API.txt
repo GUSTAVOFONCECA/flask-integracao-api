@@ -1,0 +1,98 @@
+*Luiz Florindo*:
+Orientações detalhadas para configurar o robô com webhook e contexto
+Olá! A seguir, explico passo a passo como você deve configurar o seu robô para realizar o disparo via webhook, tratar a resposta e criar as regras necessárias para que o fluxo funcione corretamente:
+
+Tudo isso no contexto persistente, ok?
+
+1️⃣ Criar a regra de recebimento da mensagem (disparo via webhook)
+➡️ Passos:
+No seu robô, crie uma nova regra de "Recebimento de mensagem".
+
+Dentro dessa regra, configure:
+
+Condição: Verifique se o chamado está incluso na lista.
+
+Ação: "Enviar comando webhook".
+
+Identificador do comando: Defina um identificador único.
+➡️ Este será o código que o seu webhook vai reconhecer e tratar.
+➡️ Pode ser uma palavra-chave ou um código específico.
+
+✅ Importante: O identificador precisa ser algo que a sua equipe consiga identificar facilmente quando o webhook receber a solicitação.
+
+2️⃣ Configurar o direcionamento para o departamento correto
+Ainda dentro da regra de recebimento de mensagem, adicione a seguinte condição:
+
+Se o operador estiver incluso na lista.
+
+Em seguida, selecione o departamento correto, por exemplo:
+➡️ "Certificado Digital".
+
+Configure também uma verificação se a variável contém alguma palavra-chave específica.
+➡️ Exemplo: Se a variável tiver os valores "1", "2" ou "3", então o disparo será efetuado.
+
+Assim, a ação será:
+➡️ "Enviar comando webhook" com o identificador definido no passo anterior.
+
+3️⃣ Criar uma contra-regra para os outros departamentos
+Ainda no mesmo contexto de "Recebimento de mensagem", crie mais uma regra.
+
+Nessa regra, configure a condição:
+
+Se o chamado estiver no departamento.
+
+Incluso na lista de TODOS os outros departamentos, ou seja, todos aqueles que NÃO devem fazer o disparo.
+
+Ação:
+
+Defina o "contexto morto" (ou qualquer outra ação que deseje configurar para essas situações).
+
+✅ Assim, garantimos que o disparo via webhook só aconteça para o departamento desejado.
+
+4️⃣ Criar o gatilho do "Sinal da API"
+Agora, precisamos configurar a parte que vai tratar a resposta do webhook.
+
+Dentro do mesmo contexto que criamos anteriormente, configure um novo gatilho:
+
+Tipo: "Sinal da API".
+
+Dentro deste gatilho, você vai configurar a flag.
+➡️ Esta flag será a resposta enviada pelo seu webhook de volta para o robô.
+
+5️⃣ Configurar a flag do gatilho
+Na configuração do gatilho, clique na opção:
+➡️ "Variável" e selecione "Flag do gatilho (sinal da API)".
+
+Em "Operador", selecione:
+➡️ "Igual".
+
+Em "Valor", digite exatamente o valor que a sua API retornará.
+✅ Atenção: Esse valor deve ser inserido sem espaços a mais ou a menos.
+➡️ Qualquer diferença impedirá que o robô reconheça a resposta corretamente.
+
+6️⃣ Definir a ação após a flag
+Após configurar corretamente a flag, defina a ação que o robô deve tomar com base nesse retorno.
+➡️ Por exemplo:
+
+Transferir para outro departamento;
+
+Enviar uma mensagem;
+
+Notificar o cliente sobre boleto em aberto;
+
+Qualquer outra ação necessária no seu fluxo.
+
+✅ Assim, a resposta tratada pelo webhook será corretamente processada pelo robô e o atendimento seguirá conforme desejado.
+
+✅ Resumo visual do fluxo:
+Mensagem recebida →
+
+Verifica se está no departamento correto →
+
+Dispara o webhook com identificador →
+
+Webhook trata e responde →
+
+Robô recebe a flag (sinal da API) →
+
+Realiza a ação configurada.
