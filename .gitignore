@@ -3,8 +3,7 @@ __pycache__/
 *.py[cod]
 *.pyc
 venv/
-.env
-.env.local
+
 
 # Logs
 logs/
