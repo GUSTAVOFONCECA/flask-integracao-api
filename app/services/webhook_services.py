@@ -444,3 +444,5 @@ def send_message_digisac(
     except requests.RequestException as e:
         logger.error("❌ [MSG] Erro: %s", e)
         return {"error": str(e)}
+
+###############################################################################
