@@ -4,6 +4,7 @@
 Rotas de webhook para integração com Bitrix24 e validação de CNPJ.
 """
 
+import time
 import logging
 from werkzeug.exceptions import BadRequest
 from flask import Blueprint, request, jsonify
@@ -116,9 +117,6 @@ def post_valida_cnpj_receita_bitrix():
 @webhook_bp.route("/aviso-certificado", methods=["POST"])
 def post_envia_comunicado_para_cliente_bitrix():
     """Envia comunicação de expiração de certificado"""
-    # ID departamento fixo certificação digital
-    department_id = "154521dc-71c0-4117-a697-bd978cd442aa"
-
     # Obter a assinatura DO FORMULÁRIO (não do header)
     signature = request.form.get("auth[member_id]", "")
 
@@ -161,15 +159,18 @@ def post_envia_comunicado_para_cliente_bitrix():
         logger.error("❌ Contact ID não encontrado para o número: %s", contact_number)
         return jsonify({"error": "Número não encontrado no sistema"}), 404
 
-    # ID do departamento fixo certificação digital
-    department_id = "154521dc-71c0-4117-a697-bd978cd442aa"
+    # Abrir chamado
+    transfer_ticket_digisac(
+        contact_id=contact_id,
+    )
+    time.sleep(1)
 
     # Enviar mensagem
     result = send_message_digisac(
         contact_id=contact_id,
-        department_id=department_id,
         contact_name=contact_name,
         company_name=company_name,
+        days_to_expire=days_to_expire,
     )
 
     if "error" in result:
@@ -191,14 +192,31 @@ def post_envia_comunicado_para_cliente_bitrix():
 @webhook_bp.route("/renova-certificado", methods=["POST"])
 def post_renova_certificado_digisac():
     """Processa resposta de renovação de certificado"""
-    certificado_department_id = "154521dc-71c0-4117-a697-bd978cd442aa"
     # Log detalhado da requisição
-    logger.debug(f"→ Headers: {dict(request.headers)}")
-    logger.debug(f"→ Raw Data: {request.get_data()!r}")
+    # ─── DEBUG: tudo que chega na requisição ──────────────────────────────
+    # Query string (args)
+    logger.debug("→ Query String args: %s", request.args.to_dict(flat=False))
+    # Cabeçalhos
+    logger.debug("→ Headers: %s", dict(request.headers))
+    # Payload raw
+    logger.debug("→ Raw Data: %r", request.get_data())
+    # JSON (se houver)
+    try:
+        json_payload = request.get_json(silent=True)
+    except BadRequest as e:
+        json_payload = f"<invalid JSON: {e}>"
+    logger.debug("→ JSON: %s", json_payload)
+    # Form fields (application/x-www-form-urlencoded ou multipart/form-data)
+    logger.debug("→ Form: %s", request.form.to_dict(flat=False))
+    # Arquivos (se houver upload)
+    logger.debug("→ Files: %s", list(request.files.keys()))
+    # Valores combinados (args + form)
+    logger.debug("→ Values (args+form): %s", request.values.to_dict(flat=False))
 
 
 @webhook_bp.route("/nao-renova-certificado", methods=["POST"])
 def post_nao_renova_certificado_digisac():
+    """Processa resposta de não renovação de certificado"""
     # ─── DEBUG: tudo que chega na requisição ──────────────────────────────
     # Query string (args)
     logger.debug("→ Query String args: %s", request.args.to_dict(flat=False))

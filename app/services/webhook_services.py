@@ -9,7 +9,6 @@ import hmac
 import re
 import json
 import logging
-from urllib.parse import urlparse, parse_qs, unquote_plus
 from datetime import datetime, timedelta
 from functools import wraps
 from typing import Optional, Dict
@@ -263,6 +262,7 @@ BASE_API = f"{URL_DIGISAC}/api/v1"
 CLIENT_ID = "api"
 CLIENT_SECRET = "secret"
 
+
 # Variável global para armazenamento de tokens
 digisac_tokens = {"access_token": None, "refresh_token": None, "expires_at": None}
 
@@ -313,11 +313,11 @@ def get_auth_digisac(username: str, password: str) -> dict:
         "password": password,
     }
     try:
-        response = requests.post(url, data=payload)
+        response = requests.post(url, data=payload, timeout=10)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        logger.error(f"❌ Erro na autenticação: {str(e)}")
+        logger.error("❌ Erro na autenticação: %s", str(e))
         return {"error": str(e)}
 
 
@@ -331,11 +331,11 @@ def refresh_auth_digisac(refresh_token: str) -> dict:
         "refresh_token": refresh_token,
     }
     try:
-        response = requests.post(url, data=payload)
+        response = requests.post(url, data=payload, timeout=10)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        logger.error(f"❌ Erro no refresh: {str(e)}")
+        logger.error("❌ Erro no refresh: %s", str(e))
         return {"error": str(e)}
 
 
@@ -349,7 +349,7 @@ def get_contact_id_by_number(contact_number: str) -> str | None:
     """
     # Caminho para o arquivo JSON
     contacts_json_path = os.path.join(
-        os.getcwd(), "..", "database", "digisac_contacts.json"
+        os.getcwd(), "app", "database", "digisac", "digisac_contacts.json"
     )
 
     try:
@@ -372,8 +372,7 @@ def get_contact_id_by_number(contact_number: str) -> str | None:
 
         # 4. Buscar correspondência
         for contact in contacts:
-            contact_num = contact.get("data", {}).get("number", "")
-            # Remover não-dígitos para comparar
+            contact_num = (contact.get("data") or {}).get("number") or ""
             contact_digits = re.sub(r"\D", "", contact_num)
 
             if contact_digits in possible_numbers:
@@ -386,49 +385,62 @@ def get_contact_id_by_number(contact_number: str) -> str | None:
         return None
 
 
-def transfer_ticket_digisac(
-    contact_id: str, department_id: str, user_id: str, comments: str
-) -> dict:
+def transfer_ticket_digisac(contact_id: str) -> dict:
     """Transfere ticket no Digisac"""
+    user_id = Config.DIGISAC_USER_ID
+    # ID do departamento fixo certificação digital
+    department_id = "154521dc-71c0-4117-a697-bd978cd442aa"
+
+    # Comentário da abertura do chamado
+    comments = "Chamado aberto via automação para renovação de certificado."
+
     url = f"{BASE_API}/contacts/{contact_id}/ticket/transfer"
     payload = {"departmentId": department_id, "userId": user_id, "comments": comments}
 
     try:
-        resp = requests.post(url, headers=get_auth_headers(), json=payload)
+        resp = requests.post(url, headers=get_auth_headers(), json=payload, timeout=10)
         resp.raise_for_status()
-        return resp.json()
+        if resp.content and "application/json" in resp.headers.get("Content-Type", ""):
+            return resp.json()
+        else:
+            return {"status_code": resp.status_code, "text": resp.text}
+
     except requests.RequestException as e:
-        logger.error(f"❌ [TRANSFER] Erro: {e}")
+        logger.error("❌ [TRANSFER] Erro: %s", e)
         return {"error": str(e)}
 
 
+# REFATORAR CÓDIGO PARA SER MAIS GENERALISTA, RECEBENDO MSG TEXT E DEPARTMENT ID
 def send_message_digisac(
     contact_id: str,
-    # user_id: str,
-    department_id: str,
     contact_name: str,
     company_name: str,
+    days_to_expire: str,
 ) -> dict:
     """Envia mensagem automática via Digisac"""
+    user_id = Config.DIGISAC_USER_ID
+    # ID do departamento fixo certificação digital
+    department_id = "154521dc-71c0-4117-a697-bd978cd442aa"
+
     url = f"{BASE_API}/messages"
     payload = {
         "text": (
             f"Olá {contact_name}, o certificado da empresa {company_name} "
-            "irá expirar dentro de 15 dias.\n"
+            f"irá expirar dentro de {abs(int(days_to_expire))} dias.\n"
             "Deseja renovar seu certificado? (Digite a opção)\n\n"
             "1 - Sim\n"
             "2 - Não"
         ),
         "contactId": contact_id,
-        # "userId": user_id,
+        "userId": user_id,
         "ticketDepartmentId": department_id,
         "origin": "bot",
     }
 
     try:
-        resp = requests.post(url, headers=get_auth_headers(), json=payload)
+        resp = requests.post(url, headers=get_auth_headers(), json=payload, timeout=10)
         resp.raise_for_status()
         return resp.json()
     except requests.RequestException as e:
-        logger.error(f"❌ [MSG] Erro: {e}")
+        logger.error("❌ [MSG] Erro: %s", e)
         return {"error": str(e)}

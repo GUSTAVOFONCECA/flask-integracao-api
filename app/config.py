@@ -53,6 +53,7 @@ class Config:
     TUNNEL_PORT: int = 5478
     DIGISAC_USER: str = os.getenv("DIGISAC_USER", "")
     DIGISAC_PASSWORD: str = os.getenv("DIGISAC_PASSWORD", "")
+    DIGISAC_USER_ID: str = os.getenv("DIGISAC_USER_ID", "")
 
     @classmethod
     def validate(cls) -> None:
