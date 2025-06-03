@@ -40,10 +40,17 @@ class Config:
     # Porta para túnel reverso (LocalTunnel, ngrok, etc.)
     TUNNEL_PORT: int = int(os.getenv("TUNNEL_PORT", "5478"))
 
-    # Outras variáveis (exemplo)
+    # Digisac env
     DIGISAC_USER: str = os.getenv("DIGISAC_USER", "")
     DIGISAC_PASSWORD: str = os.getenv("DIGISAC_PASSWORD", "")
     DIGISAC_USER_ID: str = os.getenv("DIGISAC_USER_ID", "")
+
+    # Conta Azul OAuth
+    CONTA_AZUL_CLIENT_ID: str = os.getenv("CONTA_AZUL_CLIENT_ID", "")
+    CONTA_AZUL_CLIENT_SECRET: str = os.getenv("CONTA_AZUL_CLIENT_SECRET", "")
+    CONTA_AZUL_REDIRECT_URI: str = os.getenv(
+        "CONTA_AZUL_REDIRECT_URI", "https://127.0.0.1:5478/conta-azul/callback"
+    )
 
     @classmethod
     def validate(cls) -> None:
@@ -54,7 +61,9 @@ class Config:
         required = ["SECRET_KEY", "WEBHOOK_SECRET", "API_KEY"]
         missing = [var for var in required if not getattr(cls, var)]
         if missing:
-            raise EnvironmentError(f"Variáveis obrigatórias faltando: {', '.join(missing)}")
+            raise EnvironmentError(
+                f"Variáveis obrigatórias faltando: {', '.join(missing)}"
+            )
 
 
 class ColorFormatter(logging.Formatter):
@@ -70,11 +79,11 @@ class ColorFormatter(logging.Formatter):
     """
 
     _COLORS = {
-        logging.DEBUG: "\x1b[38;5;244m",   # cinza claro
-        logging.INFO: "\x1b[32;20m",       # verde
-        logging.WARNING: "\x1b[33;20m",    # amarelo
-        logging.ERROR: "\x1b[31;20m",      # vermelho
-        logging.CRITICAL: "\x1b[31;1m",    # vermelho negrito
+        logging.DEBUG: "\x1b[38;5;244m",  # cinza claro
+        logging.INFO: "\x1b[32;20m",  # verde
+        logging.WARNING: "\x1b[33;20m",  # amarelo
+        logging.ERROR: "\x1b[31;20m",  # vermelho
+        logging.CRITICAL: "\x1b[31;1m",  # vermelho negrito
         "reset": "\x1b[0m",
     }
 
@@ -115,8 +124,7 @@ class ColorFormatter(logging.Formatter):
         base = (
             f"\n{ts} | {record.levelname:<8} | [{record.name}] | "
             f"{record.module}:{record.lineno}\n"
-            f"{emoji} {record.getMessage()}\n"
-            + "-" * 80
+            f"{emoji} {record.getMessage()}\n" + "-" * 80
         )
         return f"{color}{base}{self._COLORS['reset']}"
 
@@ -156,8 +164,7 @@ def configure_logging(app: Any) -> None:
         # Formato de arquivo: multilinha, sem cores
         file_formatter = logging.Formatter(
             "[%(asctime)s] %(levelname)-8s | [%(name)s] | %(module)s:%(lineno)d\n"
-            "→ %(message)s\n"
-            + ("=" * 100),
+            "→ %(message)s\n" + ("=" * 100),
             datefmt="%Y-%m-%d %H:%M:%S",
         )
         file_handler.setFormatter(file_formatter)
@@ -169,7 +176,7 @@ def configure_logging(app: Any) -> None:
         console_handler.setLevel(lvl)
         console_handler.setFormatter(ColorFormatter())
 
-        # >>> 4) Root logger <<<  
+        # >>> 4) Root logger <<<
         root_logger = logging.getLogger()  # logger raiz
         root_logger.setLevel(logging.DEBUG)  # captura TUDO
         # Remove handlers antigos (se houver) para evitar duplicação
@@ -183,13 +190,11 @@ def configure_logging(app: Any) -> None:
         logging.getLogger("werkzeug").setLevel(logging.WARNING)
         logging.getLogger("urllib3").setLevel(logging.WARNING)
 
-
         # >>> 6) Log inicial de startup <<<
         app.logger.info(
             "\n🚀 🚀 🚀  Iniciando aplicação Flask  🚀 🚀 🚀\n"
             f"   Ambiente : {Config.ENV.upper()}\n"
-            f"   Log File : {filename}\n"
-            + ("=" * 100)
+            f"   Log File : {filename}\n" + ("=" * 100)
         )
 
         # >>> 7) Validação de variáveis obrigatórias <<<

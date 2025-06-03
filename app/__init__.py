@@ -6,7 +6,7 @@ Inicializa o app
 
 from flask import Flask
 from app.config import Config, configure_logging
-from app.routes import api_routes, webhook_routes
+from app.routes import api_routes, webhook_routes, conta_azul_routes
 
 
 def create_app() -> Flask:
@@ -60,11 +60,14 @@ def _configure_app(app: Flask) -> None:
 
 def _register_blueprints(app: Flask) -> None:
     """Registra todos os blueprints de rotas."""
-    blueprints = [(api_routes.api_bp, "/api"), (webhook_routes.webhook_bp, "/webhooks")]
+    blueprints = [
+        (api_routes.api_bp, "/api"), 
+        (webhook_routes.webhook_bp, "/webhooks"),
+        (conta_azul_routes.conta_azul_bp, "/conta-azul")  # Novo blueprint
+    ]
 
     for blueprint, url_prefix in blueprints:
         app.register_blueprint(blueprint, url_prefix=url_prefix)
-
 
 def _perform_post_configuration(app: Flask) -> None:
     """Validações e configurações pós-inicialização."""
