@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 # Endpoints da Conta Azul
 AUTH_URL = "https://auth.contaazul.com/oauth2/authorize"
 TOKEN_URL = "https://auth.contaazul.com/oauth2/token"
-API_BASE_URL = "https://api.contaazul.com"
+API_BASE_URL = "https://api-v2.contaazul.com"
 
 # Armazenamento de tokens (em memória - para produção use persistência)
 conta_azul_tokens: Dict[str, Optional[Union[str, datetime]]] = {
