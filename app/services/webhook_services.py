@@ -208,7 +208,7 @@ def update_company_process_cnpj(raw_cnpj_json: Dict, id_empresa: str) -> Dict:
     }
 
     logger.debug(
-        "\n✅ Processed data:\n%s\n",
+        "\nProcessed data:\n%s\n",
         json.dumps(processed_data, indent=2, ensure_ascii=False),
     )
 
@@ -317,7 +317,7 @@ def get_auth_digisac(username: str, password: str) -> dict:
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        logger.error("❌ Erro na autenticação: %s", str(e))
+        logger.error("Erro na autenticação: %s", str(e))
         return {"error": str(e)}
 
 
@@ -331,11 +331,11 @@ def refresh_auth_digisac(refresh_token: str) -> dict:
         "refresh_token": refresh_token,
     }
     try:
-        response = requests.post(url, data=payload, timeout=10)
+        response = requests.post(url, data=payload, timeout=60)
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        logger.error("❌ Erro no refresh: %s", str(e))
+        logger.error("Erro no refresh: %s", str(e))
         return {"error": str(e)}
 
 
@@ -381,7 +381,7 @@ def get_contact_id_by_number(contact_number: str) -> str | None:
         return None
 
     except (FileNotFoundError, json.JSONDecodeError, OSError) as e:
-        logger.error("❌ Erro ao buscar contactId: %s", str(e))
+        logger.error("Erro ao buscar contactId: %s", str(e))
         return None
 
 
@@ -398,7 +398,7 @@ def transfer_ticket_digisac(contact_id: str) -> dict:
     payload = {"departmentId": department_id, "userId": user_id, "comments": comments}
 
     try:
-        resp = requests.post(url, headers=get_auth_headers(), json=payload, timeout=10)
+        resp = requests.post(url, headers=get_auth_headers(), json=payload, timeout=60)
         resp.raise_for_status()
         if resp.content and "application/json" in resp.headers.get("Content-Type", ""):
             return resp.json()
@@ -406,7 +406,7 @@ def transfer_ticket_digisac(contact_id: str) -> dict:
             return {"status_code": resp.status_code, "text": resp.text}
 
     except requests.RequestException as e:
-        logger.error("❌ [TRANSFER] Erro: %s", e)
+        logger.error("[TRANSFER] Erro: %s", e)
         return {"error": str(e)}
 
 
@@ -438,11 +438,11 @@ def send_message_digisac(
     }
 
     try:
-        resp = requests.post(url, headers=get_auth_headers(), json=payload, timeout=10)
+        resp = requests.post(url, headers=get_auth_headers(), json=payload, timeout=60)
         resp.raise_for_status()
         return resp.json()
     except requests.RequestException as e:
-        logger.error("❌ [MSG] Erro: %s", e)
+        logger.error("[MSG] Erro: %s", e)
         return {"error": str(e)}
 
 ###############################################################################

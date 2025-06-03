@@ -72,7 +72,7 @@ class ColorFormatter(logging.Formatter):
 
     Exibe:
      - DEBUG em cinza 🐛
-     - INFO em verde ✅
+     - INFO em verde ℹ️
      - WARNING em amarelo ⚠️
      - ERROR em vermelho 🛑
      - CRITICAL em vermelho negrito 💥
@@ -103,19 +103,19 @@ class ColorFormatter(logging.Formatter):
 
         if lvl == logging.DEBUG:
             color = self._COLORS[lvl]
-            emoji = "🐛"
+            emoji = "🐛 "
         elif lvl == logging.INFO:
             color = self._COLORS[lvl]
-            emoji = "✅"
+            emoji = "ℹ️ "
         elif lvl == logging.WARNING:
             color = self._COLORS[lvl]
-            emoji = "⚠️"
+            emoji = "⚠️ "
         elif lvl == logging.ERROR:
             color = self._COLORS[lvl]
-            emoji = "🛑"
+            emoji = "🛑 "
         elif lvl == logging.CRITICAL:
             color = self._COLORS[lvl]
-            emoji = "💥"
+            emoji = "💥 "
         else:
             color = ""
             emoji = ""
@@ -192,7 +192,7 @@ def configure_logging(app: Any) -> None:
 
         # >>> 6) Log inicial de startup <<<
         app.logger.info(
-            "\n🚀 🚀 🚀  Iniciando aplicação Flask  🚀 🚀 🚀\n"
+            "🚀 🚀 🚀  Iniciando aplicação Flask  🚀 🚀 🚀\n"
             f"   Ambiente : {Config.ENV.upper()}\n"
             f"   Log File : {filename}\n" + ("=" * 100)
         )

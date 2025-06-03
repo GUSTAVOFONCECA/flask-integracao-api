@@ -61,14 +61,14 @@ def post_valida_cnpj_receita_bitrix():
 
     # Validar usando os dados BRUTOS da requisição (já URL-decoded)
     if not verify_webhook_signature(signature):
-        logger.warning("⚠️ Assinatura inválida | Recebida: %s", signature)
+        logger.warning("Assinatura inválida | Recebida: %s", signature)
         return jsonify({"error": "Assinatura inválida"}), 403
     # Validar parâmetros obrigatórios
     required_params = ["idEmpresa", "CNPJ"]
     missing = [param for param in required_params if not request.args.get(param)]
 
     if missing:
-        logger.error("❌ Parâmetros obrigatórios faltando: %s", missing)
+        logger.error("Parâmetros obrigatórios faltando: %s", missing)
         return (
             jsonify(
                 {"error": f"Parâmetros obrigatórios faltando: {', '.join(missing)}"}
@@ -85,7 +85,7 @@ def post_valida_cnpj_receita_bitrix():
         cnpj = request.args["CNPJ"]
 
         logger.info(
-            "ℹ️ Nova requisição de validação de CNPJ - ID Empresa: %s, CNPJ: %s",
+            "Nova requisição de validação de CNPJ - ID Empresa: %s, CNPJ: %s",
             id_empresa,
             cnpj,
         )
@@ -93,7 +93,7 @@ def post_valida_cnpj_receita_bitrix():
         # Consultar dados do CNPJ
         raw_cnpj_json = get_cnpj_receita(cnpj)
         if not raw_cnpj_json:
-            logger.error("❌ Falha na consulta do CNPJ %s", cnpj)
+            logger.error("Falha na consulta do CNPJ %s", cnpj)
             return jsonify({"error": "Dados do CNPJ não encontrados"}), 502
 
         # Processar e enviar dados
@@ -101,7 +101,7 @@ def post_valida_cnpj_receita_bitrix():
         api_response = post_destination_api(processed_data, post_url)
 
         logger.info(
-            "✅ CNPJ %s validado com sucesso para a empresa %s", cnpj, id_empresa
+            "CNPJ %s validado com sucesso para a empresa %s", cnpj, id_empresa
         )
 
         return (
@@ -110,7 +110,7 @@ def post_valida_cnpj_receita_bitrix():
         )
 
     except (KeyError, ValueError, TypeError) as e:
-        logger.critical("❌ Erro crítico no processamento: %s", str(e))
+        logger.critical("Erro crítico no processamento: %s", str(e))
         return jsonify({"error": "Erro interno no processamento"}), 500
 
 
@@ -122,14 +122,14 @@ def post_envia_comunicado_para_cliente_bitrix():
 
     # Validar usando os dados BRUTOS da requisição (já URL-decoded)
     if not verify_webhook_signature(signature):
-        logger.warning("⚠️ Assinatura inválida | Recebida: %s", signature)
+        logger.warning("Assinatura inválida | Recebida: %s", signature)
         return jsonify({"error": "Assinatura inválida"}), 403
     # Validar parâmetros obrigatórios
     required_params = ["companyName", "contactName", "contactNumber", "daysToExpire"]
     missing = [param for param in required_params if not request.args.get(param)]
 
     if missing:
-        logger.error("❌ Parâmetros obrigatórios faltando: %s", missing)
+        logger.error("Parâmetros obrigatórios faltando: %s", missing)
         return (
             jsonify(
                 {"error": f"Parâmetros obrigatórios faltando: {', '.join(missing)}"}
@@ -144,7 +144,7 @@ def post_envia_comunicado_para_cliente_bitrix():
     days_to_expire = request.args["daysToExpire"]
 
     logger.info(
-        "ℹ️ Nova requisição de aviso do vencimento de CD\n"
+        "Nova requisição de aviso do vencimento de CD\n"
         "Empresa: %s\nContato: %s\nNúmero: %s\nDias para expirar: %s",
         company_name,
         contact_name,
@@ -156,7 +156,7 @@ def post_envia_comunicado_para_cliente_bitrix():
     contact_id = get_contact_id_by_number(contact_number)
 
     if not contact_id:
-        logger.error("❌ Contact ID não encontrado para o número: %s", contact_number)
+        logger.error("Contact ID não encontrado para o número: %s", contact_number)
         return jsonify({"error": "Número não encontrado no sistema"}), 404
 
     # Abrir chamado
@@ -174,7 +174,7 @@ def post_envia_comunicado_para_cliente_bitrix():
     )
 
     if "error" in result:
-        logger.error("❌ Falha ao enviar mensagem: %s", result["error"])
+        logger.error("Falha ao enviar mensagem: %s", result["error"])
         return jsonify(result), 500
 
     return (

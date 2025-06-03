@@ -60,14 +60,14 @@ def _monitor_output(stream, url_event, url_container, subdomain, process):
             url_candidate = line.split("your url is:")[1].strip()
             # Se o link contiver o subdomínio exato, sucesso
             if subdomain in url_candidate:
-                logger.info("✅ LT retornou URL correta: %s", url_candidate)
+                logger.info("LT retornou URL correta: %s", url_candidate)
                 url_container[0] = url_candidate
                 url_event.set()
                 return
             else:
                 # Subdomínio diferente: mata o processo e retorna (forçando nova tentativa)
                 logger.warning(
-                    "⚠️ LT retornou subdomínio incorreto (%s). Finalizando processo para retry.",
+                    "LT retornou subdomínio incorreto (%s). Finalizando processo para retry.",
                     url_candidate,
                 )
                 try:
@@ -77,7 +77,7 @@ def _monitor_output(stream, url_event, url_container, subdomain, process):
                 return
 
         # (Opcional) Log de DEBUG para ver tudo o que o lt está emitindo
-        logger.debug("ℹ️ LT Output: %s", line)
+        logger.debug("LT Output: %s", line)
 
 
 def _start_tunnel_process(cmd_str: str) -> subprocess.Popen:
@@ -158,7 +158,7 @@ def _try_start_tunnel() -> Optional[dict]:
             UnicodeDecodeError,
             OSError,
         ) as e:
-            logger.warning("⚠️ Falha na tentativa %d: %s", attempt, e)
+            logger.warning("Falha na tentativa %d: %s", attempt, e)
             # Se o processo ainda estiver vivo, encerra para liberar recursos
             if process and process.poll() is None:
                 try:
@@ -191,11 +191,11 @@ def _run_tunnel_loop():
             while process.poll() is None:
                 time.sleep(TUNNEL_CHECK_INTERVAL)
 
-            logger.warning("⚠️ Túnel encerrado inesperadamente. Reiniciando...")
+            logger.warning("Túnel encerrado inesperadamente. Reiniciando...")
 
         else:
             logger.error(
-                "❌ Não foi possível alocar subdomínio '%s'. "
+                "Não foi possível alocar subdomínio '%s'. "
                 "Tentando novamente em %ds...",
                 TUNNEL_SUBDOMAIN,
                 TUNNEL_RETRY_INTERVAL,

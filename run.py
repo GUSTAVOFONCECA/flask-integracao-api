@@ -37,10 +37,10 @@ class AppManager:
         - Em 'development' usa o servidor embutido do Flask.
         """
         if Config.ENV == "production":
-            self.flask_app.logger.info("ℹ️  Iniciando servidor em modo produção")
+            self.flask_app.logger.info("Iniciando servidor em modo produção")
             serve(self.flask_app, host="0.0.0.0", port=Config.TUNNEL_PORT)
         else:
-            self.flask_app.logger.info("ℹ️  Iniciando servidor em modo desenvolvimento")
+            self.flask_app.logger.info("Iniciando servidor em modo desenvolvimento")
             self.flask_app.run(
                 host="0.0.0.0",
                 port=Config.TUNNEL_PORT,
@@ -54,7 +54,7 @@ class AppManager:
         1. Loga mensagem de encerramento.
         2. Sai do processo com código 0.
         """
-        self.flask_app.logger.info("ℹ️  Encerrando aplicação...")
+        self.flask_app.logger.info("Encerrando aplicação...")
         sys.exit(0)
 
 
@@ -80,7 +80,7 @@ def main() -> None:
         app_logger = manager.flask_app.logger
         
         # Validação agora é feita dentro do configure_logging
-        app_logger.info("🛠️  Verificando configurações básicas...")
+        app_logger.info("🛠️ Verificando configurações básicas...")
         app_logger.info("✅ Configurações válidas")
 
         # 4) Testar health check da API antes de subir o servidor
@@ -117,15 +117,15 @@ def main() -> None:
         # 7) Loop de monitoramento
         while True:
             if not flask_thread.is_alive():
-                raise RuntimeError("❌ Servidor Flask parou inesperadamente")
+                raise RuntimeError("Servidor Flask parou inesperadamente")
             time.sleep(5)
 
     except (RuntimeError, ConnectionError, AssertionError, EnvironmentError) as e:
         # Se manager.flask_app existir, usamos o logger; caso contrário, printar
         if manager and manager.flask_app:
-            manager.flask_app.logger.critical("\n❌ Falha crítica:\n%s\n", str(e))
+            manager.flask_app.logger.critical("\nFalha crítica:\n%s\n", str(e))
         else:
-            print(f"\n❌ Falha crítica:\n{str(e)}\n")
+            print(f"\nFalha crítica:\n{str(e)}\n")
         sys.exit(1)
 
 
