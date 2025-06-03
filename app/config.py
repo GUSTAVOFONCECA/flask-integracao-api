@@ -1,22 +1,13 @@
 # app/config.py
 
 """
-Módulo de configuração centralizada para aplicações Flask.
+Módulo de configuração centralizada para a aplicação Flask.
 
-Fornece funcionalidades para:
-- Carregamento de variáveis de ambiente
-- Configuração avançada de logging
-- Validação de ambiente
-- Formatação colorida de logs
-
-Classes:
-    Config: Configurações principais da aplicação
-    ColorFormatter: Formata logs com cores ANSI
-
-Funções:
-    configure_logging: Configura sistema de logging da aplicação
+- Carrega variáveis de ambiente (python-dotenv).
+- Configura logging em arquivo (RotatingFileHandler) e console (StreamHandler com cores).
+- Garante que todos os logs (INFO, DEBUG, WARNING, ERROR) sejam gravados em arquivo.
+- Valida variáveis obrigatórias: SECRET_KEY, WEBHOOK_SECRET, API_KEY.
 """
-
 
 import os
 import logging
@@ -25,32 +16,31 @@ from datetime import datetime
 from typing import Any
 from dotenv import load_dotenv
 
+# 1) Carrega variáveis do .env (se existir)
 load_dotenv()
 
 
 class Config:
     """
-    Configurações globais da aplicação carregadas de variáveis de ambiente.
-
-    Attributes:
-        LOG_FILE (str): Caminho do arquivo de log (padrão: 'app.log')
-        ENV (str): Ambiente de execução (development/production)
-        SECRET_KEY (str): Chave secreta da aplicação
-        WEBHOOK_SECRET (str): Segredo para validação de webhooks
-        API_KEY (str): Chave para autenticação de API
-        BITRIX_WEBHOOK_URL (str): URL para integração com Bitrix24
-        BITRIX_WEBHOOK_TOKEN (str): Token para validação com Bitrix24
-        TUNNEL_PORT (int): Porta para túnel reverso (padrão: 5478)
+    Configurações globais da aplicação (lidas via .env ou padrão).
     """
 
-    LOG_FILE: str = "app.log"
+    # Ambiente de execução: 'development' ou 'production'
     ENV: str = os.getenv("FLASK_ENV", "production").lower()
+
+    # Variáveis obrigatórias
     SECRET_KEY: str = os.getenv("SECRET_KEY", "")
     WEBHOOK_SECRET: str = os.getenv("WEBHOOK_SECRET", "")
     API_KEY: str = os.getenv("API_KEY", "")
+
+    # Integrações (exemplo)
     BITRIX_WEBHOOK_URL: str = os.getenv("BITRIX_WEBHOOK_URL", "")
     BITRIX_WEBHOOK_TOKEN: str = os.getenv("BITRIX_WEBHOOK_TOKEN", "")
-    TUNNEL_PORT: int = 5478
+
+    # Porta para túnel reverso (LocalTunnel, ngrok, etc.)
+    TUNNEL_PORT: int = int(os.getenv("TUNNEL_PORT", "5478"))
+
+    # Outras variáveis (exemplo)
     DIGISAC_USER: str = os.getenv("DIGISAC_USER", "")
     DIGISAC_PASSWORD: str = os.getenv("DIGISAC_PASSWORD", "")
     DIGISAC_USER_ID: str = os.getenv("DIGISAC_USER_ID", "")
@@ -58,168 +48,153 @@ class Config:
     @classmethod
     def validate(cls) -> None:
         """
-        Valida as variáveis de ambiente obrigatórias.
-
-            :params:
-                :cls:  :class:`Config`  # noqa: E1101
-                :type:  :class:`Config`
-
-                Classe Config
-
-            :return:
-                None
-
-            :raises EnvironmentError: Se variáveis essenciais estiverem faltando
-            :raises ValueError: Se variáveis existirem mas estiverem vazias
+        Verifica se as variáveis obrigatórias estão preenchidas.
+        Caso contrario, lança EnvironmentError.
         """
         required = ["SECRET_KEY", "WEBHOOK_SECRET", "API_KEY"]
         missing = [var for var in required if not getattr(cls, var)]
         if missing:
-            raise EnvironmentError(f"Variáveis faltando: {', '.join(missing)}")
+            raise EnvironmentError(f"Variáveis obrigatórias faltando: {', '.join(missing)}")
 
 
 class ColorFormatter(logging.Formatter):
-    """Implementa formatação colorida para logs no terminal usando códigos ANSI.
+    """
+    Formata registros de log no console com cores ANSI, emojis e quebras de linha.
 
-    Attributes:
-        FORMATS (dict): Mapeamento de níveis de log para códigos de cores
+    Exibe:
+     - DEBUG em cinza 🐛
+     - INFO em verde ✅
+     - WARNING em amarelo ⚠️
+     - ERROR em vermelho 🛑
+     - CRITICAL em vermelho negrito 💥
     """
 
     _COLORS = {
-        "grey": "\x1b[38;20m",
-        "green": "\x1b[32;20m",
-        "yellow": "\x1b[33;20m",
-        "red": "\x1b[31;20m",
-        "bold_red": "\x1b[31;1m",
+        logging.DEBUG: "\x1b[38;5;244m",   # cinza claro
+        logging.INFO: "\x1b[32;20m",       # verde
+        logging.WARNING: "\x1b[33;20m",    # amarelo
+        logging.ERROR: "\x1b[31;20m",      # vermelho
+        logging.CRITICAL: "\x1b[31;1m",    # vermelho negrito
         "reset": "\x1b[0m",
     }
 
-    _BASE_FORMAT = (
-        "%(asctime)s | %(levelname)-8s [%(name)s] | %(module)s:%(lineno)d %(message)s"
-    )
-
-    FORMATS = {
-        logging.DEBUG: _COLORS["grey"] + _BASE_FORMAT + _COLORS["reset"],
-        logging.INFO: _COLORS["green"] + _BASE_FORMAT + _COLORS["reset"],
-        logging.WARNING: _COLORS["yellow"] + _BASE_FORMAT + _COLORS["reset"],
-        logging.ERROR: _COLORS["red"] + _BASE_FORMAT + _COLORS["reset"],
-        logging.CRITICAL: _COLORS["bold_red"] + _BASE_FORMAT + _COLORS["reset"],
-    }
-
     def format(self, record: logging.LogRecord) -> str:
-        """Formata o registro de log aplicando a cor correspondente ao nível.
-
-        :param record: Registro de log a ser formatado
-        :type record: :class:`logging.LogRecord`
-        :return: Mensagem de log formatada com cores ANSI
-        :rtype: str
-
-        Exemplo de uso:
-            >>> formatter = ColorFormatter()
-            >>> log_record = logger.makeRecord(
-                                "test",
-                                logging.INFO,
-                                __file__,
-                                42,
-                                "Test message",
-                                (),
-                                None
-                            )
-            >>> colored_message = formatter.format(log_record)
         """
-        formatter = logging.Formatter(
-            self.FORMATS[record.levelno], datefmt="%Y-%m-%d %H:%M:%S"
+        Retorna uma string composta por:
+         - Timestamp
+         - Levelname
+         - [Nome do logger]
+         - Módulo:linha
+         - Mensagem (precedida por emoji)
+         - Linha de separação
+        Tudo colorido conforme o level.
+        """
+        ts = datetime.fromtimestamp(record.created).strftime("%Y-%m-%d %H:%M:%S")
+        lvl = record.levelno
+
+        if lvl == logging.DEBUG:
+            color = self._COLORS[lvl]
+            emoji = "🐛"
+        elif lvl == logging.INFO:
+            color = self._COLORS[lvl]
+            emoji = "✅"
+        elif lvl == logging.WARNING:
+            color = self._COLORS[lvl]
+            emoji = "⚠️"
+        elif lvl == logging.ERROR:
+            color = self._COLORS[lvl]
+            emoji = "🛑"
+        elif lvl == logging.CRITICAL:
+            color = self._COLORS[lvl]
+            emoji = "💥"
+        else:
+            color = ""
+            emoji = ""
+
+        # Formato multilinha:
+        base = (
+            f"\n{ts} | {record.levelname:<8} | [{record.name}] | "
+            f"{record.module}:{record.lineno}\n"
+            f"{emoji} {record.getMessage()}\n"
+            + "-" * 80
         )
-        return formatter.format(record)
+        return f"{color}{base}{self._COLORS['reset']}"
 
 
 def configure_logging(app: Any) -> None:
-    """Configura o sistema de logging da aplicação.
+    """
+    Configura o sistema de logging:
 
-    Cria:
-        - Arquivo de log rotativo
-        - Log colorido no console (em desenvolvimento)
-        - Estrutura de diretórios para logs
-
-    :param app: Instância da aplicação Flask
-    :raises RuntimeError: Em falha crítica de configuração
+    1) Cria pasta absoluta "logs/" dentro da raiz do projeto.
+    2) Cria RotatingFileHandler (NÍVEL MÍNIMO: DEBUG) gravando em arquivo.
+    3) Cria StreamHandler (para console) com ColorFormatter.
+       - DEBUG+ no console se ENV == "development"
+       - INFO+ no console se ENV == "production"
+    4) Anexa esses handlers ao root logger, para que todos os sub-loggers herdem.
+    5) Ajusta níveis de log para werkzeug e urllib3 (não poluir).
+    6) Ajusta app.logger para não propagar duplicadamente.
+    7) Lança um log inicial de “startup” com informações de ambiente + caminho do arquivo.
+    8) Valida variáveis obrigatórias.
     """
     try:
-        _clean_handlers(app)
-        logs_dir = _create_logs_directory()
+        # >>> 1) Diretório absoluto para logs <<<
+        # Assumimos que este script está em "app/config.py".
+        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        logs_dir = os.path.join(project_root, "logs")
+        os.makedirs(logs_dir, exist_ok=True)
 
-        file_handler = _create_file_handler(logs_dir)
-        app.logger.addHandler(file_handler)
+        # >>> 2) RotatingFileHandler (DEBUG+) <<<
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        filename = os.path.join(logs_dir, f"app_{timestamp}.log")
 
-        if Config.ENV == "development":
-            _add_console_handler(app)
+        file_handler = RotatingFileHandler(
+            filename=filename,
+            maxBytes=10 * 1024 * 1024,  # 10 MB
+            backupCount=5,
+            encoding="utf-8",
+        )
+        # Formato de arquivo: multilinha, sem cores
+        file_formatter = logging.Formatter(
+            "[%(asctime)s] %(levelname)-8s | [%(name)s] | %(module)s:%(lineno)d\n"
+            "→ %(message)s\n"
+            + ("=" * 100),
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+        file_handler.setFormatter(file_formatter)
+        file_handler.setLevel(logging.DEBUG)  # grava TUDO a partir de DEBUG
 
-        _configure_log_levels(app)
-        _log_startup_info(app, logs_dir)
+        # >>> 3) StreamHandler para console <<<
+        console_handler = logging.StreamHandler()
+        lvl = logging.DEBUG if Config.ENV == "development" else logging.INFO
+        console_handler.setLevel(lvl)
+        console_handler.setFormatter(ColorFormatter())
+
+        # >>> 4) Root logger <<<  
+        root_logger = logging.getLogger()  # logger raiz
+        root_logger.setLevel(logging.DEBUG)  # captura TUDO
+        # Remove handlers antigos (se houver) para evitar duplicação
+        for h in list(root_logger.handlers):
+            root_logger.removeHandler(h)
+        # Adiciona os novos
+        root_logger.addHandler(file_handler)
+        root_logger.addHandler(console_handler)
+
+        # >>> 5) Silenciar bibliotecas muito verbosas <<<
+        logging.getLogger("werkzeug").setLevel(logging.WARNING)
+        logging.getLogger("urllib3").setLevel(logging.WARNING)
+
+
+        # >>> 6) Log inicial de startup <<<
+        app.logger.info(
+            "\n🚀 🚀 🚀  Iniciando aplicação Flask  🚀 🚀 🚀\n"
+            f"   Ambiente : {Config.ENV.upper()}\n"
+            f"   Log File : {filename}\n"
+            + ("=" * 100)
+        )
+
+        # >>> 7) Validação de variáveis obrigatórias <<<
         Config.validate()
 
-    except (OSError, IOError) as e:
-        raise RuntimeError(f"Falha na configuração de logging: {str(e)}") from e
-
-
-def _clean_handlers(app: Any) -> None:
-    """Remove handlers existentes do logger."""
-    app.logger.handlers.clear()
-
-
-def _create_logs_directory() -> str:
-    """Cria diretório de logs com tratamento de erros."""
-    logs_dir = "logs"
-    os.makedirs(logs_dir, exist_ok=True)
-    return logs_dir
-
-
-def _create_file_handler(logs_dir: str) -> RotatingFileHandler:
-    """Configura handler para arquivo de log rotativo."""
-    file_formatter = logging.Formatter(
-        "[%(asctime)s] %(levelname)-8s [%(name)s]\n"
-        "PID: %(process)-6d | TID: %(thread)-11d | "
-        "%(module)-s.%(funcName)-s Line: %(lineno)-d\n"
-        ">> %(message)s\n" + ("-" * 85),
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-
-    handler = RotatingFileHandler(
-        filename=os.path.join(
-            logs_dir, f"app_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
-        ),
-        maxBytes=10 * 1024 * 1024,
-        backupCount=0,
-        encoding="utf-8",
-    )
-    handler.setFormatter(file_formatter)  # Correção aplicada aqui
-
-    return handler
-
-
-def _add_console_handler(app: Any) -> None:
-    """Adiciona handler colorido para o console em desenvolvimento."""
-    console_handler = logging.StreamHandler()
-    console_handler.setFormatter(ColorFormatter())
-    console_handler.setLevel(logging.DEBUG)
-    app.logger.addHandler(console_handler)
-
-
-def _configure_log_levels(app: Any) -> None:
-    """Define níveis de log conforme ambiente."""
-    app.logger.setLevel(logging.DEBUG if Config.ENV == "development" else logging.INFO)
-    app.logger.propagate = False
-
-
-def _log_startup_info(app: Any, logs_dir: str) -> None:
-    """Registra informações iniciais no log."""
-    log_filename = os.path.join(
-        logs_dir, f"app_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
-    )
-    app.logger.info(
-        "\n%s\n Iniciando aplicação\n Ambiente: %s\n Arquivo de log: %s\n%s\n",
-        "#" * 60,
-        Config.ENV,
-        log_filename,
-        "#" * 60,
-    )
+    except Exception as e:
+        # Se qualquer coisa falhar, encerra imediatamente
+        raise RuntimeError(f"Falha ao configurar logging: {e}") from e

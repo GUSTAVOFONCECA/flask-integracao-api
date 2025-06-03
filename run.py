@@ -1,27 +1,27 @@
-"""
-Main entry point for the application
-    This script initializes the Flask application, sets up the localtunnel,
-    and handles graceful shutdowns. It also includes a pre-initialization check
-"""
-
 # app/run.py
+
+"""
+Main entry point for the aplicação.
+Este script inicializa a aplicação Flask, configura o logging, dispara o LocalTunnel
+e trata encerramentos de forma graciosa.
+"""
 
 import sys
 import signal
 import atexit
 import threading
 import time
+
 from waitress import serve
 from app import create_app
 from app.services.tunnel_service import start_localtunnel
-from app.config import Config
+from app.config import Config, configure_logging
 
 
 class AppManager:
-    """Gerenciador principal da aplicação Flask e serviços associados
+    """
+    Gerenciador principal da aplicação Flask e serviços associados.
 
-    :ivar tunnel: Dicionário contendo informações do túnel localtunnel
-    :vartype tunnel: dict[str, any]
     :ivar flask_app: Instância da aplicação Flask
     :vartype flask_app: flask.Flask
     """
@@ -30,72 +30,66 @@ class AppManager:
         self.flask_app = create_app()
 
     def run_flask_server(self):
-        """Inicia o servidor Flask/Waitress conforme o ambiente configurado
+        """
+        Inicia o servidor Flask/Waitress conforme o ambiente configurado.
 
-        :return: None
-        :raises RuntimeError: Se ocorrer falha na inicialização do servidor
-
-        .. note::
-            - Modo produção: Usa Waitress com logging detalhado
-            - Modo desenvolvimento: Usa servidor embutido do Flask
+        - Em 'production' usa Waitress.
+        - Em 'development' usa o servidor embutido do Flask.
         """
         if Config.ENV == "production":
-            self.flask_app.logger.info("\nℹ️ Iniciando servidor em modo produção\n")
+            self.flask_app.logger.info("ℹ️  Iniciando servidor em modo produção")
             serve(self.flask_app, host="0.0.0.0", port=Config.TUNNEL_PORT)
         else:
-            self.flask_app.logger.info(
-                "\nℹ️ Iniciando servidor em modo desenvolvimento\n"
-            )
+            self.flask_app.logger.info("ℹ️  Iniciando servidor em modo desenvolvimento")
             self.flask_app.run(
-                host="0.0.0.0", port=Config.TUNNEL_PORT, debug=True, use_reloader=False
+                host="0.0.0.0",
+                port=Config.TUNNEL_PORT,
+                debug=True,
+                use_reloader=False,
             )
 
     def graceful_shutdown(self):
-        """Executa o desligamento seguro da aplicação
-
-        :return: None
-        :raises SystemExit: Sempre levanta exceção para finalização do processo
-
-        .. rubric:: Ações realizadas
-        1. Encerra o processo do túnel localtunnel
-        2. Finaliza a aplicação Flask
-        3. Encerra o processo com código 0
         """
-        self.flask_app.logger.info("ℹ️ Encerrando aplicação...")
+        Executa o desligamento seguro da aplicação:
+        1. Loga mensagem de encerramento.
+        2. Sai do processo com código 0.
+        """
+        self.flask_app.logger.info("ℹ️  Encerrando aplicação...")
         sys.exit(0)
 
 
 def main() -> None:
-    """Função principal de inicialização da aplicação
+    """
+    Função principal de inicialização da aplicação.
 
-    :return: None
-    :raises AssertionError: Se teste das rotas básicas falhar
-    :raises RuntimeError: Se houver falha no monitoramento de componentes
-    :raises ConnectionError: Se houver problemas de conexão com serviços externos
-
-    .. rubric:: Fluxo de execução
-    1. Inicialização dos componentes em threads separadas
-    2. Validação das configurações
-    3. Teste inicial das rotas Flask
-    4. Monitoramento contínuo do status
+    Fluxo de execução:
+    1. Valida variáveis de ambiente obrigatórias.
+    2. Define Config.ENV como 'development' para ajustar níveis de log.
+    3. Configura logging (arquivo + console).
+    4. Testa health check da API.
+    5. Inicia Flask em thread.
+    6. Dispara LocalTunnel em background.
+    7. Loop de monitoramento.
     """
     manager = AppManager()
+
     try:
-        # Validação ANTES de inicializar componentes
-        print("🛠️  Verificando configurações básicas...")
-        Config.validate()
-        print("✅ Configurações válidas")
+        # Configure logging FIRST
+        configure_logging(manager.flask_app)  # Movido para cá
+        
+        app_logger = manager.flask_app.logger
+        
+        # Validação agora é feita dentro do configure_logging
+        app_logger.info("🛠️  Verificando configurações básicas...")
+        app_logger.info("✅ Configurações válidas")
 
-        # Configurar ambiente
-        Config.ENV = "development"
+        # 4) Testar health check da API antes de subir o servidor
+        app_logger.info("🔥 Testando health check da API...")
         flask_app = manager.flask_app
-
-        # Testar endpoints ANTES de iniciar o servidor
-        print("🔥 Testando health check da API...")
         with flask_app.test_client() as client:
             response = client.get(
                 "/api/health/",
-                headers={"X-API-Key": Config.API_KEY},  # Adicione o header
+                headers={"X-API-Key": Config.API_KEY},
             )
             assert (
                 response.status_code == 200
@@ -103,30 +97,31 @@ def main() -> None:
             data = response.get_json()
             assert data["status"] == "healthy", f"Status inválido: {data.get('status')}"
             assert (
-                data["environment"] == "development"
+                data["environment"] == Config.ENV
             ), f"Ambiente incorreto: {data.get('environment')}"
-        print("✅ Testes prévios concluídos")
+        app_logger.info("✅ Testes prévios concluídos")
 
+        # Registra sinais de encerramento gracioso
         atexit.register(manager.graceful_shutdown)
         signal.signal(signal.SIGINT, lambda s, f: manager.graceful_shutdown())
         signal.signal(signal.SIGTERM, lambda s, f: manager.graceful_shutdown())
 
-        # Iniciar componentes APÓS testes
+        # 5) Iniciar Flask em thread
         flask_thread = threading.Thread(target=manager.run_flask_server, daemon=True)
         flask_thread.start()
 
+        # 6) Disparar o LocalTunnel em background
         start_localtunnel()
-        manager.flask_app.logger.info(
-            "✅ Túnel iniciado (monitoramento automático ativado)"
-        )
+        app_logger.info("✅ Túnel iniciado (monitoramento automático ativado)")
 
-        # Loop único de monitoramento
+        # 7) Loop de monitoramento
         while True:
             if not flask_thread.is_alive():
                 raise RuntimeError("❌ Servidor Flask parou inesperadamente")
             time.sleep(5)
 
-    except (RuntimeError, ConnectionError, AssertionError) as e:
+    except (RuntimeError, ConnectionError, AssertionError, EnvironmentError) as e:
+        # Se manager.flask_app existir, usamos o logger; caso contrário, printar
         if manager and manager.flask_app:
             manager.flask_app.logger.critical("\n❌ Falha crítica:\n%s\n", str(e))
         else:
