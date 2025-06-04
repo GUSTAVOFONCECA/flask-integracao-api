@@ -125,7 +125,7 @@ def post_envia_comunicado_para_cliente_bitrix():
         logger.warning("Assinatura inválida | Recebida: %s", signature)
         return jsonify({"error": "Assinatura inválida"}), 403
     # Validar parâmetros obrigatórios
-    required_params = ["companyName", "contactName", "contactNumber", "daysToExpire"]
+    required_params = ["companyName", "contactName", "contactNumber", "daysToExpire", "dealType"]
     missing = [param for param in required_params if not request.args.get(param)]
 
     if missing:
@@ -142,14 +142,16 @@ def post_envia_comunicado_para_cliente_bitrix():
     contact_name = request.args["contactName"]
     contact_number = request.args["contactNumber"]
     days_to_expire = request.args["daysToExpire"]
+    deal_type = request.args["dealType"]
 
     logger.info(
         "Nova requisição de aviso do vencimento de CD\n"
-        "Empresa: %s\nContato: %s\nNúmero: %s\nDias para expirar: %s",
+        "Empresa: %s\nContato: %s\nNúmero: %s\nDias para expirar: %s\nTipo do negócio: %s",
         company_name,
         contact_name,
         contact_number,
         days_to_expire,
+        deal_type
     )
 
     # Buscar contact ID - FUNÇÃO ATUALIZADA

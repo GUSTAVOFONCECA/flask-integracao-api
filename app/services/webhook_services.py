@@ -15,6 +15,8 @@ from typing import Optional, Dict
 import requests
 from flask import request, jsonify
 from app.config import Config
+from app.utils import retry_with_backoff
+
 
 logger = logging.getLogger(__name__)
 
@@ -257,10 +259,12 @@ def post_destination_api(processed_data: Dict, api_url: str) -> Dict:
 
 
 ###############################################################################
-URL_DIGISAC = "https://logicassessoria.digisac.chat"
-BASE_API = f"{URL_DIGISAC}/api/v1"
-CLIENT_ID = "api"
-CLIENT_SECRET = "secret"
+DIGISAC_URL = "https://logicassessoria.digisac.chat"
+DIGISAC_BASE_API = f"{DIGISAC_URL}/api/v1"
+DIGISAC_CLIENT_ID = "api"
+DIGISAC_CLIENT_SECRET = "secret"
+DIGISAC_USER = Config.DIGISAC_USER
+DIGISAC_PASSWORD = Config.DIGISAC_PASSWORD
 
 
 # Variável global para armazenamento de tokens
@@ -287,9 +291,7 @@ def refresh_tokens():
     if digisac_tokens["refresh_token"]:
         new_tokens = refresh_auth_digisac(digisac_tokens["refresh_token"])
     else:
-        username = Config.DIGISAC_USER
-        password = Config.DIGISAC_PASSWORD
-        new_tokens = get_auth_digisac(username, password)
+        new_tokens = get_auth_digisac()
 
     if "error" in new_tokens:
         raise RuntimeError(f"Falha na autenticação: {new_tokens['error']}")
@@ -302,19 +304,20 @@ def refresh_tokens():
     )
 
 
-def get_auth_digisac(username: str, password: str) -> dict:
+def get_auth_digisac() -> dict:
     """Obtém tokens de autenticação"""
-    url = f"{URL_DIGISAC}/api/v1/oauth/token"
+    url = f"{DIGISAC_BASE_API}/oauth/token"
     payload = {
         "grant_type": "password",
-        "client_id": CLIENT_ID,
-        "client_secret": CLIENT_SECRET,
-        "username": username,
-        "password": password,
+        "client_id": DIGISAC_CLIENT_ID,
+        "client_secret": DIGISAC_CLIENT_SECRET,
+        "username": DIGISAC_USER,
+        "password": DIGISAC_PASSWORD,
     }
     try:
         response = requests.post(url, data=payload, timeout=10)
         response.raise_for_status()
+        logger.debug("Payload\n%s\nResponse:\n%s", payload, response.json())
         return response.json()
     except requests.exceptions.RequestException as e:
         logger.error("Erro na autenticação: %s", str(e))
@@ -323,11 +326,11 @@ def get_auth_digisac(username: str, password: str) -> dict:
 
 def refresh_auth_digisac(refresh_token: str) -> dict:
     """Renova tokens de acesso"""
-    url = f"{URL_DIGISAC}/api/v1/oauth/token"
+    url = f"{DIGISAC_BASE_API}/oauth/token"
     payload = {
         "grant_type": "refresh_token",
-        "client_id": CLIENT_ID,
-        "client_secret": CLIENT_SECRET,
+        "client_id": DIGISAC_CLIENT_ID,
+        "client_secret": DIGISAC_CLIENT_SECRET,
         "refresh_token": refresh_token,
     }
     try:
@@ -385,21 +388,24 @@ def get_contact_id_by_number(contact_number: str) -> str | None:
         return None
 
 
+@retry_with_backoff(retries=3, backoff_in_seconds=2)
 def transfer_ticket_digisac(contact_id: str) -> dict:
     """Transfere ticket no Digisac"""
     user_id = Config.DIGISAC_USER_ID
+
     # ID do departamento fixo certificação digital
     department_id = "154521dc-71c0-4117-a697-bd978cd442aa"
 
     # Comentário da abertura do chamado
     comments = "Chamado aberto via automação para renovação de certificado."
 
-    url = f"{BASE_API}/contacts/{contact_id}/ticket/transfer"
+    url = f"{DIGISAC_BASE_API}/contacts/{contact_id}/ticket/transfer"
     payload = {"departmentId": department_id, "userId": user_id, "comments": comments}
 
     try:
         resp = requests.post(url, headers=get_auth_headers(), json=payload, timeout=60)
         resp.raise_for_status()
+        logger.debug()
         if resp.content and "application/json" in resp.headers.get("Content-Type", ""):
             return resp.json()
         else:
@@ -411,6 +417,7 @@ def transfer_ticket_digisac(contact_id: str) -> dict:
 
 
 # REFATORAR CÓDIGO PARA SER MAIS GENERALISTA, RECEBENDO MSG TEXT E DEPARTMENT ID
+@retry_with_backoff(retries=3, backoff_in_seconds=2)
 def send_message_digisac(
     contact_id: str,
     contact_name: str,
@@ -419,10 +426,11 @@ def send_message_digisac(
 ) -> dict:
     """Envia mensagem automática via Digisac"""
     user_id = Config.DIGISAC_USER_ID
+
     # ID do departamento fixo certificação digital
     department_id = "154521dc-71c0-4117-a697-bd978cd442aa"
 
-    url = f"{BASE_API}/messages"
+    url = f"{DIGISAC_BASE_API}/messages"
     payload = {
         "text": (
             f"Olá {contact_name}, o certificado da empresa {company_name} "
@@ -444,5 +452,3 @@ def send_message_digisac(
     except requests.RequestException as e:
         logger.error("[MSG] Erro: %s", e)
         return {"error": str(e)}
-
-###############################################################################

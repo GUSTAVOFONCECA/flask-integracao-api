@@ -76,9 +76,9 @@ def main() -> None:
     try:
         # Configure logging FIRST
         configure_logging(manager.flask_app)  # Movido para cá
-        
+
         app_logger = manager.flask_app.logger
-        
+
         # Validação agora é feita dentro do configure_logging
         app_logger.info("🛠️ Verificando configurações básicas...")
         app_logger.info("✅ Configurações válidas")
@@ -125,7 +125,7 @@ def main() -> None:
         if manager and manager.flask_app:
             manager.flask_app.logger.critical("\nFalha crítica:\n%s\n", str(e))
         else:
-            print(f"\nFalha crítica:\n{str(e)}\n")
+            app_logger.critical(f"\nFalha crítica:\n{str(e)}\n")
         sys.exit(1)
 
 
