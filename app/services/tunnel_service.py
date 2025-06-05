@@ -8,15 +8,16 @@ com subdomínio fixo (logic-1997) e porta configurada em Config.TUNNEL_PORT.
 2. Invoca 'lt' como string única via shell=True, pois o npm cria um arquivo lt.cmd.
 3. Monitora o stdout do processo: se receber "your url is: ..." SEM o subdomínio correto,
    encerra o processo e tenta novamente até que "logic-1997" esteja alocado.
+4. Obtém e armazena o IP público para uso no aviso do LocalTunnel.
 """
-
 
 import os
 import time
 import logging
 import subprocess
 import threading
-from typing import Optional
+import requests
+from typing import Optional, Dict, Any
 from app.config import Config
 
 logger = logging.getLogger(__name__)
@@ -27,6 +28,29 @@ TUNNEL_SUBDOMAIN = "logic-1997"
 TUNNEL_RETRY_INTERVAL = 5
 # Intervalo (em segundos) para checar se o processo ainda está vivo
 TUNNEL_CHECK_INTERVAL = 10
+# Armazenamento global do IP público
+tunnel_public_ip = None
+
+
+def get_public_ip() -> Optional[str]:
+    """Obtém o IP público do computador usando a API ipify."""
+    global tunnel_public_ip
+
+    if tunnel_public_ip:
+        return tunnel_public_ip
+
+    try:
+        logger.info("🔄 Obtendo IP público...")
+        response = requests.get("https://api.ipify.org?format=json", timeout=5)
+        if response.status_code == 200:
+            tunnel_public_ip = response.json().get("ip")
+            Config.TUNNEL_PUBLIC_IP = tunnel_public_ip
+            logger.info(f"🌐 IP Público obtido: {tunnel_public_ip}")
+            return tunnel_public_ip
+    except Exception as e:
+        logger.error(f"❌ Falha ao obter IP público: {str(e)}")
+
+    return None
 
 
 def _monitor_output(stream, url_event, url_container, subdomain, process):
@@ -93,7 +117,7 @@ def _start_tunnel_process(cmd_str: str) -> subprocess.Popen:
     )
 
 
-def _try_start_tunnel() -> Optional[dict]:
+def _try_start_tunnel() -> Optional[Dict[str, Any]]:
     """
     Tenta iniciar o localtunnel até 3 vezes em sequência, retornando um dict
     com {'process': Popen, 'url': str} se der certo. Caso contrário, retorna None.
@@ -180,6 +204,11 @@ def _run_tunnel_loop():
     - Se o processo LT morrer por algum motivo, reinicia.
     - Se retornar None (3 tentativas falhas), aguarda TUNNEL_RETRY_INTERVAL e tenta de novo.
     """
+    global tunnel_public_ip
+
+    # Obter IP público apenas uma vez no início
+    get_public_ip()
+
     while True:
         result = _try_start_tunnel()
         if result is not None:
@@ -208,5 +237,11 @@ def start_localtunnel():
     Dispara a thread daemon que mantém o túnel ativo: toda vez que o lt retornar
     subdomínio errado ou morrer, ele reinicia automaticamente.
     """
+    # Obter IP público antes de iniciar o túnel
+    public_ip = get_public_ip()
+    if public_ip:
+        logger.info(f"🌐 IP Público do túnel: {public_ip}")
+        Config.TUNNEL_PUBLIC_IP = public_ip
+
     tunnel_thread = threading.Thread(target=_run_tunnel_loop, daemon=True)
     tunnel_thread.start()

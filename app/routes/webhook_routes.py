@@ -204,7 +204,9 @@ def post_renova_certificado_digisac():
     logger.debug("→ Raw Data: %r", request.get_data())
     # JSON (se houver)
     try:
+        logger.info("Nova requisição para renovação de certificado")
         json_payload = request.get_json(silent=True)
+        return request.get_json()
     except BadRequest as e:
         json_payload = f"<invalid JSON: {e}>"
     logger.debug("→ JSON: %s", json_payload)

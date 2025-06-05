@@ -8,6 +8,7 @@ import os
 import hmac
 import re
 import json
+from json import JSONDecodeError
 import logging
 from datetime import datetime, timedelta
 from functools import wraps
@@ -265,6 +266,8 @@ DIGISAC_CLIENT_ID = "api"
 DIGISAC_CLIENT_SECRET = "secret"
 DIGISAC_USER = Config.DIGISAC_USER
 DIGISAC_PASSWORD = Config.DIGISAC_PASSWORD
+DIGISAC_TOKEN = Config.DIGISAC_TOKEN
+DIGISAC_USER_ID = Config.DIGISAC_USER_ID
 
 
 # Variável global para armazenamento de tokens
@@ -391,28 +394,46 @@ def get_contact_id_by_number(contact_number: str) -> str | None:
 @retry_with_backoff(retries=3, backoff_in_seconds=2)
 def transfer_ticket_digisac(contact_id: str) -> dict:
     """Transfere ticket no Digisac"""
-    user_id = Config.DIGISAC_USER_ID
-
-    # ID do departamento fixo certificação digital
     department_id = "154521dc-71c0-4117-a697-bd978cd442aa"
-
-    # Comentário da abertura do chamado
     comments = "Chamado aberto via automação para renovação de certificado."
 
     url = f"{DIGISAC_BASE_API}/contacts/{contact_id}/ticket/transfer"
-    payload = {"departmentId": department_id, "userId": user_id, "comments": comments}
+    payload = {
+        "departmentId": department_id,
+        "userId": DIGISAC_USER_ID,
+        "comments": comments,
+    }
 
     try:
-        resp = requests.post(url, headers=get_auth_headers(), json=payload, timeout=60)
-        resp.raise_for_status()
-        logger.debug()
-        if resp.content and "application/json" in resp.headers.get("Content-Type", ""):
-            return resp.json()
+        response = requests.post(
+            url, headers=get_auth_headers(), json=payload, timeout=60
+        )
+        response.raise_for_status()
+
+        content_type = response.headers.get("Content-Type", "")
+        # Se vier JSON, retorna o json; senão, devolve texto bruto
+        if response.content and "application/json" in content_type:
+            try:
+                data = response.json()
+                logger.debug("Response JSON:\n%s", data)
+                return data
+            except (JSONDecodeError, ValueError):
+                logger.warning(
+                    "[TRANSFER] Retorno sem JSON válido (length=%d). Texto recebido:\n%s",
+                    len(response.content),
+                    response.text,
+                )
+                return {"status_code": response.status_code, "text": response.text}
         else:
-            return {"status_code": resp.status_code, "text": resp.text}
+            logger.debug(
+                "[TRANSFER] Content-Type não indica JSON (%s). Texto recebido:\n%s",
+                content_type,
+                response.text,
+            )
+            return {"status_code": response.status_code, "text": response.text}
 
     except requests.RequestException as e:
-        logger.error("[TRANSFER] Erro: %s", e)
+        logger.error("[TRANSFER] Erro de requisição: %s", e)
         return {"error": str(e)}
 
 
@@ -425,30 +446,46 @@ def send_message_digisac(
     days_to_expire: str,
 ) -> dict:
     """Envia mensagem automática via Digisac"""
-    user_id = Config.DIGISAC_USER_ID
 
     # ID do departamento fixo certificação digital
     department_id = "154521dc-71c0-4117-a697-bd978cd442aa"
 
     url = f"{DIGISAC_BASE_API}/messages"
-    payload = {
-        "text": (
-            f"Olá {contact_name}, o certificado da empresa {company_name} "
+
+    if int(days_to_expire) >= 0:
+        text = (
+            "*Bot*\n"
+            f"Olá {contact_name}, o certificado da empresa *{company_name}* "
             f"irá expirar dentro de {abs(int(days_to_expire))} dias.\n"
             "Deseja renovar seu certificado? (Digite a opção)\n\n"
             "1 - Sim\n"
             "2 - Não"
-        ),
+        )
+    else:
+        text = (
+            "*Bot*\n"
+            f"Olá {contact_name}, o certificado da empresa *{company_name}* "
+            f"expirou há {abs(int(days_to_expire))} dias.\n"
+            "Deseja renovar seu certificado? (Digite a opção)\n\n"
+            "1 - Sim\n"
+            "2 - Não"
+        )
+
+    payload = {
+        "text": text,
         "contactId": contact_id,
-        "userId": user_id,
+        "userId": DIGISAC_USER_ID,
         "ticketDepartmentId": department_id,
         "origin": "bot",
     }
 
     try:
-        resp = requests.post(url, headers=get_auth_headers(), json=payload, timeout=60)
-        resp.raise_for_status()
-        return resp.json()
+        response = requests.post(
+            url, headers=get_auth_headers(), json=payload, timeout=60
+        )
+        response.raise_for_status()
+        logger.debug("Response:\n%s", response.json())
+        return response.json()
     except requests.RequestException as e:
         logger.error("[MSG] Erro: %s", e)
         return {"error": str(e)}

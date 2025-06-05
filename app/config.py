@@ -33,24 +33,29 @@ class Config:
     WEBHOOK_SECRET: str = os.getenv("WEBHOOK_SECRET", "")
     API_KEY: str = os.getenv("API_KEY", "")
 
-    # Integrações (exemplo)
-    BITRIX_WEBHOOK_URL: str = os.getenv("BITRIX_WEBHOOK_URL", "")
-    BITRIX_WEBHOOK_TOKEN: str = os.getenv("BITRIX_WEBHOOK_TOKEN", "")
-
     # Porta para túnel reverso (LocalTunnel, ngrok, etc.)
     TUNNEL_PORT: int = int(os.getenv("TUNNEL_PORT", "5478"))
+
+    # Bitrix24 env
+    BITRIX_WEBHOOK_URL: str = os.getenv("BITRIX_WEBHOOK_URL", "")
+    BITRIX_WEBHOOK_TOKEN: str = os.getenv("BITRIX_WEBHOOK_TOKEN", "")
 
     # Digisac env
     DIGISAC_USER: str = os.getenv("DIGISAC_USER", "")
     DIGISAC_PASSWORD: str = os.getenv("DIGISAC_PASSWORD", "")
     DIGISAC_USER_ID: str = os.getenv("DIGISAC_USER_ID", "")
+    DIGISAC_TOKEN: str = os.getenv("DIGISAC_TOKEN", "")
 
-    # Conta Azul OAuth
+    # Conta Azul env
     CONTA_AZUL_CLIENT_ID: str = os.getenv("CONTA_AZUL_CLIENT_ID", "")
     CONTA_AZUL_CLIENT_SECRET: str = os.getenv("CONTA_AZUL_CLIENT_SECRET", "")
     CONTA_AZUL_REDIRECT_URI: str = os.getenv(
         "CONTA_AZUL_REDIRECT_URI", "https://127.0.0.1:5478/conta-azul/callback"
     )
+    CONTA_AZUL_EMAIL = os.getenv("CONTA_AZUL_EMAIL", "")
+    CONTA_AZUL_PASSWORD = os.getenv("CONTA_AZUL_PASSWORD", "")
+    CHROMEDRIVER_PATH = os.path.join(os.getcwd(), "chromedriver-win64", "chromedriver.exe")
+    TUNNEL_PUBLIC_IP: str = None
 
     @classmethod
     def validate(cls) -> None:

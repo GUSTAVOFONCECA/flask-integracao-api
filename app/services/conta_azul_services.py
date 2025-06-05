@@ -6,6 +6,8 @@ from urllib.parse import urlencode
 import base64
 import requests
 from app.config import Config
+from app.services.conta_azul_auto_auth import automate_auth
+
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +23,17 @@ conta_azul_tokens: Dict[str, Optional[Union[str, datetime]]] = {
     "id_token": None,
     "expires_at": None,
 }
+
+
+def auto_authenticate():
+    """Obtém tokens através da automação Selenium"""
+    # Obter código de autorização via Selenium
+    auth_code = automate_auth()
+
+    # Trocar código por tokens
+    token_data = get_tokens(auth_code)
+    set_tokens(token_data)
+    return token_data
 
 
 def get_auth_url(state: str = "security_token") -> str:

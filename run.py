@@ -11,7 +11,6 @@ import signal
 import atexit
 import threading
 import time
-
 from waitress import serve
 from app import create_app
 from app.services.tunnel_service import start_localtunnel

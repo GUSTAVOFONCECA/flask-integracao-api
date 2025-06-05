@@ -1,0 +1,10 @@
+curl -X GET "https://auth.contaazul.com/oauth2/authorize?response_type=code&client_id=Vqp1PVuV5VpWvrjMVwSUXsusN7q3YHhS&redirect_uri=https://127.0.0.1:5478/conta-azul/callback&state=ESTADO&scope=openid+profile+aws.cognito.signin.user.admin"
+
+curl -X POST https://auth.contaazul.com/oauth2/token \
+-H "Content-Type: application/x-www-form-urlencoded" \
+-H "Authorization: Basic BASE64VnFwMVBWdVY1VnBXdnJqTVZ3U1VYc3VzTjdxM1lIaFM6Z1dFT1dST2dDVUxGZUYxRXpCcmRaN3VRc2ZiVW43ZEM=
+--data-urlencode "client_id=Vqp1PVuV5VpWvrjMVwSUXsusN7q3YHhS" \
+--data-urlencode "client_secret=gWEOWROgCULFeF1EzBrdZ7uQsfbUn7dC" \
+--data-urlencode "grant_type=authorization_code" \
+--data-urlencode "code=-9d9e-4000-955b-f5c919dfe5e7" \
+--data-urlencode "redirect_uri=https://127.0.0.1:5478/conta-azul/callback&state"
