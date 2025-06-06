@@ -1,0 +1,84 @@
+================================================================================
+Diagnóstico da Página - 20250606_163106
+================================================================================
+URL: https://auth.contaazul.com/login?response_type=code&client_id=25c7lijrn2ef9bfl1jpqn0f98&redirect_uri=https%3A%2F%2Flogic-1997.loca.lt%2Fconta-azul%2Fcallback&scope=openid+profile+aws.cognito.signin.user.admin&state=security_token
+Título: Signin
+Exceção: TimeoutException: Message: 
+
+
+================================================================================
+ESTADO DOS ELEMENTOS-CHAVE
+================================================================================
+USERNAME_FIELD (input[name='username'])
+  Encontrados: 2 elementos
+  Elemento 1:
+    Visível: Não
+    Habilitado: Sim
+    Texto: N/A
+    Valor: N/A
+  Elemento 2:
+    Visível: Sim
+    Habilitado: Sim
+    Texto: N/A
+    Valor: N/A
+PASSWORD_FIELD (input[name='password'])
+  Encontrados: 2 elementos
+  Elemento 1:
+    Visível: Não
+    Habilitado: Sim
+    Texto: N/A
+    Valor: N/A
+  Elemento 2:
+    Visível: Sim
+    Habilitado: Sim
+    Texto: N/A
+    Valor: N/A
+SUBMIT_BUTTON (input[name='signInSubmitButton'])
+  Encontrados: 2 elementos
+  Elemento 1:
+    Visível: Não
+    Habilitado: Sim
+    Texto: N/A
+    Valor: Sign in...
+  Elemento 2:
+    Visível: Sim
+    Habilitado: Sim
+    Texto: N/A
+    Valor: Sign in...
+LOGIN_FORM (form[name='cognitoSignInForm'])
+  Encontrados: 2 elementos
+  Elemento 1:
+    Visível: Não
+    Habilitado: Sim
+    Texto: N/A
+    Valor: N/A
+  Elemento 2:
+    Visível: Sim
+    Habilitado: Sim
+    Texto: Username
+Password
+Forgot your password?
+
+Need an a...
+    Valor: N/A
+IFRAME (iframe)
+  Encontrados: 0 elementos
+LOCAL_TUNNEL_WARNING (#tunnel-password-input)
+  Encontrados: 0 elementos
+
+================================================================================
+ESTRUTURA GERAL DA PÁGINA
+================================================================================
+Formulários: 2
+Inputs: 10
+Botões: 0
+Iframes: 0
+Divs: 42
+
+Cabeçalhos:
+  H1: 0 encontrados
+  H2: 0 encontrados
+  H3: 0 encontrados
+  H4: 0 encontrados
+  H5: 0 encontrados
+  H6: 0 encontrados

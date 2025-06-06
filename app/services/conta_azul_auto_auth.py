@@ -2,17 +2,23 @@
 import time
 import logging
 import socket
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import urlparse, parse_qs, urlencode
+from selenium_stealth import stealth
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from webdriver_manager.chrome import ChromeDriverManager
 from app.config import Config
+from app.utils import save_page_diagnosis
 
 logger = logging.getLogger(__name__)
+
+# Endpoints da Conta Azul
+AUTH_URL = "https://auth.contaazul.com/oauth2/authorize"
 
 
 def find_free_port():
@@ -23,26 +29,51 @@ def find_free_port():
 
 
 def handle_localtunnel_warning(driver):
-    """Lida com a página de aviso do LocalTunnel"""
-    if (
-        "localtunnel" in driver.current_url
-        and "This website is served for free via a localtunnel" in driver.page_source
-    ):
-        logger.info("🛑 Lidando com aviso do LocalTunnel")
+    """Lida com a página de aviso do LocalTunnel de forma mais robusta"""
+    try:
+        # Verificação mais confiável da página do LocalTunnel
+        if "localtunnel" in driver.current_url:
+            password_input = WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.ID, "tunnel-password-input"))
+            )
+            logger.info("🛑 Detectada página de aviso do LocalTunnel")
 
-        # Localizar elementos
-        password_input = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.ID, "tunnel-password-input"))
-        )
-        submit_button = driver.find_element(By.XPATH, "//button[@type='submit']")
+            # Preencher senha (IP público)
+            password_input.clear()
+            password_input.send_keys(Config.TUNNEL_PUBLIC_IP)
 
-        # Preencher senha (IP público)
-        password_input.send_keys(Config.TUNNEL_PUBLIC_IP)
-        submit_button.click()
+            # Localizar botão de submit de forma mais robusta
+            submit_button = WebDriverWait(driver, 5).until(
+                EC.element_to_be_clickable(
+                    (
+                        By.XPATH,
+                        "//button[contains(text(), 'Acessar') or contains(text(), 'Submit')]",
+                    )
+                )
+            )
+            submit_button.click()
 
-        # Aguardar redirecionamento
-        WebDriverWait(driver, 10).until(EC.url_contains("auth.contaazul.com"))
-        logger.info("✅ Aviso do LocalTunnel contornado com sucesso")
+            # Aguardar redirecionamento com timeout maior
+            WebDriverWait(driver, 15).until(
+                lambda d: "auth.contaazul.com" in d.current_url
+            )
+            logger.info("✅ Aviso do LocalTunnel contornado com sucesso")
+            return True
+    except (TimeoutException, NoSuchElementException):
+        logger.info("ℹ️ Página de aviso do LocalTunnel não detectada")
+    return False
+
+
+def get_auth_url(state: str = "security_token") -> str:
+    """Retorna a URL de autorização para redirecionar o usuário."""
+    params = {
+        "response_type": "code",
+        "client_id": Config.CONTA_AZUL_CLIENT_ID,
+        "redirect_uri": Config.CONTA_AZUL_REDIRECT_URI,
+        "scope": "openid profile aws.cognito.signin.user.admin",
+        "state": state,
+    }
+    return f"{AUTH_URL}?{urlencode(params)}"
 
 
 def automate_auth():
@@ -60,64 +91,104 @@ def automate_auth():
 
     # Configurar Chrome
     chrome_options = Options()
-    chrome_options.binary_location = "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+    chrome_options.binary_location = (
+        "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+    )
 
     chrome_options.add_argument(f"--remote-debugging-port={debug_port}")
-    #chrome_options.add_argument("--headless=new")
+    chrome_options.add_argument("start-maximized")
+    # chrome_options.add_argument("--headless=new")
     chrome_options.add_argument("--ignore-certificate-errors")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_experimental_option("excludeSwitches", ["enable-automation"])
     chrome_options.add_experimental_option("useAutomationExtension", False)
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
+    chrome_options.add_argument(
+        "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36"
+    )
 
-    # Configurar driver
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service, options=chrome_options)
+    stealth(
+        driver,
+        languages=["en-US", "en"],
+        vendor="Google Inc.",
+        platform="Win32",
+        webgl_vendor="Intel Inc.",
+        renderer="Intel Iris OpenGL Engine",
+        fix_hairline=True,
+    )  # Configurar driver
+
+    # Definir a propriedade do navegador "webdriver" para undefined
+    driver.execute_script(
+        "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+    )
 
     try:
-        # Construir URL de autorização
-        auth_params = {
-            "response_type": "code",
-            "client_id": Config.CONTA_AZUL_CLIENT_ID,
-            "redirect_uri": Config.CONTA_AZUL_REDIRECT_URI,
-            "scope": "openid profile aws.cognito.signin.user.admin",
-            "state": "security_token",
-        }
-        query_string = "&".join([f"{k}={v}" for k, v in auth_params.items()])
-        auth_url = f"https://auth.contaazul.com/oauth2/authorize?{query_string}"
-
+        auth_url = get_auth_url()
         logger.info(f"🌐 Acessando URL de autorização: {auth_url}")
         driver.get(auth_url)
 
         # Verificar e lidar com aviso do LocalTunnel
-        handle_localtunnel_warning(driver)
+        localtunnel_detected = handle_localtunnel_warning(driver)
+
+        # Se o LocalTunnel foi detectado, esperar o carregamento da página de login
+        if localtunnel_detected:
+            WebDriverWait(driver, 15).until(
+                EC.presence_of_element_located((By.ID, "signInFormUsername"))
+            )
+
+        # Identificar formulário VISÍVEL (desktop)
+        login_form = WebDriverWait(driver, 20).until(
+            EC.visibility_of_element_located((
+                By.CSS_SELECTOR,
+                ".modal-content.visible-md.visible-lg:not([style*='display: none'])"
+            ))
+        )
+        logger.info("✅ Formulário desktop visível encontrado")
 
         # Preencher formulário de login
         logger.info("🔑 Preenchendo formulário de login")
-        email_field = WebDriverWait(driver, 10).until(
-            EC.presence_of_element_located((By.NAME, "email"))
-        )
-        password_field = driver.find_element(By.NAME, "password")
-        submit_button = driver.find_element(By.XPATH, "//button[@type='submit']")
+        email_field = login_form.find_element(By.ID, "signInFormUsername")
+        password_field = login_form.find_element(By.ID, "signInFormPassword")
+        submit_button = login_form.find_element(By.NAME, "signInSubmitButton")
 
         email_field.send_keys(Config.CONTA_AZUL_EMAIL)
+        time.sleep(0.5)  # Espera para a interface responder
+
         password_field.send_keys(Config.CONTA_AZUL_PASSWORD)
-        submit_button.click()
+        time.sleep(0.5)  # Espera para a interface responder
+
+        driver.execute_script("arguments[0].click();", submit_button)
+        try:
+            WebDriverWait(driver, 10).until(
+                EC.any_of(
+                    EC.url_contains("auth.contaazul.com/oauth2/authorize"),
+                    EC.url_contains(Config.CONTA_AZUL_REDIRECT_URI),
+                )
+            )
+        except TimeoutException as e:
+            # Salvar diagnóstico detalhado
+            log_file = save_page_diagnosis(driver, e)
+            logger.error(f"Redirecionamento não ocorreu após o login. Diagnóstico salvo em: {log_file}")
+            return None
 
         # Lidar com aprovação do aplicativo
         time.sleep(3)
         if "oauth2/authorize" in driver.current_url:
             logger.info("✅ Autorizando aplicativo")
             try:
-                allow_button = WebDriverWait(driver, 5).until(
+                allow_button = WebDriverWait(driver, 10).until(
                     EC.element_to_be_clickable(
                         (By.XPATH, "//button[contains(., 'Allow')]")
                     )
                 )
                 allow_button.click()
-            except Exception:
-                logger.info("ℹ️ Nenhum prompt de autorização encontrado")
+            except Exception as e:
+                # Salvar diagnóstico detalhado
+                log_file = save_page_diagnosis(driver, e)
+                logger.info(f"ℹ️ Nenhum prompt de autorização encontrado. Diagnóstico salvo em: {log_file}")
 
         # Aguardar redirecionamento para callback
         WebDriverWait(driver, 20).until(
@@ -136,10 +207,9 @@ def automate_auth():
         return auth_code
 
     except Exception as e:
-        logger.error(f"❌ Falha na automação de autenticação: {str(e)}")
-        # Capturar screenshot para debug
-        driver.save_screenshot("auth_error.png")
-        logger.error("📸 Screenshot salvo em auth_error.png")
+        # Salvar diagnóstico detalhado
+        log_file = save_page_diagnosis(driver, e)
+        logger.error(f"❌ Elemento não encontrado. Diagnóstico salvo em: {log_file}")
         return None
     finally:
         driver.quit()

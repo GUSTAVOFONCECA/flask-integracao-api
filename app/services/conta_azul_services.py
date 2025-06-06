@@ -12,7 +12,6 @@ from app.services.conta_azul_auto_auth import automate_auth
 logger = logging.getLogger(__name__)
 
 # Endpoints da Conta Azul
-AUTH_URL = "https://auth.contaazul.com/oauth2/authorize"
 TOKEN_URL = "https://auth.contaazul.com/oauth2/token"
 API_BASE_URL = "https://api-v2.contaazul.com"
 
@@ -36,20 +35,9 @@ def auto_authenticate():
     return token_data
 
 
-def get_auth_url(state: str = "security_token") -> str:
-    """Retorna a URL de autorização para redirecionar o usuário."""
-    params = {
-        "response_type": "code",
-        "client_id": Config.CONTA_AZUL_CLIENT_ID,
-        "redirect_uri": Config.CONTA_AZUL_REDIRECT_URI,
-        "scope": "openid profile aws.cognito.signin.user.admin",
-        "state": state,
-    }
-    return f"{AUTH_URL}?{urlencode(params)}"
-
-
 def get_tokens(code: str) -> dict:
     """Troca o código de autorização por tokens de acesso."""
+    # Preparar credenciais para Basic Auth
     credentials = f"{Config.CONTA_AZUL_CLIENT_ID}:{Config.CONTA_AZUL_CLIENT_SECRET}"
     encoded_credentials = base64.b64encode(credentials.encode()).decode()
 
@@ -58,13 +46,26 @@ def get_tokens(code: str) -> dict:
         "Authorization": f"Basic {encoded_credentials}",
     }
 
+    # Preparar dados com codificação adequada
     data = {
         "grant_type": "authorization_code",
         "code": code,
         "redirect_uri": Config.CONTA_AZUL_REDIRECT_URI,
+        "client_id": Config.CONTA_AZUL_CLIENT_ID,
+        "client_secret": Config.CONTA_AZUL_CLIENT_SECRET,
+        "scope": "openid profile aws.cognito.signin.user.admin",
     }
 
-    response = requests.post(TOKEN_URL, data=data, headers=headers, timeout=60)
+    # Fazer requisição com parâmetros devidamente codificados
+    response = requests.post(
+        TOKEN_URL, data=urlencode(data), headers=headers, timeout=60
+    )
+
+    # Adicionar logs para debug
+    if response.status_code != 200:
+        logger.error(f"Erro na requisição de tokens: {response.status_code}")
+        logger.error(f"Resposta: {response.text}")
+
     response.raise_for_status()
     return response.json()
 
@@ -74,6 +75,7 @@ def refresh_tokens() -> dict:
     if not conta_azul_tokens["refresh_token"]:
         raise ValueError("Nenhum refresh token disponível")
 
+    # Preparar credenciais para Basic Auth
     credentials = f"{Config.CONTA_AZUL_CLIENT_ID}:{Config.CONTA_AZUL_CLIENT_SECRET}"
     encoded_credentials = base64.b64encode(credentials.encode()).decode()
 
@@ -82,12 +84,25 @@ def refresh_tokens() -> dict:
         "Authorization": f"Basic {encoded_credentials}",
     }
 
+    # Preparar dados com escopo e codificação adequada
     data = {
         "grant_type": "refresh_token",
         "refresh_token": conta_azul_tokens["refresh_token"],
+        "client_id": Config.CONTA_AZUL_CLIENT_ID,
+        "client_secret": Config.CONTA_AZUL_CLIENT_SECRET,
+        "scope": "openid profile aws.cognito.signin.user.admin",
     }
 
-    response = requests.post(TOKEN_URL, data=data, headers=headers, timeout=60)
+    # Fazer requisição com parâmetros devidamente codificados
+    response = requests.post(
+        TOKEN_URL, data=urlencode(data), headers=headers, timeout=60
+    )
+
+    # Adicionar logs para debug
+    if response.status_code != 200:
+        logger.error(f"Erro na renovação de tokens: {response.status_code}")
+        logger.error(f"Resposta: {response.text}")
+
     response.raise_for_status()
     return response.json()
 

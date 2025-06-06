@@ -1,7 +1,6 @@
 # app/routes/conta_azul_routes.py
-from flask import Blueprint, request, redirect, current_app, jsonify
+from flask import Blueprint, request, current_app, jsonify
 from app.services.conta_azul_services import (
-    get_auth_url,
     get_tokens,
     set_tokens,
     get_sales,
@@ -40,13 +39,6 @@ def auto_auth():
             f"Falha na autenticação automática (ValueError): {str(e)}"
         )
         return jsonify({"error": str(e)}), 400
-
-
-@conta_azul_bp.route("/auth")
-def auth():
-    """Inicia o fluxo de autenticação OAuth2."""
-    auth_url = get_auth_url()
-    return redirect(auth_url)
 
 
 @conta_azul_bp.route("/callback")
