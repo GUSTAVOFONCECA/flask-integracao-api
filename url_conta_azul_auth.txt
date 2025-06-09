@@ -1,2 +1,12 @@
 curl -X GET "https://logic-1997.loca.lt/conta-azul/auto-auth" \
      -H "X-API-Key: rk0evx8ch3vie1YJMgpJqaplWJZxDhLc7q7LOFdRl29C80GhFemmnd3s79NJNR4ZZ8"
+
+
+
+curl -v -X POST https://auth.contaazul.com/oauth2/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  --data-urlencode "grant_type=authorization_code" \
+  --data-urlencode "code=<SEU_CODE>" \
+  --data-urlencode "redirect_uri=https://logic-1997.loca.lt/conta-azul/callback" \
+  --data-urlencode "client_id=25c7lijrn2ef9bfl1jpqn0f98" \
+  --data-urlencode "client_secret=cjuap0c32l3k2t93eem7357pl54o37f8vl6vhn6vmidsg60dbb3"

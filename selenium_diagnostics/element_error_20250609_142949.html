@@ -1,0 +1,202 @@
+<html lang="en" class="a-ws a-js a-audio a-video a-canvas a-svg a-drag-drop a-geolocation a-history a-webworker a-autofocus a-input-placeholder a-textarea-placeholder a-local-storage a-gradients a-transform3d a-touch-scrolling a-text-shadow a-text-stroke a-box-shadow a-border-radius a-border-image a-opacity a-transform a-transition" data-aui-build-date="3.17.16.3-2017-10-11"><head>
+    <link href="https://dgay0d1ozp68.cloudfront.net/20240614193835/css/bootstrap.min.css" rel="stylesheet" media="screen">
+    <link href="https://dgay0d1ozp68.cloudfront.net/20240614193835/css/cognito-login.css" rel="stylesheet" media="screen">
+    <link href="https://auth.contaazul.com/ALL/20250225123402/assets/CSS/custom-css.css" rel="stylesheet" media="screen">
+    <title>Signin</title>
+
+    <script src="https://dgay0d1ozp68.cloudfront.net/20240614193835/js/amazon-cognito-advanced-security-data.min.js"></script>
+    <script>
+    function getAdvancedSecurityData(formReference) {
+        if (typeof AmazonCognitoAdvancedSecurityData === "undefined") {
+            return true;
+        }
+
+        // UserpoolId is not available on frontend for springboard. We do not use userPoolId
+        // anyway other than put in context data. 
+        var userPoolId = "";
+        var clientId = getUrlParameter("client_id");
+
+        var username = "";
+        var usernameInput = document.getElementsByName("username")[0];
+        if (usernameInput && usernameInput.value) {
+            username = usernameInput.value;
+        }
+
+        var asfData = AmazonCognitoAdvancedSecurityData.getData(username, userPoolId, clientId);
+        if (typeof asfData === "undefined") {
+            return true;
+        }
+
+        if (formReference && formReference.cognitoAsfData) {
+            formReference.cognitoAsfData.value = asfData
+        }
+
+        return true;
+    }
+
+    function getUrlParameter(name) {
+        name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+        var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+        var results = regex.exec(location.search);
+        return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+    }
+
+    function onSubmit(evt, formRef) {
+        formRef.querySelector('button[type="submit"]').disabled = true;
+        if (!!formRef.submitted) {
+            evt.preventDefault();
+            return false;
+        } else {
+            formRef.submitted = true;
+            return getAdvancedSecurityData(formRef);
+        }
+    }
+
+    function onSubmitLoginForm (formRef) {
+        formRef.querySelector('input[name="signInSubmitButton"]').disabled = true;
+        getAdvancedSecurityData(formRef)
+    }
+</script>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body spellcheck="false">
+    <div class="container">
+        <div class="modal-dialog">
+            <div class="modal-content background-customizable modal-content-mobile visible-xs visible-sm">
+                <div><div>
+                    <div class="banner-customizable">
+                        <center>
+                            <img alt="logo" class="logo-customizable" src="https://auth.contaazul.com/ALL/20250225123402/assets/images/image.jpg">
+                        </center>
+                    </div>
+                </div></div>
+                <div class="modal-body">
+                    <div><div>
+    
+</div></div>
+                    <div>
+                        <div><div>
+    
+</div></div>
+                        <div><div>
+    
+</div></div>
+                        <div>
+                            
+                            <div><div>
+    
+        <span class="textDescription-customizable ">Sign in with your username and password</span>
+        <form action="/login?response_type=code&amp;client_id=25c7lijrn2ef9bfl1jpqn0f98&amp;redirect_uri=https%3A%2F%2Flogic-1997.loca.lt%2Fconta-azul%2Fcallback&amp;scope=openid+profile+aws.cognito.signin.user.admin&amp;state=security_token" method="POST" name="cognitoSignInForm" class="cognito-asf" onsubmit="onSubmitLoginForm(this);"><input type="hidden" name="_csrf" value="262e423b-0fa1-4d12-975c-ec08cc5560f1" wfd-id="id0">
+
+            
+
+            
+            <label for="signInFormUsername" class="label-customizable">Username</label>
+            <div>
+                
+                
+                <input id="signInFormUsername" name="username" type="text" class="form-control inputField-customizable" placeholder="Username" autocapitalize="none" required="" value="" wfd-id="id1">
+            </div>
+
+            <label for="signInFormPassword" class="label-customizable">Password</label>
+            <div><input id="signInFormPassword" name="password" type="password" class="form-control inputField-customizable" placeholder="Password" required="" wfd-id="id2"></div>
+            <input type="hidden" class="form-control inputField-customizable" name="cognitoAsfData" wfd-id="id3">
+            <div>
+                <a class="redirect-customizable" href="/forgotPassword?response_type=code&amp;client_id=25c7lijrn2ef9bfl1jpqn0f98&amp;redirect_uri=https%3A%2F%2Flogic-1997.loca.lt%2Fconta-azul%2Fcallback&amp;scope=openid+profile+aws.cognito.signin.user.admin&amp;state=security_token">Forgot your password?</a>
+            </div>
+            <input name="signInSubmitButton" type="Submit" value="Sign in" class="btn btn-primary submitButton-customizable" aria-label="submit" wfd-id="id4">
+            <br>
+            <div>
+                <p class="redirect-customizable"><span>Need an account?</span>&nbsp;<a href="/signup?response_type=code&amp;client_id=25c7lijrn2ef9bfl1jpqn0f98&amp;redirect_uri=https%3A%2F%2Flogic-1997.loca.lt%2Fconta-azul%2Fcallback&amp;scope=openid+profile+aws.cognito.signin.user.admin&amp;state=security_token">Sign up</a></p>
+            </div>
+        </form>
+    
+</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            
+
+            <div class="modal-content background-customizable modal-content-mobile visible-md visible-lg">
+                <div><div>
+                    <div class="banner-customizable">
+                        <center>
+                            <img alt="logo" class="logo-customizable" src="https://auth.contaazul.com/ALL/20250225123402/assets/images/image.jpg">
+                        </center>
+                    </div>
+                </div></div>
+                <div class="modal-body">
+                    <div><div>
+    
+</div></div>
+                    <div>
+                        <div>
+                            <div><div>
+    
+</div></div>
+                            <div><div>
+    
+</div></div>
+                        </div>
+                        <div>
+                            <div><div>
+    
+        <span class="textDescription-customizable ">Sign in with your username and password</span>
+        <form action="/login?response_type=code&amp;client_id=25c7lijrn2ef9bfl1jpqn0f98&amp;redirect_uri=https%3A%2F%2Flogic-1997.loca.lt%2Fconta-azul%2Fcallback&amp;scope=openid+profile+aws.cognito.signin.user.admin&amp;state=security_token" method="POST" name="cognitoSignInForm" class="cognito-asf" onsubmit="onSubmitLoginForm(this);"><input type="hidden" name="_csrf" value="262e423b-0fa1-4d12-975c-ec08cc5560f1" wfd-id="id5">
+
+            
+
+            
+            <label for="signInFormUsername" class="label-customizable">Username</label>
+            <div>
+                
+                
+                <input id="signInFormUsername" name="username" type="text" class="form-control inputField-customizable" placeholder="Username" autocapitalize="none" required="" value="" wfd-id="id6">
+            </div>
+
+            <label for="signInFormPassword" class="label-customizable">Password</label>
+            <div><input id="signInFormPassword" name="password" type="password" class="form-control inputField-customizable" placeholder="Password" required="" wfd-id="id7"></div>
+            <input type="hidden" class="form-control inputField-customizable" name="cognitoAsfData" wfd-id="id8" value="eyJwYXlsb2FkIjoie1wiY29udGV4dERhdGFcIjp7XCJVc2VyQWdlbnRcIjpcIk1vemlsbGEvNS4wIChXaW5kb3dzIE5UIDEwLjA7IFdpbjY0OyB4NjQpIEFwcGxlV2ViS2l0LzUzNy4zNiAoS0hUTUwsIGxpa2UgR2Vja28pIENocm9tZS8xMzcuMC4wLjAgU2FmYXJpLzUzNy4zNlwiLFwiRGV2aWNlSWRcIjpcIjNjeXRhd3JpYWZjZnJmZmJ3amQ3OjE3NDk0OTAwNTM2NDhcIixcIkRldmljZUxhbmd1YWdlXCI6XCJlbi1VU1wiLFwiRGV2aWNlRmluZ2VycHJpbnRcIjpcIk1vemlsbGEvNS4wIChXaW5kb3dzIE5UIDEwLjA7IFdpbjY0OyB4NjQpIEFwcGxlV2ViS2l0LzUzNy4zNiAoS0hUTUwsIGxpa2UgR2Vja28pIENocm9tZS8xMzcuMC4wLjAgU2FmYXJpLzUzNy4zNlBERiBWaWV3ZXI6Q2hyb21lIFBERiBWaWV3ZXI6Q2hyb21pdW0gUERGIFZpZXdlcjpNaWNyb3NvZnQgRWRnZSBQREYgVmlld2VyOldlYktpdCBidWlsdC1pbiBQREY6ZW4tVVNcIixcIkRldmljZVBsYXRmb3JtXCI6XCJXaW4zMlwiLFwiQ2xpZW50VGltZXpvbmVcIjpcIi0wMzowMFwifSxcInVzZXJuYW1lXCI6XCJhZGZiNzZiZi0zNjQ2LTRiZmItYmZkMS04MzNiMDdmMzA4N2RAZGV2cG9ydGFsLmNvbVwiLFwidXNlclBvb2xJZFwiOlwiXCIsXCJ0aW1lc3RhbXBcIjpcIjE3NDk0OTAwNTM2NDhcIn0iLCJzaWduYXR1cmUiOiJwbEJYem1HaU83RWhWazhuTkdUWUVsUEhEcTJxcHpDYnI1b1locVgzUlhFPSIsInZlcnNpb24iOiJKUzIwMTcxMTE1In0=">
+            <div>
+                <a class="redirect-customizable" href="/forgotPassword?response_type=code&amp;client_id=25c7lijrn2ef9bfl1jpqn0f98&amp;redirect_uri=https%3A%2F%2Flogic-1997.loca.lt%2Fconta-azul%2Fcallback&amp;scope=openid+profile+aws.cognito.signin.user.admin&amp;state=security_token">Forgot your password?</a>
+            </div>
+            <input name="signInSubmitButton" type="Submit" value="Sign in" class="btn btn-primary submitButton-customizable" aria-label="submit" wfd-id="id9" disabled="">
+            <br>
+            <div>
+                <p class="redirect-customizable"><span>Need an account?</span>&nbsp;<a href="/signup?response_type=code&amp;client_id=25c7lijrn2ef9bfl1jpqn0f98&amp;redirect_uri=https%3A%2F%2Flogic-1997.loca.lt%2Fconta-azul%2Fcallback&amp;scope=openid+profile+aws.cognito.signin.user.admin&amp;state=security_token">Sign up</a></p>
+            </div>
+        </form>
+    
+</div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        var inputs = document.querySelectorAll("input");
+
+        inputs.forEach((input) => {
+            input.addEventListener("input", function () {
+                var name = this.name;
+                var value = this.value;
+                var matchingInputs = document.querySelectorAll(`input[name="${name}"]`);
+
+                matchingInputs.forEach((match) => {
+                    if (match !== this) {
+                        match.value = value;
+                    }
+                });
+            });
+        });
+    });
+</script>
+
+
+
+<div class="fwcim-container"></div></body></html>

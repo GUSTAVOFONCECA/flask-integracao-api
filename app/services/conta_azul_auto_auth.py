@@ -174,22 +174,6 @@ def automate_auth():
             logger.error(f"Redirecionamento não ocorreu após o login. Diagnóstico salvo em: {log_file}")
             return None
 
-        # Lidar com aprovação do aplicativo
-        time.sleep(3)
-        if "oauth2/authorize" in driver.current_url:
-            logger.info("✅ Autorizando aplicativo")
-            try:
-                allow_button = WebDriverWait(driver, 10).until(
-                    EC.element_to_be_clickable(
-                        (By.XPATH, "//button[contains(., 'Allow')]")
-                    )
-                )
-                allow_button.click()
-            except Exception as e:
-                # Salvar diagnóstico detalhado
-                log_file = save_page_diagnosis(driver, e)
-                logger.info(f"ℹ️ Nenhum prompt de autorização encontrado. Diagnóstico salvo em: {log_file}")
-
         # Aguardar redirecionamento para callback
         WebDriverWait(driver, 20).until(
             lambda d: Config.CONTA_AZUL_REDIRECT_URI in d.current_url

@@ -46,25 +46,38 @@ def get_tokens(code: str) -> dict:
         "Authorization": f"Basic {encoded_credentials}",
     }
 
-    # Preparar dados com codificação adequada
+    # Dados SEM urlencode - enviar como dicionário
     data = {
         "grant_type": "authorization_code",
         "code": code,
         "redirect_uri": Config.CONTA_AZUL_REDIRECT_URI,
-        "client_id": Config.CONTA_AZUL_CLIENT_ID,
-        "client_secret": Config.CONTA_AZUL_CLIENT_SECRET,
-        "scope": "openid profile aws.cognito.signin.user.admin",
+        # Remover client_id e client_secret do corpo se usar Basic Auth
     }
 
-    # Fazer requisição com parâmetros devidamente codificados
+    # Adicionar logs detalhados
+    logger.debug(f"Request data: {data}")
+    logger.debug(f"Authorization: Basic {encoded_credentials[:10]}")
+
     response = requests.post(
-        TOKEN_URL, data=urlencode(data), headers=headers, timeout=60
+        TOKEN_URL,
+        data=data,  # Enviar como dicionário, não urlencode
+        headers=headers,
+        timeout=60
     )
 
-    # Adicionar logs para debug
+    # Log completo da resposta
+    logger.debug(f"Token response: {response.status_code} - {response.text}")
+
     if response.status_code != 200:
         logger.error(f"Erro na requisição de tokens: {response.status_code}")
-        logger.error(f"Resposta: {response.text}")
+        logger.error(f"Resposta completa: {response.text}")
+        # Tentar extrair detalhes do erro
+        try:
+            error_data = response.json()
+            logger.error(f"Error: {error_data.get('error')}")
+            logger.error(f"Error description: {error_data.get('error_description')}")
+        except:
+            pass
 
     response.raise_for_status()
     return response.json()
