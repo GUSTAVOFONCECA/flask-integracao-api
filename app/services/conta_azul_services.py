@@ -1,8 +1,9 @@
-# app/services/conta_azul_service.py
+# app/services/conta_azul_service.
+import os
+import json
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Union
-from urllib.parse import urlencode
 import base64
 import requests
 from app.config import Config
@@ -14,6 +15,12 @@ logger = logging.getLogger(__name__)
 # Endpoints da Conta Azul
 TOKEN_URL = "https://auth.contaazul.com/oauth2/token"
 API_BASE_URL = "https://api-v2.contaazul.com"
+
+# Caminho do arquivo de persistência de tokens
+TOKEN_FILE_PATH = os.path.join(
+    os.getcwd(), "app", "database", "conta_azul", "conta_azul_tokens.json"
+)
+
 
 # Armazenamento de tokens (em memória - para produção use persistência)
 conta_azul_tokens: Dict[str, Optional[Union[str, datetime]]] = {
@@ -32,6 +39,7 @@ def auto_authenticate():
     # Trocar código por tokens
     token_data = get_tokens(auth_code)
     set_tokens(token_data)
+
     return token_data
 
 
@@ -46,23 +54,24 @@ def get_tokens(code: str) -> dict:
         "Authorization": f"Basic {encoded_credentials}",
     }
 
-    # Dados SEM urlencode - enviar como dicionário
-    data = {
-        "grant_type": "authorization_code",
-        "code": code,
-        "redirect_uri": Config.CONTA_AZUL_REDIRECT_URI,
-        # Remover client_id e client_secret do corpo se usar Basic Auth
-    }
+    # Monta a string manualmente, SEM urlencode nem dict
+    body = (
+        f"client_id={Config.CONTA_AZUL_CLIENT_ID}"
+        f"&client_secret={Config.CONTA_AZUL_CLIENT_SECRET}"
+        f"&grant_type=authorization_code"
+        f"&code={code}"
+        f"&redirect_uri={Config.CONTA_AZUL_REDIRECT_URI}"
+    )
 
     # Adicionar logs detalhados
-    logger.debug(f"Request data: {data}")
-    logger.debug(f"Authorization: Basic {encoded_credentials[:10]}")
+    logger.debug(f"Request data: {body}")
+    logger.debug(f"Authorization: Basic {encoded_credentials}")
 
     response = requests.post(
         TOKEN_URL,
-        data=data,  # Enviar como dicionário, não urlencode
+        data=body,  # Enviar como dicionário, não urlencode
         headers=headers,
-        timeout=60
+        timeout=60,
     )
 
     # Log completo da resposta
@@ -98,18 +107,15 @@ def refresh_tokens() -> dict:
     }
 
     # Preparar dados com escopo e codificação adequada
-    data = {
-        "grant_type": "refresh_token",
-        "refresh_token": conta_azul_tokens["refresh_token"],
-        "client_id": Config.CONTA_AZUL_CLIENT_ID,
-        "client_secret": Config.CONTA_AZUL_CLIENT_SECRET,
-        "scope": "openid profile aws.cognito.signin.user.admin",
-    }
+    body = (
+        f"client_id={Config.CONTA_AZUL_CLIENT_ID}"
+        f"&client_secret={Config.CONTA_AZUL_CLIENT_SECRET}"
+        f"&grant_type=refresh_token"
+        f"&code={conta_azul_tokens['refresh_token']}"
+    )
 
     # Fazer requisição com parâmetros devidamente codificados
-    response = requests.post(
-        TOKEN_URL, data=urlencode(data), headers=headers, timeout=60
-    )
+    response = requests.post(TOKEN_URL, data=body, headers=headers, timeout=60)
 
     # Adicionar logs para debug
     if response.status_code != 200:
@@ -128,6 +134,31 @@ def set_tokens(token_data: dict):
     conta_azul_tokens["expires_at"] = datetime.now() + timedelta(
         seconds=token_data["expires_in"]
     )
+
+    logger.debug("Conta azul tokens:\n%s", conta_azul_tokens)
+    save_tokens_to_file()
+
+
+def save_tokens_to_file():
+    data = conta_azul_tokens.copy()
+    if isinstance(data["expires_at"], datetime):
+        data["expires_at"] = data["expires_at"].isoformat()
+    os.makedirs(os.path.dirname(TOKEN_FILE_PATH), exist_ok=True)
+    with open(TOKEN_FILE_PATH, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=4)
+    logger.info("Conta azul tokens salvo no arquivo: %s", TOKEN_FILE_PATH)
+
+
+def load_tokens_from_file():
+    if os.path.exists(TOKEN_FILE_PATH):
+        with open(TOKEN_FILE_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            conta_azul_tokens["access_token"] = data.get("access_token")
+            conta_azul_tokens["refresh_token"] = data.get("refresh_token")
+            conta_azul_tokens["id_token"] = data.get("id_token")
+            expires_at = data.get("expires_at")
+            if expires_at:
+                conta_azul_tokens["expires_at"] = datetime.fromisoformat(expires_at)
 
 
 def is_authenticated() -> bool:
@@ -168,3 +199,7 @@ def get_sales(page: int = 1, size: int = 100) -> dict:
     response = requests.get(url, params=params, headers=get_auth_headers(), timeout=10)
     response.raise_for_status()
     return response.json()
+
+
+# Carrega tokens do arquivo ao inicializar
+load_tokens_from_file()

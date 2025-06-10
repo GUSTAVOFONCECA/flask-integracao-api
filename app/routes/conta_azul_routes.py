@@ -1,8 +1,6 @@
 # app/routes/conta_azul_routes.py
 from flask import Blueprint, request, current_app, jsonify
 from app.services.conta_azul_services import (
-    get_tokens,
-    set_tokens,
     get_sales,
     auto_authenticate,
 )
@@ -12,57 +10,39 @@ conta_azul_bp = Blueprint("conta_azul", __name__, url_prefix="/conta-azul")
 
 @conta_azul_bp.route("/auto-auth")
 def auto_auth():
-    """Endpoint para autenticação automática com Selenium"""
+    """Endpoint para executar todo fluxo automatizado de OAuth e retornar tokens."""
     try:
+        # Executa Selenium, troca code por token e captura dados
         token_data = auto_authenticate()
+        # Retorna apenas o access_token para simplicidade
         return (
             jsonify(
                 {
-                    "status": "Autenticado automaticamente com sucesso!",
-                    "access_token": token_data["access_token"],
+                    "access_token": token_data.get("access_token"),
+                    "refresh_token": token_data.get("refresh_token"),
+                    "expires_in": token_data.get("expires_in"),
                 }
             ),
             200,
         )
-    except RuntimeError as e:
-        current_app.logger.error(
-            f"Falha na autenticação automática (RuntimeError): {str(e)}"
-        )
-        return jsonify({"error": str(e)}), 500
-    except KeyError as e:
-        current_app.logger.error(
-            f"Falha na autenticação automática (KeyError): {str(e)}"
-        )
-        return jsonify({"error": str(e)}), 400
-    except ValueError as e:
-        current_app.logger.error(
-            f"Falha na autenticação automática (ValueError): {str(e)}"
-        )
-        return jsonify({"error": str(e)}), 400
+    except Exception as e:
+        current_app.logger.error("Erro em auto-auth: %s", str(e))
+        return jsonify({"error": str(e)}), getattr(e, "code", 500)
 
 
 @conta_azul_bp.route("/callback")
 def callback():
-    """Endpoint de callback para receber o código de autorização."""
-    code = request.args.get("code")
+    """Endpoint de callback para receber apenas o authorization code."""
     error = request.args.get("error")
-
     if error:
         return jsonify({"error": error}), 400
 
-    try:
-        token_data = get_tokens(str(code))
-        set_tokens(token_data)
-        return jsonify({"status": "Autenticado com sucesso!"}), 200
-    except ValueError as e:
-        current_app.logger.error("Falha na autenticação (ValueError): %s", str(e))
-        return jsonify({"error": str(e)}), 400
-    except KeyError as e:
-        current_app.logger.error("Falha na autenticação (KeyError): %s", str(e))
-        return jsonify({"error": str(e)}), 400
-    except RuntimeError as e:
-        current_app.logger.error("Falha na autenticação (RuntimeError): %s", str(e))
-        return jsonify({"error": str(e)}), 500
+    code = request.args.get("code")
+    if not code:
+        return jsonify({"error": "Parâmetro 'code' não fornecido"}), 400
+
+    # Somente retorna o code, sem chamar get_tokens
+    return jsonify({"code": code}), 200
 
 
 @conta_azul_bp.route("/vendas")

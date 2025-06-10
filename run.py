@@ -62,9 +62,9 @@ def main() -> None:
     Função principal de inicialização da aplicação.
 
     Fluxo de execução:
-    1. Valida variáveis de ambiente obrigatórias.
+    1. Configura logging (arquivo + console).
     2. Define Config.ENV como 'development' para ajustar níveis de log.
-    3. Configura logging (arquivo + console).
+    3. Valida variáveis de ambiente obrigatórias.
     4. Testa health check da API.
     5. Inicia Flask em thread.
     6. Dispara LocalTunnel em background.
@@ -73,12 +73,12 @@ def main() -> None:
     manager = AppManager()
 
     try:
-        # Configure logging FIRST
+        # 1) Configure logging
         configure_logging(manager.flask_app)  # Movido para cá
 
         app_logger = manager.flask_app.logger
 
-        # Validação agora é feita dentro do configure_logging
+        # 2) Validação agora é feita dentro do configure_logging
         app_logger.info("🛠️ Verificando configurações básicas...")
         app_logger.info("✅ Configurações válidas")
 

@@ -82,7 +82,7 @@ def get_cnpj_receita(cnpj: str) -> Optional[Dict]:
     :type cnpj: str
     :return: Dados do CNPJ ou None em caso de erro
     :rtype: dict or None
-    :raises requests.exceptions.RequestException: Em caso de erro na requisição
+    :raises: requests.exceptions.RequestException: Em caso de erro na requisição
 
     .. rubric:: Exemplo de Retorno
 

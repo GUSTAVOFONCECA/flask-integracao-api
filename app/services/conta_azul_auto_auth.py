@@ -69,11 +69,10 @@ def get_auth_url(state: str = "security_token") -> str:
     params = {
         "response_type": "code",
         "client_id": Config.CONTA_AZUL_CLIENT_ID,
-        "redirect_uri": Config.CONTA_AZUL_REDIRECT_URI,
         "scope": "openid profile aws.cognito.signin.user.admin",
         "state": state,
     }
-    return f"{AUTH_URL}?{urlencode(params)}"
+    return f"{AUTH_URL}?{urlencode(params)}&redirect_uri={Config.CONTA_AZUL_REDIRECT_URI}"
 
 
 def automate_auth():
