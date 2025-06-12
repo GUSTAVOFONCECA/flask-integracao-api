@@ -77,6 +77,7 @@ def get_auth_url(state: str = "security_token") -> str:
 
 def automate_auth():
     """Automatiza o processo de autenticação OAuth2 com Selenium"""
+    ### VERIFICAR O COMPORTAMENTO DA 2FA ###
     logger.info("🚀 Iniciando automação de autenticação com Selenium")
 
     # Verificar se temos o IP público
@@ -160,33 +161,38 @@ def automate_auth():
         time.sleep(0.5)  # Espera para a interface responder
 
         driver.execute_script("arguments[0].click();", submit_button)
-        try:
-            WebDriverWait(driver, 10).until(
-                EC.any_of(
-                    EC.url_contains("auth.contaazul.com/oauth2/authorize"),
-                    EC.url_contains(Config.CONTA_AZUL_REDIRECT_URI),
-                )
-            )
-        except TimeoutException as e:
-            # Salvar diagnóstico detalhado
-            log_file = save_page_diagnosis(driver, e)
-            logger.error(f"Redirecionamento não ocorreu após o login. Diagnóstico salvo em: {log_file}")
-            return None
 
-        # Aguardar redirecionamento para callback
-        WebDriverWait(driver, 20).until(
-            lambda d: Config.CONTA_AZUL_REDIRECT_URI in d.current_url
+        # Aguardar o campo de autenticação 2FA aparecer
+        auth_code_input = WebDriverWait(driver, 30).until(
+            EC.presence_of_element_located((By.NAME, "authentication_code"))
+        )
+        logger.info("📲 Campo para autenticação de 2 fatores detectado.")
+
+        # Exibe um alerta para o usuário lembrar de digitar o código
+        logger.info("⏳ Aguardando usuário inserir o código 2FA e confirmar...")
+        driver.execute_script(
+            "alert('⚠️ Insira o código de autenticação de 2 fatores e clique em Confirmar na tela.')"
         )
 
-        # Extrair código de autorização
+        # Aguarda o redirecionamento após o usuário completar o 2FA
+        try:
+            WebDriverWait(driver, 180).until(
+                lambda d: Config.CONTA_AZUL_REDIRECT_URI in d.current_url
+            )
+        except TimeoutException as e:
+            log_file = save_page_diagnosis(driver, e)
+            logger.error(f"⏳ Tempo esgotado esperando redirecionamento pós-2FA. Diagnóstico salvo em: {log_file}")
+            return None
+
+        # Extrair código de autorização da URL
         parsed_url = urlparse(driver.current_url)
         query_params = parse_qs(parsed_url.query)
         auth_code = query_params.get("code", [None])[0]
 
         if not auth_code:
-            raise ValueError("❌ Código de autorização não encontrado")
+            raise ValueError("❌ Código de autorização não encontrado na URL de callback")
 
-        logger.info(f"🔑 Código de autorização obtido: {auth_code}")
+        logger.info(f"🔑 Código de autorização obtido com sucesso: {auth_code}")
         return auth_code
 
     except Exception as e:
@@ -195,5 +201,5 @@ def automate_auth():
         logger.error(f"❌ Elemento não encontrado. Diagnóstico salvo em: {log_file}")
         return None
     finally:
-        driver.quit()
+        #driver.quit()
         logger.info("🛑 Navegador fechado")

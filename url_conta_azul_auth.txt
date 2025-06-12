@@ -1,5 +1,3 @@
 curl -i \
   -H "X-API-Key: rk0evx8ch3vie1YJMgpJqaplWJZxDhLc7q7LOFdRl29C80GhFemmnd3s79NJNR4ZZ8" \
   "https://logic-1997.loca.lt/conta-azul/auto-auth"
-
-

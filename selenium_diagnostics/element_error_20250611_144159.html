@@ -1,0 +1,121 @@
+<html lang="en" class="a-ws a-js a-audio a-video a-canvas a-svg a-drag-drop a-geolocation a-history a-webworker a-autofocus a-input-placeholder a-textarea-placeholder a-local-storage a-gradients a-transform3d a-touch-scrolling a-text-shadow a-text-stroke a-box-shadow a-border-radius a-border-image a-opacity a-transform a-transition" data-aui-build-date="3.17.16.3-2017-10-11"><head>
+    <link href="https://dgay0d1ozp68.cloudfront.net/20240614193835/css/bootstrap.min.css" rel="stylesheet" media="screen">
+    <link href="https://dgay0d1ozp68.cloudfront.net/20240614193835/css/cognito-login.css" rel="stylesheet" media="screen">
+    <link href="https://auth.contaazul.com/ALL/20250225123402/assets/CSS/custom-css.css" rel="stylesheet" media="screen">
+    <title>Signin</title>
+
+    <script src="https://dgay0d1ozp68.cloudfront.net/20240614193835/js/amazon-cognito-advanced-security-data.min.js"></script>
+    <script>
+    function getAdvancedSecurityData(formReference) {
+        if (typeof AmazonCognitoAdvancedSecurityData === "undefined") {
+            return true;
+        }
+
+        // UserpoolId is not available on frontend for springboard. We do not use userPoolId
+        // anyway other than put in context data. 
+        var userPoolId = "";
+        var clientId = getUrlParameter("client_id");
+
+        var username = "";
+        var usernameInput = document.getElementsByName("username")[0];
+        if (usernameInput && usernameInput.value) {
+            username = usernameInput.value;
+        }
+
+        var asfData = AmazonCognitoAdvancedSecurityData.getData(username, userPoolId, clientId);
+        if (typeof asfData === "undefined") {
+            return true;
+        }
+
+        if (formReference && formReference.cognitoAsfData) {
+            formReference.cognitoAsfData.value = asfData
+        }
+
+        return true;
+    }
+
+    function getUrlParameter(name) {
+        name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+        var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+        var results = regex.exec(location.search);
+        return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
+    }
+
+    function onSubmit(evt, formRef) {
+        formRef.querySelector('button[type="submit"]').disabled = true;
+        if (!!formRef.submitted) {
+            evt.preventDefault();
+            return false;
+        } else {
+            formRef.submitted = true;
+            return getAdvancedSecurityData(formRef);
+        }
+    }
+
+    function onSubmitLoginForm (formRef) {
+        formRef.querySelector('input[name="signInSubmitButton"]').disabled = true;
+        getAdvancedSecurityData(formRef)
+    }
+</script>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+
+<body spellcheck="false">
+<div class="container">
+    <div class="modal-dialog">
+        <div class="modal-content background-customizable modal-content-mobile">
+            <div><div>
+                    <div class="banner-customizable">
+                        <center>
+                            <img alt="logo" class="logo-customizable" src="https://auth.contaazul.com/ALL/20250225123402/assets/images/image.jpg">
+                        </center>
+                    </div>
+                </div></div>
+            <div class="modal-body">
+                <form name="mfaform" action="/mfa?response_type=code&amp;client_id=25c7lijrn2ef9bfl1jpqn0f98&amp;scope=openid+profile+aws.cognito.signin.user.admin&amp;state=security_token&amp;redirect_uri=https://logic-1997.loca.lt/conta-azul/callback" method="POST" class="cognito-asf" onsubmit="onSubmit(event, this)"><input type="hidden" name="_csrf" value="2710f2bc-01dc-4f9f-b88a-b4036092a73c">
+                    <div>
+                        <div><div>
+    
+        <div class="div-login-msg">
+            <span id="text-code">Please enter the code from your passcode app.</span>
+        </div>
+        
+        <br>
+        <input class="form-control inputField-customizable" name="authentication_code" required="" type="text" inputmode="numeric" autocomplete="one-time-code" aria-label="authentication code" oninput="validateTotpCode()" id="totpCodeInput">
+        <input type="hidden" class="form-control inputField-customizable" name="cognitoAsfData">
+        <button disabled="" type="submit" class="btn submitButton-customizable" id="signInButton">Sign in</button>
+    
+    <script>
+    function onSubmit(evt, formRef) {
+        formRef.querySelector('button[type="submit"]').disabled = true;
+        if (!!formRef.submitted) {
+            evt.preventDefault();
+            return false;
+        } else {
+            formRef.submitted = true;
+            return true;
+        }
+    }
+
+    function isMfaCodeValid(mfaCode) {
+        // MFA code must be exactly 6 numeric digits
+        return /^\d{6}$/.test(mfaCode);
+    }
+</script>
+    <script>
+        function validateTotpCode() {
+            document.getElementById('signInButton').disabled = !isMfaCodeValid(document.getElementById('totpCodeInput').value);
+        }
+    </script>
+</div></div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+<div class="fwcim-container"></div></body></html>

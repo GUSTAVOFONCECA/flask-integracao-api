@@ -54,7 +54,7 @@ def get_tokens(code: str) -> dict:
         "Authorization": f"Basic {encoded_credentials}",
     }
 
-    # Monta a string manualmente, SEM urlencode nem dict
+    # Monta a string manualmente
     body = (
         f"client_id={Config.CONTA_AZUL_CLIENT_ID}"
         f"&client_secret={Config.CONTA_AZUL_CLIENT_SECRET}"
