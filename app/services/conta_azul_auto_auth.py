@@ -72,7 +72,9 @@ def get_auth_url(state: str = "security_token") -> str:
         "scope": "openid profile aws.cognito.signin.user.admin",
         "state": state,
     }
-    return f"{AUTH_URL}?{urlencode(params)}&redirect_uri={Config.CONTA_AZUL_REDIRECT_URI}"
+    return (
+        f"{AUTH_URL}?{urlencode(params)}&redirect_uri={Config.CONTA_AZUL_REDIRECT_URI}"
+    )
 
 
 def automate_auth():
@@ -141,10 +143,12 @@ def automate_auth():
 
         # Identificar formulário VISÍVEL (desktop)
         login_form = WebDriverWait(driver, 20).until(
-            EC.visibility_of_element_located((
-                By.CSS_SELECTOR,
-                ".modal-content.visible-md.visible-lg:not([style*='display: none'])"
-            ))
+            EC.visibility_of_element_located(
+                (
+                    By.CSS_SELECTOR,
+                    ".modal-content.visible-md.visible-lg:not([style*='display: none'])",
+                )
+            )
         )
         logger.info("✅ Formulário desktop visível encontrado")
 
@@ -162,35 +166,47 @@ def automate_auth():
 
         driver.execute_script("arguments[0].click();", submit_button)
 
-        # Aguardar o campo de autenticação 2FA aparecer
-        auth_code_input = WebDriverWait(driver, 30).until(
-            EC.presence_of_element_located((By.NAME, "authentication_code"))
-        )
-        logger.info("📲 Campo para autenticação de 2 fatores detectado.")
-
-        # Exibe um alerta para o usuário lembrar de digitar o código
-        logger.info("⏳ Aguardando usuário inserir o código 2FA e confirmar...")
-        driver.execute_script(
-            "alert('⚠️ Insira o código de autenticação de 2 fatores e clique em Confirmar na tela.')"
-        )
-
-        # Aguarda o redirecionamento após o usuário completar o 2FA
+        # Tentar localizar o campo de autenticação 2FA (sem falhar se não existir)
         try:
-            WebDriverWait(driver, 180).until(
-                lambda d: Config.CONTA_AZUL_REDIRECT_URI in d.current_url
+            auth_code_input = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.NAME, "authentication_code"))
             )
+            logger.info("📲 Campo para autenticação de 2 fatores detectado.")
+
+            logger.info("⏳ Aguardando usuário inserir o código 2FA e confirmar...")
+
+            # Esperar o campo sumir (indica que o usuário confirmou o código)
+            WebDriverWait(driver, 180).until(EC.staleness_of(auth_code_input))
+            logger.info("✅ Campo de 2FA enviado e removido da página.")
+
+        except TimeoutException:
+            logger.info(
+                "⏩ Campo de 2FA não apareceu — seguindo fluxo padrão (pode estar autenticado ou não requer 2FA)."
+            )
+
+        # Aguardar redirecionamento para o callback (válido com ou sem 2FA)
+        callback_prefix = Config.CONTA_AZUL_REDIRECT_URI.rstrip("/")
+        try:
+            WebDriverWait(driver, 60).until(
+                lambda d: d.current_url.startswith(callback_prefix)
+            )
+            logger.info("🌐 Redirecionado de volta ao callback da aplicação.")
         except TimeoutException as e:
             log_file = save_page_diagnosis(driver, e)
-            logger.error(f"⏳ Tempo esgotado esperando redirecionamento pós-2FA. Diagnóstico salvo em: {log_file}")
+            logger.error(
+                f"❌ Não houve redirecionamento ao callback. Diagnóstico salvo em: {log_file}"
+            )
             return None
 
-        # Extrair código de autorização da URL
+        # Extrair o código da URL
         parsed_url = urlparse(driver.current_url)
         query_params = parse_qs(parsed_url.query)
         auth_code = query_params.get("code", [None])[0]
 
         if not auth_code:
-            raise ValueError("❌ Código de autorização não encontrado na URL de callback")
+            raise ValueError(
+                "❌ Código de autorização não encontrado na URL de callback"
+            )
 
         logger.info(f"🔑 Código de autorização obtido com sucesso: {auth_code}")
         return auth_code
@@ -201,5 +217,5 @@ def automate_auth():
         logger.error(f"❌ Elemento não encontrado. Diagnóstico salvo em: {log_file}")
         return None
     finally:
-        #driver.quit()
+        driver.quit()
         logger.info("🛑 Navegador fechado")

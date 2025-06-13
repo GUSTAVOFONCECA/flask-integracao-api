@@ -1,0 +1,16 @@
+# app/.env
+FLASK_ENV=development 			# Altere para "production" em produção
+SECRET_KEY=2c75e98d-e9bf-4b94-b70b-622a2425d4f4
+WEBHOOK_SECRET=secreto_webhook
+API_KEY=rk0evx8ch3vie1YJMgpJqaplWJZxDhLc7q7LOFdRl29C80GhFemmnd3s79NJNR4ZZ8KgDk3xLqxCdgk4NzgiDjXqoOFPTJRQ3pbNsPGpjHSyuZHqveesKn2jkK27wWRI
+BITRIX_WEBHOOK_URL=sua_url_bitrix
+BITRIX_WEBHOOK_TOKEN=9aa8aede999e31a3c15b29766902ff22
+DIGISAC_USER=gustavo.fonseca@logicassessoria.com.br
+DIGISAC_PASSWORD=S-dX;3#0!"42
+DIGISAC_USER_ID=af8f3dc8-5dd2-493c-92ac-6c6d7ba7cdba
+DIGISAC_TOKEN=a296aef8413621b65432096a5bc7524c1ab357e3
+CONTA_AZUL_CLIENT_ID=25c7lijrn2ef9bfl1jpqn0f98
+CONTA_AZUL_CLIENT_SECRET=cjuap0c32l3k2t93eem7357pl54o37f8vl6vhn6vmidsg60dbb3
+CONTA_AZUL_REDIRECT_URI=https://logic-1997.loca.lt/conta-azul/callback
+CONTA_AZUL_EMAIL=gustavo.fonseca@logicassessoria.com.br
+CONTA_AZUL_PASSWORD=Ed_gu0123456!
