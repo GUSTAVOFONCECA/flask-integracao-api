@@ -4,6 +4,8 @@
 Rotas de webhook para integração com Bitrix24 e validação de CNPJ.
 """
 
+import os
+import json
 import time
 import logging
 from werkzeug.exceptions import BadRequest
@@ -17,9 +19,39 @@ from app.services.webhook_services import (
     send_message_digisac,
     transfer_ticket_digisac,
 )
+from app.services.conta_azul_services import handle_sale_creation
 
 webhook_bp = Blueprint("webhook", __name__)
 logger = logging.getLogger(__name__)
+PENDING_FILE = "database/pending_renewals.json"
+
+# Utilities to persist pending renewals
+
+
+def _load_pending():
+    if not os.path.exists(PENDING_FILE):
+        return {}
+    with open(PENDING_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _save_pending(data):
+    os.makedirs(os.path.dirname(PENDING_FILE), exist_ok=True)
+    with open(PENDING_FILE, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def _add_pending(contact_number, deal_type):
+    pending = _load_pending()
+    pending[contact_number] = deal_type
+    _save_pending(pending)
+
+
+def _pop_pending(contact_number):
+    pending = _load_pending()
+    deal_type = pending.pop(contact_number, None)
+    _save_pending(pending)
+    return deal_type
 
 
 @webhook_bp.route("/consulta-receita", methods=["POST"])
@@ -100,9 +132,7 @@ def post_valida_cnpj_receita_bitrix():
         processed_data = update_company_process_cnpj(raw_cnpj_json, id_empresa)
         api_response = post_destination_api(processed_data, post_url)
 
-        logger.info(
-            "CNPJ %s validado com sucesso para a empresa %s", cnpj, id_empresa
-        )
+        logger.info("CNPJ %s validado com sucesso para a empresa %s", cnpj, id_empresa)
 
         return (
             jsonify({"status": "received", "response": api_response}),
@@ -125,7 +155,13 @@ def post_envia_comunicado_para_cliente_bitrix():
         logger.warning("Assinatura inválida | Recebida: %s", signature)
         return jsonify({"error": "Assinatura inválida"}), 403
     # Validar parâmetros obrigatórios
-    required_params = ["companyName", "contactName", "contactNumber", "daysToExpire", "dealType"]
+    required_params = [
+        "companyName",
+        "contactName",
+        "contactNumber",
+        "daysToExpire",
+        "dealType",
+    ]
     missing = [param for param in required_params if not request.args.get(param)]
 
     if missing:
@@ -151,7 +187,7 @@ def post_envia_comunicado_para_cliente_bitrix():
         contact_name,
         contact_number,
         days_to_expire,
-        deal_type
+        deal_type,
     )
 
     # Buscar contact ID - FUNÇÃO ATUALIZADA
@@ -192,30 +228,31 @@ def post_envia_comunicado_para_cliente_bitrix():
 
 
 @webhook_bp.route("/renova-certificado", methods=["POST"])
-def post_renova_certificado_digisac():
-    """Processa resposta de renovação de certificado"""
-    # Log detalhado da requisição
-    # ─── DEBUG: tudo que chega na requisição ──────────────────────────────
-    # Query string (args)
-    logger.debug("→ Query String args: %s", request.args.to_dict(flat=False))
-    # Cabeçalhos
-    logger.debug("→ Headers: %s", dict(request.headers))
-    # Payload raw
-    logger.debug("→ Raw Data: %r", request.get_data())
-    # JSON (se houver)
+def renova_certificado():
+    # Pega contactNumber (via args ou corpo JSON)
+    contact_number = request.args.get("contactNumber") or request.json.get("contactNumber")
+    if not contact_number:
+        return jsonify({"error": "contactNumber ausente"}), 400
+
+    # Recupera o tipo de negócio pendente
+    deal_type = _pop_pending(contact_number)
+    if not deal_type:
+        return jsonify({"error": "Nenhuma solicitação pendente encontrada"}), 404
+
     try:
-        logger.info("Nova requisição para renovação de certificado")
-        json_payload = request.get_json(silent=True)
-        return request.get_json()
-    except BadRequest as e:
-        json_payload = f"<invalid JSON: {e}>"
-    logger.debug("→ JSON: %s", json_payload)
-    # Form fields (application/x-www-form-urlencoded ou multipart/form-data)
-    logger.debug("→ Form: %s", request.form.to_dict(flat=False))
-    # Arquivos (se houver upload)
-    logger.debug("→ Files: %s", list(request.files.keys()))
-    # Valores combinados (args + form)
-    logger.debug("→ Values (args+form): %s", request.values.to_dict(flat=False))
+        # Cria a venda e obtém dados, incluindo link do boleto
+        sale = handle_sale_creation(contact_number, deal_type)
+
+        # Retorna resposta com dados da venda / boleto
+        return jsonify({
+            "status": "success",
+            "sale_id": sale.get("id"),
+            "url_boleto": sale.get("url_boleto") or sale.get("boletoUrl"),
+            "raw": sale
+        }), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @webhook_bp.route("/nao-renova-certificado", methods=["POST"])

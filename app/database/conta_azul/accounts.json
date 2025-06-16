@@ -1,0 +1,100 @@
+{
+  "itens": [
+    {
+      "id": "a10a31a4-892f-4a3d-9c47-54460c8fefa4",
+      "banco": "BANCO_BRASIL",
+      "codigo_banco": 1,
+      "nome": "BANCO DO BRASIL - APLICAÇÃO",
+      "ativo": true,
+      "tipo": "APLICACAO",
+      "conta_padrao": false,
+      "possui_config_boleto_bancario": false,
+      "agencia": null,
+      "numero": null
+    },
+    {
+      "id": "f2f77b61-6f53-4e61-98ca-84f33e5dff22",
+      "banco": "NAO_BANCO",
+      "codigo_banco": -10,
+      "nome": "Caixa - Tesouraria",
+      "ativo": true,
+      "tipo": "CAIXINHA",
+      "conta_padrao": false,
+      "possui_config_boleto_bancario": false,
+      "agencia": null,
+      "numero": null
+    },
+    {
+      "id": "efa91453-f647-4d6f-879d-312817a337fe",
+      "banco": "BANCO_BRASIL",
+      "codigo_banco": 1,
+      "nome": "CONTA CORRENTE BB",
+      "ativo": true,
+      "tipo": "CONTA_CORRENTE",
+      "conta_padrao": false,
+      "possui_config_boleto_bancario": true,
+      "agencia": null,
+      "numero": null
+    },
+    {
+      "id": "3ed5a229-9b94-4725-8f8e-0b462a2d0c60",
+      "banco": "IUGU",
+      "codigo_banco": 401,
+      "nome": "Conta PJ Conta Azul",
+      "ativo": true,
+      "tipo": "CONTA_CORRENTE",
+      "conta_padrao": false,
+      "possui_config_boleto_bancario": false,
+      "agencia": "0002",
+      "numero": "5233713"
+    },
+    {
+      "id": "a10a31a4-892f-4a3d-9c47-54460c8fefa4",
+      "banco": "BANCO_BRASIL",
+      "codigo_banco": 1,
+      "nome": "BANCO DO BRASIL - APLICAÇÃO",
+      "ativo": true,
+      "tipo": "APLICACAO",
+      "conta_padrao": false,
+      "possui_config_boleto_bancario": false,
+      "agencia": null,
+      "numero": null
+    },
+    {
+      "id": "f2f77b61-6f53-4e61-98ca-84f33e5dff22",
+      "banco": "NAO_BANCO",
+      "codigo_banco": -10,
+      "nome": "Caixa - Tesouraria",
+      "ativo": true,
+      "tipo": "CAIXINHA",
+      "conta_padrao": false,
+      "possui_config_boleto_bancario": false,
+      "agencia": null,
+      "numero": null
+    },
+    {
+      "id": "efa91453-f647-4d6f-879d-312817a337fe",
+      "banco": "BANCO_BRASIL",
+      "codigo_banco": 1,
+      "nome": "CONTA CORRENTE BB",
+      "ativo": true,
+      "tipo": "CONTA_CORRENTE",
+      "conta_padrao": false,
+      "possui_config_boleto_bancario": true,
+      "agencia": null,
+      "numero": null
+    },
+    {
+      "id": "3ed5a229-9b94-4725-8f8e-0b462a2d0c60",
+      "banco": "IUGU",
+      "codigo_banco": 401,
+      "nome": "Conta PJ Conta Azul",
+      "ativo": true,
+      "tipo": "CONTA_CORRENTE",
+      "conta_padrao": false,
+      "possui_config_boleto_bancario": false,
+      "agencia": "0002",
+      "numero": "5233713"
+    }
+  ]
+}

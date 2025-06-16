@@ -1,6 +1,8 @@
 # app/services/conta_azul_service.
 import os
 import json
+import re
+from pathlib import Path
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, Optional, Union
@@ -191,14 +193,135 @@ def get_auth_headers() -> dict:
     }
 
 
-def get_sales(page: int = 1, size: int = 100) -> dict:
-    """Obtém vendas da API da Conta Azul."""
-    url = f"{API_BASE_URL}/sales/v1/sales_orders"
-    params = {"page": page, "size": size}
+def find_person_uuid_by_phone(phone: str) -> str | None:
+    # Normaliza número
+    normalized_phone = re.sub(r"\D", "", phone)
 
-    response = requests.get(url, params=params, headers=get_auth_headers(), timeout=10)
+    with open(Path("database/conta_azul/person.json"), "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    for person in data.get("itens", []):
+        person_phone = person.get("telefone")
+        if person_phone and re.sub(r"\D", "", person_phone) == normalized_phone:
+            return person["uuid"]
+
+    return None
+
+
+def create_sale(sale_payload: dict) -> dict:
+    url = f"{API_BASE_URL}/v1/venda"
+    headers = get_auth_headers()
+    response = requests.post(url, json=sale_payload, headers=headers, timeout=60)
     response.raise_for_status()
     return response.json()
+
+
+def build_sale_payload(
+    client_id: str,
+    service_id: str,
+    price: float,
+    sale_date: datetime,
+    due_date: datetime,
+    item_description: str,
+) -> None:
+    return {
+        "id_cliente": client_id,
+        "situacao": "APROVADO",
+        "data_venda": sale_date.strftime("%Y-%m-%d"),
+        "itens": [
+            {
+                "descricao": item_description,
+                "quantidade": 1,
+                "valor": price,
+                "id": service_id,
+            }
+        ],
+        "condicao_pagamento": {
+            "tipo_pagamento": "BOLETO_BANCARIO",
+            "id_conta_financeira": "efa91453-f647-4d6f-879d-312817a337fe",
+            "opcao_condicao_pagamento": "À vista",
+            "parcelas": [
+                {
+                    "data_vencimento": due_date.strftime("%Y-%m-%d"),
+                    "valor": price,
+                    "descricao": "Parcela única",
+                }
+            ],
+        },
+    }
+
+
+def build_sale_certif_digital_params(deal_type: str, client_id: str) -> dict:
+    base = {
+        "id_service": None,
+        "item_description": None,
+        "price": None,
+        "sale_date": datetime.now(),
+        "due_date": datetime.now() + timedelta(days=5),
+    }
+
+    if deal_type == "Pessoa jurídica":
+        base.update(
+            {
+                "id_service": "0b4f9a8b-01bb-4a89-93b3-7f56210bc75d",
+                "item_description": "CERTIFICADO DIGITAL PJ",
+                "price": 180,
+            }
+        )
+    elif deal_type == "Pessoa física - CPF":
+        base.update(
+            {
+                "id_service": "586d5eb2-23aa-47ff-8157-fd85de8b9932",
+                "item_description": "CERTIFICADO DIGITAL PF",
+                "price": 130,
+            }
+        )
+    elif deal_type == "Pessoa física - CEI":
+        base.update(
+            {
+                "id_service": "586d5eb2-23aa-47ff-8157-fd85de8b9932",
+                "item_description": "CERTIFICADO DIGITAL PF",
+                "price": 130,
+            }
+        )
+    else:
+        raise ValueError(f"Tipo de negócio inválido: {deal_type}")
+
+    return base
+
+
+def handle_sale_creation(contact_number: str, deal_type: str) -> dict:
+    """
+    Orquestra a criação de venda de certificado digital na Conta Azul:
+    1) Encontra o cliente pelo telefone.
+    2) Monta parâmetros específicos (id_service, preço, datas).
+    3) Constrói payload e chama create_sale().
+    """
+    # 1) Localiza o UUID do cliente pela lista local (person.json)
+    client_uuid = find_person_uuid_by_phone(contact_number)
+    if not client_uuid:
+        raise ValueError(
+            f"Cliente com telefone {contact_number} não encontrado."
+        )  # :contentReference[oaicite:0]{index=0}
+
+    # 2) Prepara parâmetros (id_service, descrição, preço, datas)
+    params = build_sale_certif_digital_params(
+        deal_type, client_uuid
+    )  # :contentReference[oaicite:1]{index=1}
+
+    # 3) Monta o payload da venda
+    payload = build_sale_payload(
+        client_id=client_uuid,
+        service_id=params["id_service"],
+        price=params["price"],
+        sale_date=params["sale_date"],
+        due_date=params["due_date"],
+        item_description=params["item_description"],
+    )  # :contentReference[oaicite:2]{index=2}
+
+    # 4) Cria a venda e retorna o resultado, que inclui URL do boleto
+    sale = create_sale(payload)  # :contentReference[oaicite:3]{index=3}
+    return sale
 
 
 # Carrega tokens do arquivo ao inicializar

@@ -1,0 +1,9 @@
+curl -X GET "https://logic-1997.loca.lt/webhooks/aviso-certificado?\
+contactNumber=6293159124&\
+dealType=Pessoa%20jur%C3%ADdica&\
+companyName=MinhaEmpresa&\
+contactName=Fulano&\
+daysToExpire=5"
+
+
+curl -X POST "https://logic-1997.loca.lt/webhooks/renova-certificado?contactNumber=6293159124"

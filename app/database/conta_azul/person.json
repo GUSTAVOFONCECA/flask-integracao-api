@@ -3895,33 +3895,6 @@
       }
     },
     {
-      "uuid": "4d702c69-f9de-4408-8de7-3a71bd987f52",
-      "email": "grossette21@gmail.com",
-      "nome": "COCAR ADMINISTRADORA DE BENS LTDA",
-      "documento": "87357285000109",
-      "inscricao_estadual": null,
-      "telefone": "8496581600",
-      "ativo": true,
-      "id_legado": 397769892,
-      "uuid_legado": "fa5743fc-773c-4cca-b569-d9f3e8d388ae",
-      "perfis": [
-        "Cliente"
-      ],
-      "tipo_pessoa": "JURIDICA",
-      "endereco": {
-        "uuid": "b8b366e6-8a79-4c3c-86d5-ceee689d5722",
-        "cep": "74120130",
-        "logradouro": "RUA 22",
-        "numero": "431",
-        "complemento": "QUADRAH10 LOTE 24 BOX E19",
-        "bairro": "SET OESTE",
-        "id_cidade": 2174,
-        "cidade": "Goiânia",
-        "estado": "GO",
-        "pais": "Brasil"
-      }
-    },
-    {
       "uuid": "05656545-b2e2-4b2b-85d8-6f8a7f581720",
       "email": "GROSSETTE21@GMAIL.COM",
       "nome": "COCAR ADMINISTRADORA DE BENS LTDA",
@@ -3945,6 +3918,33 @@
         "id_cidade": 7221,
         "cidade": "Natal",
         "estado": "RN",
+        "pais": "Brasil"
+      }
+    },
+    {
+      "uuid": "4d702c69-f9de-4408-8de7-3a71bd987f52",
+      "email": "grossette21@gmail.com",
+      "nome": "COCAR ADMINISTRADORA DE BENS LTDA",
+      "documento": "87357285000109",
+      "inscricao_estadual": null,
+      "telefone": "8496581600",
+      "ativo": true,
+      "id_legado": 397769892,
+      "uuid_legado": "fa5743fc-773c-4cca-b569-d9f3e8d388ae",
+      "perfis": [
+        "Cliente"
+      ],
+      "tipo_pessoa": "JURIDICA",
+      "endereco": {
+        "uuid": "b8b366e6-8a79-4c3c-86d5-ceee689d5722",
+        "cep": "74120130",
+        "logradouro": "RUA 22",
+        "numero": "431",
+        "complemento": "QUADRAH10 LOTE 24 BOX E19",
+        "bairro": "SET OESTE",
+        "id_cidade": 2174,
+        "cidade": "Goiânia",
+        "estado": "GO",
         "pais": "Brasil"
       }
     },
@@ -4154,33 +4154,6 @@
       }
     },
     {
-      "uuid": "4d702c69-f9de-4408-8de7-3a71bd987f52",
-      "email": "grossette21@gmail.com",
-      "nome": "COCAR ADMINISTRADORA DE BENS LTDA",
-      "documento": "87357285000109",
-      "inscricao_estadual": null,
-      "telefone": "8496581600",
-      "ativo": true,
-      "id_legado": 397769892,
-      "uuid_legado": "fa5743fc-773c-4cca-b569-d9f3e8d388ae",
-      "perfis": [
-        "Cliente"
-      ],
-      "tipo_pessoa": "JURIDICA",
-      "endereco": {
-        "uuid": "b8b366e6-8a79-4c3c-86d5-ceee689d5722",
-        "cep": "74120130",
-        "logradouro": "RUA 22",
-        "numero": "431",
-        "complemento": "QUADRAH10 LOTE 24 BOX E19",
-        "bairro": "SET OESTE",
-        "id_cidade": 2174,
-        "cidade": "Goiânia",
-        "estado": "GO",
-        "pais": "Brasil"
-      }
-    },
-    {
       "uuid": "05656545-b2e2-4b2b-85d8-6f8a7f581720",
       "email": "GROSSETTE21@GMAIL.COM",
       "nome": "COCAR ADMINISTRADORA DE BENS LTDA",
@@ -4204,6 +4177,33 @@
         "id_cidade": 7221,
         "cidade": "Natal",
         "estado": "RN",
+        "pais": "Brasil"
+      }
+    },
+    {
+      "uuid": "4d702c69-f9de-4408-8de7-3a71bd987f52",
+      "email": "grossette21@gmail.com",
+      "nome": "COCAR ADMINISTRADORA DE BENS LTDA",
+      "documento": "87357285000109",
+      "inscricao_estadual": null,
+      "telefone": "8496581600",
+      "ativo": true,
+      "id_legado": 397769892,
+      "uuid_legado": "fa5743fc-773c-4cca-b569-d9f3e8d388ae",
+      "perfis": [
+        "Cliente"
+      ],
+      "tipo_pessoa": "JURIDICA",
+      "endereco": {
+        "uuid": "b8b366e6-8a79-4c3c-86d5-ceee689d5722",
+        "cep": "74120130",
+        "logradouro": "RUA 22",
+        "numero": "431",
+        "complemento": "QUADRAH10 LOTE 24 BOX E19",
+        "bairro": "SET OESTE",
+        "id_cidade": 2174,
+        "cidade": "Goiânia",
+        "estado": "GO",
         "pais": "Brasil"
       }
     },
@@ -8127,6 +8127,22 @@
       }
     },
     {
+      "uuid": "2bb92623-07b4-402f-9bb4-717dc741a0e9",
+      "email": "gustavo.fonseca@logicassessoria.com.br",
+      "nome": "GUSTAVO LEMES DA FONCECA",
+      "documento": "03707178137",
+      "inscricao_estadual": null,
+      "telefone": "62993159124",
+      "ativo": true,
+      "id_legado": 417088783,
+      "uuid_legado": "cdbb5f5b-19ce-4aa0-bf46-c48a784752d5",
+      "perfis": [
+        "Cliente"
+      ],
+      "tipo_pessoa": "FISICA",
+      "endereco": null
+    },
+    {
       "uuid": "a5541b0d-f7c6-445e-9a98-ec0500105149",
       "email": null,
       "nome": "GYN SAUDE AMBIENTAL LTDA",
@@ -8168,33 +8184,6 @@
       ],
       "tipo_pessoa": "FISICA",
       "endereco": null
-    },
-    {
-      "uuid": "7fb9e060-9618-4e5c-a397-d3d03ccd2476",
-      "email": "bocaina.agricultura@gmail.com",
-      "nome": "HERMAN RESENDE SANTOS",
-      "documento": "04491509689",
-      "inscricao_estadual": null,
-      "telefone": "35998255056",
-      "ativo": true,
-      "id_legado": 299848760,
-      "uuid_legado": "b23c7d79-f97a-4ef7-a154-dabe9582ee75",
-      "perfis": [
-        "Cliente"
-      ],
-      "tipo_pessoa": "FISICA",
-      "endereco": {
-        "uuid": "e4f4acd9-04fc-498e-8381-e5837e665384",
-        "cep": "37215000",
-        "logradouro": "Rua Praça Gabriel A Junqueira",
-        "numero": "sn",
-        "complemento": null,
-        "bairro": "Centro",
-        "id_cidade": 3222,
-        "cidade": "Ingaí",
-        "estado": "MG",
-        "pais": "Brasil"
-      }
     },
     {
       "uuid": "1958944f-22da-4376-a6ec-994b0e9c4122",
@@ -8373,6 +8362,22 @@
         "estado": "GO",
         "pais": "Brasil"
       }
+    },
+    {
+      "uuid": "2bb92623-07b4-402f-9bb4-717dc741a0e9",
+      "email": "gustavo.fonseca@logicassessoria.com.br",
+      "nome": "GUSTAVO LEMES DA FONCECA",
+      "documento": "03707178137",
+      "inscricao_estadual": null,
+      "telefone": "62993159124",
+      "ativo": true,
+      "id_legado": 417088783,
+      "uuid_legado": "cdbb5f5b-19ce-4aa0-bf46-c48a784752d5",
+      "perfis": [
+        "Cliente"
+      ],
+      "tipo_pessoa": "FISICA",
+      "endereco": null
     },
     {
       "uuid": "a5541b0d-f7c6-445e-9a98-ec0500105149",
@@ -8677,29 +8682,29 @@
       }
     },
     {
-      "uuid": "2208192a-7485-4c24-846a-fd8fb33f575d",
-      "email": "financeiro@ibbra.com.br",
-      "nome": "IBBRA PARTNERSHIP LTDA",
-      "documento": "46461409000106",
+      "uuid": "7fb9e060-9618-4e5c-a397-d3d03ccd2476",
+      "email": "bocaina.agricultura@gmail.com",
+      "nome": "HERMAN RESENDE SANTOS",
+      "documento": "04491509689",
       "inscricao_estadual": null,
-      "telefone": "6236394469",
+      "telefone": "35998255056",
       "ativo": true,
-      "id_legado": 384679565,
-      "uuid_legado": "c879f34e-1fd0-4937-95e9-3ce0c07bdfd7",
+      "id_legado": 299848760,
+      "uuid_legado": "b23c7d79-f97a-4ef7-a154-dabe9582ee75",
       "perfis": [
         "Cliente"
       ],
-      "tipo_pessoa": "JURIDICA",
+      "tipo_pessoa": "FISICA",
       "endereco": {
-        "uuid": "c07d6e46-bbf9-457a-9b39-08803c5ab7a1",
-        "cep": "74180140",
-        "logradouro": "1135",
-        "numero": "318",
-        "complemento": "QUADRA243                 LOTE  05                  SALA  01",
-        "bairro": "SET MARISTA",
-        "id_cidade": 2174,
-        "cidade": "Goiânia",
-        "estado": "GO",
+        "uuid": "e4f4acd9-04fc-498e-8381-e5837e665384",
+        "cep": "37215000",
+        "logradouro": "Rua Praça Gabriel A Junqueira",
+        "numero": "sn",
+        "complemento": null,
+        "bairro": "Centro",
+        "id_cidade": 3222,
+        "cidade": "Ingaí",
+        "estado": "MG",
         "pais": "Brasil"
       }
     },
@@ -9206,28 +9211,28 @@
       }
     },
     {
-      "uuid": "e7841b0a-e758-4981-ab17-bd5e210ca16b",
-      "email": "escritoriobrunomelo@gmail.com",
-      "nome": "IZADORA SOUZA E SANTOS",
-      "documento": "01394954107",
+      "uuid": "2208192a-7485-4c24-846a-fd8fb33f575d",
+      "email": "financeiro@ibbra.com.br",
+      "nome": "IBBRA PARTNERSHIP LTDA",
+      "documento": "46461409000106",
       "inscricao_estadual": null,
-      "telefone": null,
+      "telefone": "6236394469",
       "ativo": true,
-      "id_legado": 298559265,
-      "uuid_legado": "eba14bd8-7200-473a-92f7-c2fc59491664",
+      "id_legado": 384679565,
+      "uuid_legado": "c879f34e-1fd0-4937-95e9-3ce0c07bdfd7",
       "perfis": [
         "Cliente"
       ],
-      "tipo_pessoa": "FISICA",
+      "tipo_pessoa": "JURIDICA",
       "endereco": {
-        "uuid": "d1f40b8f-bbcc-46fa-b2de-b3678ca2debf",
-        "cep": "75640000",
-        "logradouro": "Rua Piracanjuba",
-        "numero": "sn",
-        "complemento": "Quadra 21 Lote 8",
-        "bairro": "Residencial Jardim Goiás",
-        "id_cidade": 2280,
-        "cidade": "Piracanjuba",
+        "uuid": "c07d6e46-bbf9-457a-9b39-08803c5ab7a1",
+        "cep": "74180140",
+        "logradouro": "1135",
+        "numero": "318",
+        "complemento": "QUADRA243                 LOTE  05                  SALA  01",
+        "bairro": "SET MARISTA",
+        "id_cidade": 2174,
+        "cidade": "Goiânia",
         "estado": "GO",
         "pais": "Brasil"
       }
@@ -9746,28 +9751,28 @@
       }
     },
     {
-      "uuid": "528c3ec7-2430-49d6-89c4-af3e13875dca",
-      "email": "financeiro@logicassessoria.com.br",
-      "nome": "JUNE VIEIRA MARTINS",
-      "documento": "19555261172",
+      "uuid": "e7841b0a-e758-4981-ab17-bd5e210ca16b",
+      "email": "escritoriobrunomelo@gmail.com",
+      "nome": "IZADORA SOUZA E SANTOS",
+      "documento": "01394954107",
       "inscricao_estadual": null,
       "telefone": null,
       "ativo": true,
-      "id_legado": 404021353,
-      "uuid_legado": "60d11cbd-1334-45b1-8ae0-35a379ac18a1",
+      "id_legado": 298559265,
+      "uuid_legado": "eba14bd8-7200-473a-92f7-c2fc59491664",
       "perfis": [
         "Cliente"
       ],
       "tipo_pessoa": "FISICA",
       "endereco": {
-        "uuid": "bff646c7-d6ef-4de5-8b2d-b4a46408c4c7",
-        "cep": "74110130",
-        "logradouro": "Rua 2",
-        "numero": "170",
-        "complemento": "EDIFÍCIO LA RESIDENCE, APT. 805",
-        "bairro": "Setor Oeste",
-        "id_cidade": 2174,
-        "cidade": "Goiânia",
+        "uuid": "d1f40b8f-bbcc-46fa-b2de-b3678ca2debf",
+        "cep": "75640000",
+        "logradouro": "Rua Piracanjuba",
+        "numero": "sn",
+        "complemento": "Quadra 21 Lote 8",
+        "bairro": "Residencial Jardim Goiás",
+        "id_cidade": 2280,
+        "cidade": "Piracanjuba",
         "estado": "GO",
         "pais": "Brasil"
       }
@@ -10275,28 +10280,28 @@
       }
     },
     {
-      "uuid": "029fb57c-64aa-40dc-9163-308cc7039681",
-      "email": "linhagengrb@hotmail.com",
-      "nome": "LINHAGEN GESTÃO EM REPRODUÇÃO BOVINA LTDA",
-      "documento": "53108815000155",
+      "uuid": "528c3ec7-2430-49d6-89c4-af3e13875dca",
+      "email": "financeiro@logicassessoria.com.br",
+      "nome": "JUNE VIEIRA MARTINS",
+      "documento": "19555261172",
       "inscricao_estadual": null,
-      "telefone": "62994127273",
+      "telefone": null,
       "ativo": true,
-      "id_legado": 318096452,
-      "uuid_legado": "9fdb8d58-7373-458d-a86c-e533e82252b8",
+      "id_legado": 404021353,
+      "uuid_legado": "60d11cbd-1334-45b1-8ae0-35a379ac18a1",
       "perfis": [
         "Cliente"
       ],
-      "tipo_pessoa": "JURIDICA",
+      "tipo_pessoa": "FISICA",
       "endereco": {
-        "uuid": "cbedee57-1833-477a-b461-4101aca4e6a3",
-        "cep": "75350000",
-        "logradouro": "Rua Avenida Principal",
-        "numero": "S/N",
-        "complemento": null,
-        "bairro": "Posselândia",
-        "id_cidade": 2179,
-        "cidade": "Guapó",
+        "uuid": "bff646c7-d6ef-4de5-8b2d-b4a46408c4c7",
+        "cep": "74110130",
+        "logradouro": "Rua 2",
+        "numero": "170",
+        "complemento": "EDIFÍCIO LA RESIDENCE, APT. 805",
+        "bairro": "Setor Oeste",
+        "id_cidade": 2174,
+        "cidade": "Goiânia",
         "estado": "GO",
         "pais": "Brasil"
       }
@@ -10805,28 +10810,28 @@
       }
     },
     {
-      "uuid": "e4009b48-a0c2-4d79-ac9f-e1054f210461",
-      "email": "gilveidealborrachas@uol.com.br",
-      "nome": "MAKRO DISTRIBUIDORA DE FERRAMENTAS E EPI",
-      "documento": "38096027000100",
+      "uuid": "029fb57c-64aa-40dc-9163-308cc7039681",
+      "email": "linhagengrb@hotmail.com",
+      "nome": "LINHAGEN GESTÃO EM REPRODUÇÃO BOVINA LTDA",
+      "documento": "53108815000155",
       "inscricao_estadual": null,
-      "telefone": "6299482494",
+      "telefone": "62994127273",
       "ativo": true,
-      "id_legado": 268467022,
-      "uuid_legado": "5d33375c-5777-4226-9069-be6617e9ff2c",
+      "id_legado": 318096452,
+      "uuid_legado": "9fdb8d58-7373-458d-a86c-e533e82252b8",
       "perfis": [
         "Cliente"
       ],
       "tipo_pessoa": "JURIDICA",
       "endereco": {
-        "uuid": "3822db6d-1ef5-40d4-9edf-7f271bbf9d39",
-        "cep": "74525060",
-        "logradouro": "RIO VERDE",
-        "numero": "205",
+        "uuid": "cbedee57-1833-477a-b461-4101aca4e6a3",
+        "cep": "75350000",
+        "logradouro": "Rua Avenida Principal",
+        "numero": "S/N",
         "complemento": null,
-        "bairro": "SET CAMPINAS",
-        "id_cidade": 2174,
-        "cidade": "Goiânia",
+        "bairro": "Posselândia",
+        "id_cidade": 2179,
+        "cidade": "Guapó",
         "estado": "GO",
         "pais": "Brasil"
       }
@@ -11335,28 +11340,28 @@
       }
     },
     {
-      "uuid": "28dee36c-bf68-4695-bbf8-84f62c49ff17",
-      "email": "monallysa_@hotmail.com",
-      "nome": "MONALLYSA",
-      "documento": "48146114000170",
+      "uuid": "e4009b48-a0c2-4d79-ac9f-e1054f210461",
+      "email": "gilveidealborrachas@uol.com.br",
+      "nome": "MAKRO DISTRIBUIDORA DE FERRAMENTAS E EPI",
+      "documento": "38096027000100",
       "inscricao_estadual": null,
-      "telefone": "6299769671",
+      "telefone": "6299482494",
       "ativo": true,
-      "id_legado": 268477655,
-      "uuid_legado": "7a78c89e-131c-42fb-9242-e6e8b9867cd4",
+      "id_legado": 268467022,
+      "uuid_legado": "5d33375c-5777-4226-9069-be6617e9ff2c",
       "perfis": [
         "Cliente"
       ],
       "tipo_pessoa": "JURIDICA",
       "endereco": {
-        "uuid": "c951bda3-67da-4575-a6e9-8af7cbf69d5b",
-        "cep": "75240000",
-        "logradouro": "SENADOR PEDRO LUDOVICO",
-        "numero": "215",
-        "complemento": "APT 206",
-        "bairro": "SETOR CENTRAL",
-        "id_cidade": 2088,
-        "cidade": "Bela Vista de Goiás",
+        "uuid": "3822db6d-1ef5-40d4-9edf-7f271bbf9d39",
+        "cep": "74525060",
+        "logradouro": "RIO VERDE",
+        "numero": "205",
+        "complemento": null,
+        "bairro": "SET CAMPINAS",
+        "id_cidade": 2174,
+        "cidade": "Goiânia",
         "estado": "GO",
         "pais": "Brasil"
       }
@@ -11853,20 +11858,31 @@
       }
     },
     {
-      "uuid": "ddfd973e-48cc-4b4d-b1aa-146da8ec0a62",
-      "email": null,
-      "nome": "NILTON PINHEIRO DE MELO",
-      "documento": "21650330120",
+      "uuid": "28dee36c-bf68-4695-bbf8-84f62c49ff17",
+      "email": "monallysa_@hotmail.com",
+      "nome": "MONALLYSA",
+      "documento": "48146114000170",
       "inscricao_estadual": null,
-      "telefone": null,
+      "telefone": "6299769671",
       "ativo": true,
-      "id_legado": 404153642,
-      "uuid_legado": "9eccbb50-d1c6-40a6-9623-dbd8f66803d1",
+      "id_legado": 268477655,
+      "uuid_legado": "7a78c89e-131c-42fb-9242-e6e8b9867cd4",
       "perfis": [
         "Cliente"
       ],
-      "tipo_pessoa": "FISICA",
-      "endereco": null
+      "tipo_pessoa": "JURIDICA",
+      "endereco": {
+        "uuid": "c951bda3-67da-4575-a6e9-8af7cbf69d5b",
+        "cep": "75240000",
+        "logradouro": "SENADOR PEDRO LUDOVICO",
+        "numero": "215",
+        "complemento": "APT 206",
+        "bairro": "SETOR CENTRAL",
+        "id_cidade": 2088,
+        "cidade": "Bela Vista de Goiás",
+        "estado": "GO",
+        "pais": "Brasil"
+      }
     },
     {
       "uuid": "fe5c8000-027a-4ddc-a17e-8469846f4de2",
@@ -12360,31 +12376,20 @@
       }
     },
     {
-      "uuid": "f5860dce-d519-44d0-a7b6-39857dd8af78",
-      "email": "eugeniafinotti@gmail.com",
-      "nome": "PLURA DESIGN LTDA",
-      "documento": "53175786000144",
+      "uuid": "ddfd973e-48cc-4b4d-b1aa-146da8ec0a62",
+      "email": null,
+      "nome": "NILTON PINHEIRO DE MELO",
+      "documento": "21650330120",
       "inscricao_estadual": null,
-      "telefone": "62998708770",
+      "telefone": null,
       "ativo": true,
-      "id_legado": 319834625,
-      "uuid_legado": "17aed4f7-c1a1-4373-b151-2e3e811a8180",
+      "id_legado": 404153642,
+      "uuid_legado": "9eccbb50-d1c6-40a6-9623-dbd8f66803d1",
       "perfis": [
         "Cliente"
       ],
-      "tipo_pessoa": "JURIDICA",
-      "endereco": {
-        "uuid": "b61977b8-455d-417c-b915-cb3778580303",
-        "cep": "74170120",
-        "logradouro": "Rua 137",
-        "numero": "372",
-        "complemento": "QUADRA52 LOTE 01 SALA 04",
-        "bairro": "Setor Marista",
-        "id_cidade": 2174,
-        "cidade": "Goiânia",
-        "estado": "GO",
-        "pais": "Brasil"
-      }
+      "tipo_pessoa": "FISICA",
+      "endereco": null
     },
     {
       "uuid": "954ceee0-08a0-4746-aa4c-4b510a9d2c9b",
@@ -12900,28 +12905,28 @@
       }
     },
     {
-      "uuid": "4ead2d35-5f47-4cd3-913d-b4a079b6f68e",
-      "email": "farmarivianalves@hotmail.com",
-      "nome": "RIVIAN ALVES DE SOUSA R A FARMA POPULAR LTDA",
-      "documento": "46079479000102",
+      "uuid": "f5860dce-d519-44d0-a7b6-39857dd8af78",
+      "email": "eugeniafinotti@gmail.com",
+      "nome": "PLURA DESIGN LTDA",
+      "documento": "53175786000144",
       "inscricao_estadual": null,
-      "telefone": "6291589042",
+      "telefone": "62998708770",
       "ativo": true,
-      "id_legado": 268477657,
-      "uuid_legado": "d64b8b84-b5bc-492a-ab5e-9bd4a1ed2437",
+      "id_legado": 319834625,
+      "uuid_legado": "17aed4f7-c1a1-4373-b151-2e3e811a8180",
       "perfis": [
         "Cliente"
       ],
       "tipo_pessoa": "JURIDICA",
       "endereco": {
-        "uuid": "9e6cce72-9864-44ba-9789-40a28f14d36f",
-        "cep": "75261303",
-        "logradouro": "ADEMAR DE BARROS",
-        "numero": "SN",
-        "complemento": "QUADRA15                  LOTE  9",
-        "bairro": "JARDIM TODOS OS SANTOS II",
-        "id_cidade": 2336,
-        "cidade": "Senador Canedo",
+        "uuid": "b61977b8-455d-417c-b915-cb3778580303",
+        "cep": "74170120",
+        "logradouro": "Rua 137",
+        "numero": "372",
+        "complemento": "QUADRA52 LOTE 01 SALA 04",
+        "bairro": "Setor Marista",
+        "id_cidade": 2174,
+        "cidade": "Goiânia",
         "estado": "GO",
         "pais": "Brasil"
       }
@@ -13440,28 +13445,28 @@
       }
     },
     {
-      "uuid": "170646d5-b3d7-452e-b18e-8eeb53ad8bd5",
-      "email": "rubens.troncoso@terra.com.br",
-      "nome": "RTRN PARTICIPAÇÕES LTDA",
-      "documento": "57352469000107",
+      "uuid": "4ead2d35-5f47-4cd3-913d-b4a079b6f68e",
+      "email": "farmarivianalves@hotmail.com",
+      "nome": "RIVIAN ALVES DE SOUSA R A FARMA POPULAR LTDA",
+      "documento": "46079479000102",
       "inscricao_estadual": null,
-      "telefone": "62999764949",
+      "telefone": "6291589042",
       "ativo": true,
-      "id_legado": 363661223,
-      "uuid_legado": "62760e45-2404-478b-941d-edae86cb9202",
+      "id_legado": 268477657,
+      "uuid_legado": "d64b8b84-b5bc-492a-ab5e-9bd4a1ed2437",
       "perfis": [
         "Cliente"
       ],
       "tipo_pessoa": "JURIDICA",
       "endereco": {
-        "uuid": "3303c64f-8bbf-4183-b37e-b389c2b24e02",
-        "cep": "74290205",
-        "logradouro": "Rua C 248",
-        "numero": "00",
-        "complemento": null,
-        "bairro": "Jardim América",
-        "id_cidade": 2174,
-        "cidade": "Goiânia",
+        "uuid": "9e6cce72-9864-44ba-9789-40a28f14d36f",
+        "cep": "75261303",
+        "logradouro": "ADEMAR DE BARROS",
+        "numero": "SN",
+        "complemento": "QUADRA15                  LOTE  9",
+        "bairro": "JARDIM TODOS OS SANTOS II",
+        "id_cidade": 2336,
+        "cidade": "Senador Canedo",
         "estado": "GO",
         "pais": "Brasil"
       }
@@ -13980,26 +13985,26 @@
       }
     },
     {
-      "uuid": "8f355f7e-368b-40ca-aeee-85b54cfa2dc2",
-      "email": "alucir.biasi@gmail.com / Fernando@sinergiaempresarial.com.br",
-      "nome": "SINERGIA REPRESENTACOES E CONSULTORIA",
-      "documento": "22827517000191",
+      "uuid": "170646d5-b3d7-452e-b18e-8eeb53ad8bd5",
+      "email": "rubens.troncoso@terra.com.br",
+      "nome": "RTRN PARTICIPAÇÕES LTDA",
+      "documento": "57352469000107",
       "inscricao_estadual": null,
-      "telefone": "6232120440",
+      "telefone": "62999764949",
       "ativo": true,
-      "id_legado": 391929876,
-      "uuid_legado": "9b36c5c4-2e33-4691-86e2-133ceadbd369",
+      "id_legado": 363661223,
+      "uuid_legado": "62760e45-2404-478b-941d-edae86cb9202",
       "perfis": [
         "Cliente"
       ],
       "tipo_pessoa": "JURIDICA",
       "endereco": {
-        "uuid": "56af6b26-f268-46bc-bf8b-de0ab6bef63f",
-        "cep": "74093250",
-        "logradouro": "136",
-        "numero": "761",
-        "complemento": "QUADRAF-44                LOTE  2-E                 ANDAR 11 PARTE B34",
-        "bairro": "SET SUL",
+        "uuid": "3303c64f-8bbf-4183-b37e-b389c2b24e02",
+        "cep": "74290205",
+        "logradouro": "Rua C 248",
+        "numero": "00",
+        "complemento": null,
+        "bairro": "Jardim América",
         "id_cidade": 2174,
         "cidade": "Goiânia",
         "estado": "GO",
@@ -14520,29 +14525,29 @@
       }
     },
     {
-      "uuid": "94d6cfe7-de53-4b9f-a565-f88fee401174",
-      "email": null,
-      "nome": "TERRA BRASILIA AMBIENTES PLANEJADOS LTDA",
-      "documento": "29835182000100",
+      "uuid": "8f355f7e-368b-40ca-aeee-85b54cfa2dc2",
+      "email": "alucir.biasi@gmail.com / Fernando@sinergiaempresarial.com.br",
+      "nome": "SINERGIA REPRESENTACOES E CONSULTORIA",
+      "documento": "22827517000191",
       "inscricao_estadual": null,
-      "telefone": "6137717587",
+      "telefone": "6232120440",
       "ativo": true,
-      "id_legado": 276512567,
-      "uuid_legado": "202772b8-5646-448a-841e-598bf14e6ad1",
+      "id_legado": 391929876,
+      "uuid_legado": "9b36c5c4-2e33-4691-86e2-133ceadbd369",
       "perfis": [
         "Cliente"
       ],
       "tipo_pessoa": "JURIDICA",
       "endereco": {
-        "uuid": "16739c5b-a50e-4f26-bfa2-ec85e2297a66",
-        "cep": "70753400",
-        "logradouro": "EQN 110/111",
-        "numero": "SN",
-        "complemento": "BLOCO A                   LOJA  12                  PAVMTOTERREO              EDIF  PLAZA NORTE",
-        "bairro": "ASA NORTE",
-        "id_cidade": 1778,
-        "cidade": "Brasília",
-        "estado": "DF",
+        "uuid": "56af6b26-f268-46bc-bf8b-de0ab6bef63f",
+        "cep": "74093250",
+        "logradouro": "136",
+        "numero": "761",
+        "complemento": "QUADRAF-44                LOTE  2-E                 ANDAR 11 PARTE B34",
+        "bairro": "SET SUL",
+        "id_cidade": 2174,
+        "cidade": "Goiânia",
+        "estado": "GO",
         "pais": "Brasil"
       }
     },
@@ -15049,29 +15054,29 @@
       }
     },
     {
-      "uuid": "41f2588d-5517-4940-99c5-8560ca2df48a",
-      "email": "21.THIAGOM@GMAIL.COM",
-      "nome": "TSPF NEGOCIOS E PARTICIPACOES FINANCEIRAS",
-      "documento": "52443432000170",
+      "uuid": "94d6cfe7-de53-4b9f-a565-f88fee401174",
+      "email": null,
+      "nome": "TERRA BRASILIA AMBIENTES PLANEJADOS LTDA",
+      "documento": "29835182000100",
       "inscricao_estadual": null,
-      "telefone": "62992612132",
+      "telefone": "6137717587",
       "ativo": true,
-      "id_legado": 329488368,
-      "uuid_legado": "b01f98c6-ad40-461a-8506-b3d033ba0275",
+      "id_legado": 276512567,
+      "uuid_legado": "202772b8-5646-448a-841e-598bf14e6ad1",
       "perfis": [
         "Cliente"
       ],
       "tipo_pessoa": "JURIDICA",
       "endereco": {
-        "uuid": "d52cc539-4aa2-4e20-b85a-6f79543ec00c",
-        "cep": "74255220",
-        "logradouro": "T9",
-        "numero": "2310",
-        "complemento": "QUADRA523                 LOTE  10/15               SALA  A103                EDIF  INOVE INT. PLACE",
-        "bairro": "BRO JARDIM AMERICA",
-        "id_cidade": 2174,
-        "cidade": "Goiânia",
-        "estado": "GO",
+        "uuid": "16739c5b-a50e-4f26-bfa2-ec85e2297a66",
+        "cep": "70753400",
+        "logradouro": "EQN 110/111",
+        "numero": "SN",
+        "complemento": "BLOCO A                   LOJA  12                  PAVMTOTERREO              EDIF  PLAZA NORTE",
+        "bairro": "ASA NORTE",
+        "id_cidade": 1778,
+        "cidade": "Brasília",
+        "estado": "DF",
         "pais": "Brasil"
       }
     },
@@ -15578,28 +15583,28 @@
       }
     },
     {
-      "uuid": "a07e22aa-d8ee-48fe-9416-f2164de9ab94",
-      "email": null,
-      "nome": "VALMIR PEREIRA MENDES",
-      "documento": "27481569000172",
+      "uuid": "41f2588d-5517-4940-99c5-8560ca2df48a",
+      "email": "21.THIAGOM@GMAIL.COM",
+      "nome": "TSPF NEGOCIOS E PARTICIPACOES FINANCEIRAS",
+      "documento": "52443432000170",
       "inscricao_estadual": null,
-      "telefone": "6492814070",
+      "telefone": "62992612132",
       "ativo": true,
-      "id_legado": 273287223,
-      "uuid_legado": "46c65b4f-f3d8-4614-a75f-5d21d34e497a",
+      "id_legado": 329488368,
+      "uuid_legado": "b01f98c6-ad40-461a-8506-b3d033ba0275",
       "perfis": [
         "Cliente"
       ],
       "tipo_pessoa": "JURIDICA",
       "endereco": {
-        "uuid": "a46a0ffe-4ef8-4b94-bd66-effc7384bebc",
-        "cep": "75640000",
-        "logradouro": "EXPEDICIONARIO JOVINO A. DA SILVA",
-        "numero": "611",
-        "complemento": "QUADRA 1;LOTE 02",
-        "bairro": "SETOR AEROPORTO",
-        "id_cidade": 2280,
-        "cidade": "Piracanjuba",
+        "uuid": "d52cc539-4aa2-4e20-b85a-6f79543ec00c",
+        "cep": "74255220",
+        "logradouro": "T9",
+        "numero": "2310",
+        "complemento": "QUADRA523                 LOTE  10/15               SALA  A103                EDIF  INOVE INT. PLACE",
+        "bairro": "BRO JARDIM AMERICA",
+        "id_cidade": 2174,
+        "cidade": "Goiânia",
         "estado": "GO",
         "pais": "Brasil"
       }
@@ -16107,28 +16112,28 @@
       "endereco": null
     },
     {
-      "uuid": "1b7a15a6-4c9b-4a10-b811-7da745472952",
-      "email": "WJR.LICI01@GMAIL.COM",
-      "nome": "WJR PUBLICIDADE GRAFICA LTDA",
-      "documento": "29234444000173",
+      "uuid": "a07e22aa-d8ee-48fe-9416-f2164de9ab94",
+      "email": null,
+      "nome": "VALMIR PEREIRA MENDES",
+      "documento": "27481569000172",
       "inscricao_estadual": null,
-      "telefone": "6232118031",
+      "telefone": "6492814070",
       "ativo": true,
-      "id_legado": 314421960,
-      "uuid_legado": "ae73cf1a-3bc7-46b7-8f7a-2bdb0549030c",
+      "id_legado": 273287223,
+      "uuid_legado": "46c65b4f-f3d8-4614-a75f-5d21d34e497a",
       "perfis": [
         "Cliente"
       ],
       "tipo_pessoa": "JURIDICA",
       "endereco": {
-        "uuid": "0b201851-367d-415a-9412-f7bc46456bcc",
-        "cep": "74560310",
-        "logradouro": "rua 3",
-        "numero": "54",
-        "complemento": "QUADRAA                   LOTE  25",
-        "bairro": "SETOR MARECHAL RONDON",
-        "id_cidade": 2174,
-        "cidade": "Goiânia",
+        "uuid": "a46a0ffe-4ef8-4b94-bd66-effc7384bebc",
+        "cep": "75640000",
+        "logradouro": "EXPEDICIONARIO JOVINO A. DA SILVA",
+        "numero": "611",
+        "complemento": "QUADRA 1;LOTE 02",
+        "bairro": "SETOR AEROPORTO",
+        "id_cidade": 2280,
+        "cidade": "Piracanjuba",
         "estado": "GO",
         "pais": "Brasil"
       }
@@ -16442,6 +16447,33 @@
         "bairro": "ZONA RURAL",
         "id_cidade": 2280,
         "cidade": "Piracanjuba",
+        "estado": "GO",
+        "pais": "Brasil"
+      }
+    },
+    {
+      "uuid": "1b7a15a6-4c9b-4a10-b811-7da745472952",
+      "email": "WJR.LICI01@GMAIL.COM",
+      "nome": "WJR PUBLICIDADE GRAFICA LTDA",
+      "documento": "29234444000173",
+      "inscricao_estadual": null,
+      "telefone": "6232118031",
+      "ativo": true,
+      "id_legado": 314421960,
+      "uuid_legado": "ae73cf1a-3bc7-46b7-8f7a-2bdb0549030c",
+      "perfis": [
+        "Cliente"
+      ],
+      "tipo_pessoa": "JURIDICA",
+      "endereco": {
+        "uuid": "0b201851-367d-415a-9412-f7bc46456bcc",
+        "cep": "74560310",
+        "logradouro": "rua 3",
+        "numero": "54",
+        "complemento": "QUADRAA                   LOTE  25",
+        "bairro": "SETOR MARECHAL RONDON",
+        "id_cidade": 2174,
+        "cidade": "Goiânia",
         "estado": "GO",
         "pais": "Brasil"
       }
