@@ -4,8 +4,6 @@
 Rotas de webhook para integração com Bitrix24 e validação de CNPJ.
 """
 
-import os
-import json
 import time
 import logging
 from werkzeug.exceptions import BadRequest
@@ -19,43 +17,17 @@ from app.services.webhook_services import (
     send_message_digisac,
     transfer_ticket_digisac,
 )
-from app.services.conta_azul_services import handle_sale_creation
+from app.services.conta_azul.conta_azul_services import (
+    handle_sale_creation_certif_digital,
+)
+from app.services.renewal_services import add_pending, pop_pending, get_pending
 
 webhook_bp = Blueprint("webhook", __name__)
 logger = logging.getLogger(__name__)
-PENDING_FILE = "database/pending_renewals.json"
-
-# Utilities to persist pending renewals
-
-
-def _load_pending():
-    if not os.path.exists(PENDING_FILE):
-        return {}
-    with open(PENDING_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def _save_pending(data):
-    os.makedirs(os.path.dirname(PENDING_FILE), exist_ok=True)
-    with open(PENDING_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-
-def _add_pending(contact_number, deal_type):
-    pending = _load_pending()
-    pending[contact_number] = deal_type
-    _save_pending(pending)
-
-
-def _pop_pending(contact_number):
-    pending = _load_pending()
-    deal_type = pending.pop(contact_number, None)
-    _save_pending(pending)
-    return deal_type
 
 
 @webhook_bp.route("/consulta-receita", methods=["POST"])
-def post_valida_cnpj_receita_bitrix():
+def valida_cnpj_receita_bitrix():
     """Endpoint para validação de CNPJ via webhook.
 
     :formparam idEmpresa: ID da empresa no sistema Bitrix24 (obrigatório)
@@ -145,16 +117,20 @@ def post_valida_cnpj_receita_bitrix():
 
 
 @webhook_bp.route("/aviso-certificado", methods=["POST"])
-def post_envia_comunicado_para_cliente_bitrix():
-    """Envia comunicação de expiração de certificado"""
-    # Obter a assinatura DO FORMULÁRIO (não do header)
-    signature = request.form.get("auth[member_id]", "")
+def envia_comunicado_para_cliente_certif_digital():
+    # Log detalhado da requisição
+    logger.debug(f"Headers: {dict(request.headers)}")
+    logger.debug(f"Args: {request.args.to_dict()}")
+    logger.debug(f"Form: {request.form.to_dict()}")
+    logger.debug(f"JSON: {request.get_json(silent=True)}")
 
-    # Validar usando os dados BRUTOS da requisição (já URL-decoded)
+    # Validação de assinatura
+    signature = request.form.get("auth[member_id]", "")
     if not verify_webhook_signature(signature):
-        logger.warning("Assinatura inválida | Recebida: %s", signature)
+        logger.warning(f"Assinatura inválida: {signature}")
         return jsonify({"error": "Assinatura inválida"}), 403
-    # Validar parâmetros obrigatórios
+
+    # Validação de parâmetros
     required_params = [
         "companyName",
         "contactName",
@@ -162,10 +138,10 @@ def post_envia_comunicado_para_cliente_bitrix():
         "daysToExpire",
         "dealType",
     ]
-    missing = [param for param in required_params if not request.args.get(param)]
+    missing = [p for p in required_params if not request.args.get(p)]
 
     if missing:
-        logger.error("Parâmetros obrigatórios faltando: %s", missing)
+        logger.error(f"Parâmetros faltando: {missing}")
         return (
             jsonify(
                 {"error": f"Parâmetros obrigatórios faltando: {', '.join(missing)}"}
@@ -173,54 +149,42 @@ def post_envia_comunicado_para_cliente_bitrix():
             400,
         )
 
-    # Get params da query da request
-    company_name = request.args["companyName"]
-    contact_name = request.args["contactName"]
-    contact_number = request.args["contactNumber"]
-    days_to_expire = request.args["daysToExpire"]
-    deal_type = request.args["dealType"]
+    # Coleta parâmetros
+    params = {p: request.args[p] for p in required_params}
+    logger.info(f"Novo aviso de certificado: {params}")
 
-    logger.info(
-        "Nova requisição de aviso do vencimento de CD\n"
-        "Empresa: %s\nContato: %s\nNúmero: %s\nDias para expirar: %s\nTipo do negócio: %s",
-        company_name,
-        contact_name,
-        contact_number,
-        days_to_expire,
-        deal_type,
-    )
-
-    # Buscar contact ID - FUNÇÃO ATUALIZADA
-    contact_id = get_contact_id_by_number(contact_number)
-
+    # Busca contact ID
+    contact_id = get_contact_id_by_number(params["contactNumber"])
     if not contact_id:
-        logger.error("Contact ID não encontrado para o número: %s", contact_number)
-        return jsonify({"error": "Número não encontrado no sistema"}), 404
+        logger.error(f"Contact ID não encontrado: {params['contactNumber']}")
+        return jsonify({"error": "Número não encontrado"}), 404
 
-    # Abrir chamado
-    transfer_ticket_digisac(
-        contact_id=contact_id,
-    )
+    # Processamento Digisac
+    transfer_ticket_digisac(contact_id=contact_id)
     time.sleep(1)
 
-    # Enviar mensagem
     result = send_message_digisac(
         contact_id=contact_id,
-        contact_name=contact_name,
-        company_name=company_name,
-        days_to_expire=days_to_expire,
+        contact_name=params["contactName"],
+        company_name=params["companyName"],
+        days_to_expire=params["daysToExpire"],
     )
 
+    # Adiciona pendência com número padronizado
+    std_number = add_pending(params["contactNumber"], params["dealType"])
+    logger.debug(f"Pendência adicionada para {std_number}")
+
     if "error" in result:
-        logger.error("Falha ao enviar mensagem: %s", result["error"])
+        logger.error(f"Erro ao enviar mensagem: {result['error']}")
         return jsonify(result), 500
 
     return (
         jsonify(
             {
                 "status": "success",
-                "message": "Mensagem enviada com sucesso",
+                "message": "Comunicação enviada",
                 "digisac_response": result,
+                "std_phone": std_number,  # Para debug
             }
         ),
         200,
@@ -229,29 +193,49 @@ def post_envia_comunicado_para_cliente_bitrix():
 
 @webhook_bp.route("/renova-certificado", methods=["POST"])
 def renova_certificado():
-    # Pega contactNumber (via args ou corpo JSON)
-    contact_number = request.args.get("contactNumber") or request.json.get("contactNumber")
+    logger.debug("Iniciando processo de renovação de certificado")
+
+    # Obter número do contato
+    contact_number = request.args.get("contactNumber") or request.json.get(
+        "contactNumber"
+    )
     if not contact_number:
+        logger.error("Parâmetro 'contactNumber' ausente")
         return jsonify({"error": "contactNumber ausente"}), 400
 
-    # Recupera o tipo de negócio pendente
-    deal_type = _pop_pending(contact_number)
+    # Consultar pendência SEM remover ainda
+    logger.debug(f"Consultando pendência para: {contact_number}")
+    deal_type = get_pending(contact_number)  # Nova função apenas para consulta
+
     if not deal_type:
+        logger.error(f"Nenhuma pendência encontrada para {contact_number}")
         return jsonify({"error": "Nenhuma solicitação pendente encontrada"}), 404
 
     try:
-        # Cria a venda e obtém dados, incluindo link do boleto
-        sale = handle_sale_creation(contact_number, deal_type)
+        logger.info(
+            f"Iniciando criação de venda na Conta Azul para {contact_number}, tipo: {deal_type}"
+        )
+        sale = handle_sale_creation_certif_digital(contact_number, deal_type)
+        logger.info(f"Venda criada com sucesso! ID: {sale.get('id')}")
 
-        # Retorna resposta com dados da venda / boleto
-        return jsonify({
-            "status": "success",
-            "sale_id": sale.get("id"),
-            "url_boleto": sale.get("url_boleto") or sale.get("boletoUrl"),
-            "raw": sale
-        }), 201
+        # REMOVER PENDÊNCIA APÓS SUCESSO NA CONTA AZUL
+        pop_pending(contact_number)  # Remove a pendência agora que a venda foi criada
+        logger.debug(f"Pendência removida para {contact_number}")
+
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "sale_id": sale.get("id"),
+                    "url_boleto": sale.get("url_boleto") or sale.get("boletoUrl"),
+                    "raw": sale,
+                }
+            ),
+            201,
+        )
 
     except Exception as e:
+        logger.exception(f"Erro fatal ao criar venda: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 

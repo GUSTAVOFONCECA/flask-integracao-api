@@ -9,7 +9,8 @@ from typing import Dict, Optional, Union
 import base64
 import requests
 from app.config import Config
-from app.services.conta_azul_auto_auth import automate_auth
+from app.services.conta_azul.conta_azul_auto_auth import automate_auth
+from app.utils import standardize_phone_number
 
 
 logger = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ conta_azul_tokens: Dict[str, Optional[Union[str, datetime]]] = {
 }
 
 
+############################################################################### CONTA AZUL AUTH SERVICES
 def auto_authenticate():
     """Obtém tokens através da automação Selenium"""
     # Obter código de autorização via Selenium
@@ -193,27 +195,71 @@ def get_auth_headers() -> dict:
     }
 
 
+############################################################################### CONTA AZUL MATCH SERVICES
 def find_person_uuid_by_phone(phone: str) -> str | None:
-    # Normaliza número
-    normalized_phone = re.sub(r"\D", "", phone)
+    # Padroniza o número para formato internacional completo
+    std_number = standardize_phone_number(phone, debug=True)
+    if not std_number:
+        logger.warning(f"Número {phone} não pôde ser padronizado")
+        return None
 
-    with open(Path("database/conta_azul/person.json"), "r", encoding="utf-8") as f:
+    # Converte para formato Conta Azul (remove DDI 55 e mantém DDD + número)
+    if len(std_number) == 13:  # Formato completo: 55 + DDD + 9 dígitos
+        conta_azul_number = std_number[2:]  # Remove DDI (55)
+    elif len(std_number) == 12:  # Formato sem nono: 55 + DDD + 8 dígitos
+        # Converte para formato com nono dígito (padrão brasileiro)
+        conta_azul_number = std_number[2:4] + "9" + std_number[4:]
+    else:
+        logger.warning(f"Formato não suportado: {std_number} (len={len(std_number)})")
+        return None
+
+    logger.debug(f"Buscando cliente no formato Conta Azul: {conta_azul_number}")
+
+    with open(Path("app/database/conta_azul/person.json"), "r", encoding="utf-8") as f:
         data = json.load(f)
 
     for person in data.get("itens", []):
         person_phone = person.get("telefone")
-        if person_phone and re.sub(r"\D", "", person_phone) == normalized_phone:
+        if not person_phone:
+            continue
+
+        # Padroniza telefone do cliente da Conta Azul
+        person_digits = re.sub(r"\D", "", person_phone)
+
+        # Compara diretamente com o formato Conta Azul
+        if person_digits == conta_azul_number:
             return person["uuid"]
 
+    logger.warning(f"Cliente não encontrado para: {phone} -> {conta_azul_number}")
     return None
 
 
+############################################################################### CONTA AZUL SALE SERVICES
 def create_sale(sale_payload: dict) -> dict:
     url = f"{API_BASE_URL}/v1/venda"
     headers = get_auth_headers()
-    response = requests.post(url, json=sale_payload, headers=headers, timeout=60)
-    response.raise_for_status()
-    return response.json()
+
+    try:
+        # ADICIONAR LOG DA REQUISIÇÃO
+        logger.debug(f"POST {url}")
+        logger.debug(f"Headers: {headers}")
+        logger.debug(f"Payload: {sale_payload}")
+
+        response = requests.post(url, json=sale_payload, headers=headers, timeout=60)
+        response.raise_for_status()
+
+        # LOG DA RESPOSTA
+        logger.info(f"Resposta HTTP {response.status_code}")
+        logger.debug(f"Conteúdo: {response.text}")
+
+        return response.json()
+
+    except requests.exceptions.RequestException as e:
+        # LOG DETALHADO DE ERROS DE REDE
+        logger.error(f"Erro na requisição: {str(e)}")
+        if hasattr(e, "response") and e.response:
+            logger.error(f"Resposta do erro: {e.response.text}")
+        raise
 
 
 def build_sale_payload(
@@ -223,9 +269,13 @@ def build_sale_payload(
     sale_date: datetime,
     due_date: datetime,
     item_description: str,
-) -> None:
+) -> dict:
+    # Gerar número sequencial baseado no timestamp
+    numero_venda = int(datetime.now().timestamp())
+
     return {
         "id_cliente": client_id,
+        "numero": numero_venda,  # CAMPO OBRIGATÓRIO ADICIONADO
         "situacao": "APROVADO",
         "data_venda": sale_date.strftime("%Y-%m-%d"),
         "itens": [
@@ -251,7 +301,7 @@ def build_sale_payload(
     }
 
 
-def build_sale_certif_digital_params(deal_type: str, client_id: str) -> dict:
+def build_sale_certif_digital_params(deal_type: str) -> dict:
     base = {
         "id_service": None,
         "item_description": None,
@@ -290,7 +340,7 @@ def build_sale_certif_digital_params(deal_type: str, client_id: str) -> dict:
     return base
 
 
-def handle_sale_creation(contact_number: str, deal_type: str) -> dict:
+def handle_sale_creation_certif_digital(contact_number: str, deal_type: str) -> dict:
     """
     Orquestra a criação de venda de certificado digital na Conta Azul:
     1) Encontra o cliente pelo telefone.
@@ -306,7 +356,7 @@ def handle_sale_creation(contact_number: str, deal_type: str) -> dict:
 
     # 2) Prepara parâmetros (id_service, descrição, preço, datas)
     params = build_sale_certif_digital_params(
-        deal_type, client_uuid
+        deal_type
     )  # :contentReference[oaicite:1]{index=1}
 
     # 3) Monta o payload da venda

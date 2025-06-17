@@ -1,7 +1,6 @@
 # app/routes/conta_azul_routes.py
 from flask import Blueprint, request, current_app, jsonify
-from app.services.conta_azul_services import (
-    get_sales,
+from app.services.conta_azul.conta_azul_services import (
     auto_authenticate,
 )
 
@@ -43,25 +42,3 @@ def callback():
 
     # Somente retorna o code, sem chamar get_tokens
     return jsonify({"code": code}), 200
-
-
-@conta_azul_bp.route("/vendas")
-def vendas():
-    """Endpoint para obter dados de vendas."""
-    try:
-        page = request.args.get("page", 1, type=int)
-        size = request.args.get("size", 100, type=int)
-        sales_data = get_sales(page, size)
-        return jsonify(sales_data)
-    except ValueError as e:
-        current_app.logger.error("Erro de valor ao obter vendas: %s", str(e))
-        return jsonify({"error": str(e)}), 400
-    except KeyError as e:
-        current_app.logger.error("Chave não encontrada ao obter vendas: %s", str(e))
-        return jsonify({"error": str(e)}), 400
-    except RuntimeError as e:
-        current_app.logger.error("Erro de execução ao obter vendas: %s", str(e))
-        return jsonify({"error": str(e)}), 500
-    except Exception as e:
-        current_app.logger.error("Erro inesperado ao obter vendas: %s", str(e))
-        raise  # Re-raise the exception to let Flask handle it or for further debugging

@@ -16,7 +16,7 @@ from typing import Optional, Dict
 import requests
 from flask import request, jsonify
 from app.config import Config
-from app.utils import retry_with_backoff
+from app.utils import retry_with_backoff, standardize_phone_number
 
 
 logger = logging.getLogger(__name__)
@@ -259,7 +259,7 @@ def post_destination_api(processed_data: Dict, api_url: str) -> Dict:
         return {"error": str(e)}
 
 
-###############################################################################
+############################################################################### DIGISAC SERVICES
 DIGISAC_URL = "https://logicassessoria.digisac.chat"
 DIGISAC_BASE_API = f"{DIGISAC_URL}/api/v1"
 DIGISAC_CLIENT_ID = "api"
@@ -346,48 +346,41 @@ def refresh_auth_digisac(refresh_token: str) -> dict:
 
 
 def get_contact_id_by_number(contact_number: str) -> str | None:
-    """
-    Busca o contactId no JSON de contatos pelo número de telefone,
-    considerando a possível presença do nono dígito.
+    # Padroniza o número antes do processamento
+    std_number = standardize_phone_number(contact_number, debug=True)
+    logger.debug(f"Buscando contact ID para número padronizado: {std_number}")
 
-    :param contact_number: Número do contato no formato recebido (ex: "Trabalho:  5562993159124")
-    :return: contactId ou None se não encontrar
-    """
-    # Caminho para o arquivo JSON
     contacts_json_path = os.path.join(
         os.getcwd(), "app", "database", "digisac", "digisac_contacts.json"
     )
 
     try:
-        # 1. Extrair apenas dígitos do número recebido
-        raw_digits = re.sub(r"\D", "", contact_number)
-
-        # 2. Gerar versões alternativas do número
-        possible_numbers = [raw_digits]
-
-        # Se tiver 13 dígitos (com nono dígito), criar versão sem o 9º
-        if len(raw_digits) == 13:
-            # Formato: 55 (DDI) + 62 (DDD) + 9 (nono) + 93159124 (número)
-            # Versão sem nono dígito: 55 + 62 + 93159124 → 556293159124
-            without_ninth = raw_digits[:4] + raw_digits[5:]
+        # Gera variações para números com 13 dígitos (com nono dígito)
+        possible_numbers = [std_number]
+        if len(std_number) == 13:
+            # Versão sem nono dígito: 55 (DDI) + 62 (DDD) + 93159124 (número)
+            without_ninth = std_number[:4] + std_number[5:]
             possible_numbers.append(without_ninth)
+            logger.debug(f"Gerada variação sem nono dígito: {without_ninth}")
 
-        # 3. Carregar contatos do JSON
         with open(contacts_json_path, "r", encoding="utf-8") as f:
             contacts = json.load(f)
 
-        # 4. Buscar correspondência
         for contact in contacts:
             contact_num = (contact.get("data") or {}).get("number") or ""
-            contact_digits = re.sub(r"\D", "", contact_num)
+            contact_std = standardize_phone_number(contact_num, debug=False)
 
-            if contact_digits in possible_numbers:
+            if contact_std in possible_numbers:
+                logger.debug(
+                    f"Contato encontrado: {contact_std} => {contact.get('id')}"
+                )
                 return contact.get("id")
 
+        logger.warning(f"Nenhum contato encontrado para: {std_number}")
         return None
 
     except (FileNotFoundError, json.JSONDecodeError, OSError) as e:
-        logger.error("Erro ao buscar contactId: %s", str(e))
+        logger.error(f"Erro ao buscar contactId: {str(e)}")
         return None
 
 

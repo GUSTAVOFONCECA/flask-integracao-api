@@ -1,0 +1,59 @@
+Antes de mergulharmos no código, aqui vai uma proposta de refatoração global para organizar tudo de forma coesa, reaproveitando as funções que discutimos (vínculo de contacts ↔ persons, criação de vendas, tratamento de webhooks, automação OAuth2):
+
+Pacote integrations/conta_azul/
+
+auto_auth.py → mantém o Selenium, mas extraímos funções utilitárias menores (e.g. handle_2fa_if_present).
+
+client.py → unifica get_tokens, refresh_tokens, get_auth_headers, create_sale, get_sales.
+
+sync.py → contém a classe SyncManager.
+
+match.py → lógica de find_person_uuid_by_phone.
+
+sales.py → build_sale_payload, build_sale_certif_digital_params, handle_sale_creation.
+
+Pacote integrations/digisac/
+
+client.py → unifica a autenticação Digisac (get_auth_headers, refresh_tokens, etc.), send_message, transfer_ticket, get_contact_id_by_number.
+
+Pacote webhooks/
+
+routes.py → blueprints de /webhooks/aviso-certificado, usando handle_sale_creation, chamando Digisac para notificação inicial e Conta Azul para gerar boleto.
+
+Configuração central e utilitários
+
+app/config.py, app/utils.py mantêm save_page_diagnosis, retry_with_backoff, decoradores, etc.
+
+Como usar
+
+No create_app() do Flask: registre todos os blueprints (conta_azul, digisac, webhooks).
+
+
+
+4. Padronização de Respostas de Erro
+Problema: Tratamento de erros inconsistente entre rotas.
+
+Pontos Críticos de Atenção:
+--Segurança de Tokens:
+
+Armazenamento atual em arquivo JSON não é ideal para produção
+
+Considere usar sistemas como AWS Secrets Manager ou HashiCorp Vault
+
+Resiliência em Comunicações:
+
+Implemente retries com backoff exponencial em todas as chamadas externas
+
+Adicione circuit breakers para APIs de terceiros
+
+--Monitoramento:
+
+Adicione métricas com Prometheus
+
+Implemente health checks detalhados para cada integração
+
+--Validação de Dados:
+
+Use schemas com Pydantic para validar entradas em todas as rotas
+
+Adicione type hints em todas as funções públicas

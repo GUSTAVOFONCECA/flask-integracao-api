@@ -2,6 +2,7 @@
 
 import datetime
 import os
+import re
 import time
 import functools
 import random
@@ -168,3 +169,44 @@ def save_page_diagnosis(driver, exception, filename_prefix="element_error"):
         f.write("\n".join(element_info))
 
     return filename
+
+
+def standardize_phone_number(phone: str, debug: bool = False) -> str | None:
+    """
+    Padroniza números de telefone brasileiros para formato internacional completo (DDI + DDD + número)
+
+    :param phone: Número de telefone em qualquer formato
+    :param debug: Habilita logs de warning para números inválidos
+    :return: Número padronizado (ex: 5562993159124) ou None se inválido
+    """
+    if not phone or not isinstance(phone, str):
+        return None
+
+    # Remove todos os não-dígitos
+    digits = re.sub(r"\D", "", phone)
+    n = len(digits)
+
+    # Verificação de comprimento válido
+    if n < 10 or n > 13:
+        if debug:
+            logger.warning(
+                f"Comprimento inválido para telefone brasileiro: {phone} (len={n})"
+            )
+        return None
+
+    # Números com DDI (55) já completo
+    if digits.startswith("55") and n in (12, 13):
+        return digits
+
+    # Números sem DDI mas com DDD (10 ou 11 dígitos)
+    if n in (10, 11):
+        return "55" + digits
+
+    # Tratamento especial para números de 9 dígitos (sem DDD/DDI)
+    if n == 9:
+        # Assume DDI 55 e DDD padrão 62 (Goiás)
+        return "5562" + digits
+
+    if debug:
+        logger.warning(f"Formato não suportado: {phone} (len={n})")
+    return None
