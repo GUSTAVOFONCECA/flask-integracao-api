@@ -13,6 +13,8 @@ import threading
 import time
 from waitress import serve
 from app import create_app
+from app.tasks import start_workers
+from app.database.database import init_db
 from app.services.tunnel_service import start_localtunnel
 from app.config import Config, configure_logging
 
@@ -73,16 +75,16 @@ def main() -> None:
     manager = AppManager()
 
     try:
-        # 1) Configure logging
+        # Configure logging
         configure_logging(manager.flask_app)  # Movido para cá
 
         app_logger = manager.flask_app.logger
 
-        # 2) Validação agora é feita dentro do configure_logging
+        # Validação agora é feita dentro do configure_logging
         app_logger.info("🛠️ Verificando configurações básicas...")
         app_logger.info("✅ Configurações válidas")
 
-        # 4) Testar health check da API antes de subir o servidor
+        # Testar health check da API antes de subir o servidor
         app_logger.info("🔥 Testando health check da API...")
         flask_app = manager.flask_app
         with flask_app.test_client() as client:
@@ -105,15 +107,22 @@ def main() -> None:
         signal.signal(signal.SIGINT, lambda s, f: manager.graceful_shutdown())
         signal.signal(signal.SIGTERM, lambda s, f: manager.graceful_shutdown())
 
-        # 5) Iniciar Flask em thread
+        # Inicia DB antes de tudo
+        init_db()
+        app_logger.info("Banco de dados inicializado")
+
+        # Inicia workers
+        start_workers()
+
+        # Iniciar Flask em thread
         flask_thread = threading.Thread(target=manager.run_flask_server, daemon=True)
         flask_thread.start()
 
-        # 6) Disparar o LocalTunnel em background
+        # Disparar o LocalTunnel em background
         start_localtunnel()
         app_logger.info("✅ Túnel iniciado (monitoramento automático ativado)")
 
-        # 7) Loop de monitoramento
+        # Loop de monitoramento
         while True:
             if not flask_thread.is_alive():
                 raise RuntimeError("Servidor Flask parou inesperadamente")

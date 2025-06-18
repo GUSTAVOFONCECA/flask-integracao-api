@@ -186,11 +186,28 @@ def is_authenticated() -> bool:
 
 
 def get_auth_headers() -> dict:
-    """Retorna os headers de autenticação."""
+    """
+    Retorna os headers de autenticação:
+     1) tenta is_authenticated() (que chama refresh_tokens() internamente)
+     2) se ainda não autenticado, chama auto_authenticate()
+    """
+    # carrega tokens persistidos (se houver)
+    load_tokens_from_file()
+
+    # 1) tenta usar o token ou renová‑lo
     if not is_authenticated():
-        raise PermissionError("Não autenticado na Conta Azul")
+        logger.info(
+            "Token ausente ou expirado e não renovável — executando auto_authenticate()"
+        )
+        auto_authenticate()
+
+    # 2) agora devemos ter um access_token válido
+    token = conta_azul_tokens.get("access_token")
+    if not token:
+        raise PermissionError("Não autenticado na Conta Azul após auto_authenticate()")
+
     return {
-        "Authorization": f"Bearer {conta_azul_tokens['access_token']}",
+        "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
 
@@ -288,7 +305,7 @@ def build_sale_payload(
         ],
         "condicao_pagamento": {
             "tipo_pagamento": "BOLETO_BANCARIO",
-            "id_conta_financeira": "efa91453-f647-4d6f-879d-312817a337fe",
+            "id_conta_financeira": Config.CONTA_AZUL_CONTA_BANCARIA_UUID,
             "opcao_condicao_pagamento": "À vista",
             "parcelas": [
                 {
@@ -340,6 +357,29 @@ def build_sale_certif_digital_params(deal_type: str) -> dict:
     return base
 
 
+def generate_billing(parcel_id: str, due_date: datetime, price: float) -> dict:
+    """Gera uma cobrança na Conta Azul"""
+    url = f"{API_BASE_URL}/v1/financeiro/eventos-financeiros/contas-a-receber/gerar-cobranca"
+    headers = get_auth_headers()
+
+    payload = {
+        "conta_bancaria": Config.CONTA_AZUL_CONTA_BANCARIA_UUID,
+        "descricao_fatura": "Renovação de Certificado Digital",
+        "id_parcela": parcel_id,
+        "data_vencimento": due_date.strftime("%Y-%m-%d"),
+        "tipo": "BOLETO",
+    }
+
+    logger.debug(f"POST {url}")
+    logger.debug(f"Payload: {payload}")
+
+    response = requests.post(url, json=payload, headers=headers, timeout=60)
+    response.raise_for_status()
+
+    logger.info(f"Resposta HTTP {response.status_code}")
+    return response.json()
+
+
 def handle_sale_creation_certif_digital(contact_number: str, deal_type: str) -> dict:
     """
     Orquestra a criação de venda de certificado digital na Conta Azul:
@@ -347,19 +387,19 @@ def handle_sale_creation_certif_digital(contact_number: str, deal_type: str) -> 
     2) Monta parâmetros específicos (id_service, preço, datas).
     3) Constrói payload e chama create_sale().
     """
-    # 1) Localiza o UUID do cliente pela lista local (person.json)
+    # Localiza o UUID do cliente pela lista local (person.json)
     client_uuid = find_person_uuid_by_phone(contact_number)
     if not client_uuid:
         raise ValueError(
             f"Cliente com telefone {contact_number} não encontrado."
         )  # :contentReference[oaicite:0]{index=0}
 
-    # 2) Prepara parâmetros (id_service, descrição, preço, datas)
+    # Prepara parâmetros (id_service, descrição, preço, datas)
     params = build_sale_certif_digital_params(
         deal_type
     )  # :contentReference[oaicite:1]{index=1}
 
-    # 3) Monta o payload da venda
+    # Monta o payload da venda
     payload = build_sale_payload(
         client_id=client_uuid,
         service_id=params["id_service"],
@@ -369,9 +409,32 @@ def handle_sale_creation_certif_digital(contact_number: str, deal_type: str) -> 
         item_description=params["item_description"],
     )  # :contentReference[oaicite:2]{index=2}
 
-    # 4) Cria a venda e retorna o resultado, que inclui URL do boleto
+    # Cria a venda e retorna o resultado, que inclui URL do boleto
     sale = create_sale(payload)  # :contentReference[oaicite:3]{index=3}
-    return sale
+
+    # Extrai o ID da primeira parcela
+    parcelas = sale["condicao_pagamento"]["parcelas"]
+    if not parcelas:
+        raise ValueError("Venda criada sem parcelas")
+
+    parcel_id = parcelas[0]["id"]
+
+    # Gera a cobrança (boleto)
+    billing = generate_billing(
+        parcel_id=parcel_id, due_date=params["due_date"], price=params["price"]
+    )
+
+    return {"sale": sale, "billing": billing}
+
+
+def get_sale_pdf(sale_id: str) -> bytes:
+    """Obtém PDF de uma venda da Conta Azul"""
+    url = f"https://api.contaazul.com/v1/sales/{sale_id}/pdf"
+    headers = get_auth_headers()
+
+    response = requests.get(url, headers=headers, timeout=30)
+    response.raise_for_status()
+    return response.content
 
 
 # Carrega tokens do arquivo ao inicializar

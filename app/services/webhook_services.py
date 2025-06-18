@@ -8,6 +8,7 @@ import os
 import hmac
 import re
 import json
+import base64
 from json import JSONDecodeError
 import logging
 from datetime import datetime, timedelta
@@ -481,4 +482,35 @@ def send_message_digisac(
         return response.json()
     except requests.RequestException as e:
         logger.error("[MSG] Erro: %s", e)
+        return {"error": str(e)}
+
+
+def send_pdf_via_digisac(
+    contact_number: str, pdf_content: bytes, filename: str
+) -> dict:
+    """Envia PDF via Digisac"""
+    contact_id = get_contact_id_by_number(contact_number)
+    if not contact_id:
+        return {"error": "Contact ID não encontrado"}
+
+    # Converte para base64
+    pdf_base64 = base64.b64encode(pdf_content).decode("utf-8")
+
+    payload = {
+        "text": "Segue o boleto para pagamento da renovação do seu certificado digital",
+        "contactId": contact_id,
+        "file": {"base64": pdf_base64, "mimetype": "application/pdf", "name": filename},
+        "userId": DIGISAC_USER_ID,
+    }
+
+    try:
+        response = requests.post(
+            f"{DIGISAC_BASE_API}/messages",
+            headers=get_auth_headers(),
+            json=payload,
+            timeout=60,
+        )
+        response.raise_for_status()
+        return response.json()
+    except requests.RequestException as e:
         return {"error": str(e)}

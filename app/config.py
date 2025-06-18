@@ -52,9 +52,10 @@ class Config:
     CONTA_AZUL_REDIRECT_URI: str = os.getenv(
         "CONTA_AZUL_REDIRECT_URI", "https://127.0.0.1:5478/conta-azul/callback"
     )
-    CONTA_AZUL_EMAIL = os.getenv("CONTA_AZUL_EMAIL", "")
-    CONTA_AZUL_PASSWORD = os.getenv("CONTA_AZUL_PASSWORD", "")
-    CHROMEDRIVER_PATH = os.path.join(os.getcwd(), "chromedriver-win64", "chromedriver.exe")
+    CONTA_AZUL_EMAIL: str = os.getenv("CONTA_AZUL_EMAIL", "")
+    CONTA_AZUL_PASSWORD: str = os.getenv("CONTA_AZUL_PASSWORD", "")
+    CONTA_AZUL_CONTA_BANCARIA_UUID: str = os.getenv("CONTA_AZUL_CONTA_BANCARIA_UUID", "")
+    CHROMEDRIVER_PATH: str = os.path.join(os.getcwd(), "chromedriver-win64", "chromedriver.exe")
     TUNNEL_PUBLIC_IP: str = None
 
     @classmethod

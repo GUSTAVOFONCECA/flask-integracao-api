@@ -1,25 +1,11 @@
 # app/services/renewal_services.py
 
-import json
 import logging
-from pathlib import Path
+import sqlite3
+from app.database.database import get_db_connection
 from app.utils import standardize_phone_number
 
 logger = logging.getLogger(__name__)
-PENDING_FILE = Path("app/database/pending_renewals.json")
-
-
-def _load_pending():
-    try:
-        if PENDING_FILE.exists():
-            content = PENDING_FILE.read_text(encoding="utf-8").strip()
-            if content:  # Verifica se o arquivo não está vazio
-                return json.loads(content)
-            return {}
-        return {}
-    except Exception as e:
-        logger.error(f"Erro ao carregar pendências: {str(e)}")
-        return {}  # Retorna dict vazio em caso de erro
 
 
 def _standardize_phone(phone: str) -> str:
@@ -35,44 +21,72 @@ def _standardize_phone(phone: str) -> str:
     return std_phone
 
 
-def _save_pending(data):
+def add_pending(contact_number: str, deal_type: str) -> str:
+    std_number = _standardize_phone(contact_number)
+    logger.info(f"Adicionando pendência: {std_number} - {deal_type}")
+
     try:
-        PENDING_FILE.parent.mkdir(parents=True, exist_ok=True)
-        PENDING_FILE.write_text(
-            json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
-        logger.debug(f"Pendências salvas: {len(data)} registros")
+        with get_db_connection() as conn:
+            conn.execute(
+                "INSERT INTO certif_pending_renewals (contact_number, deal_type) VALUES (?, ?)",
+                (std_number, deal_type),
+            )
+            conn.commit()
+        logger.info(f"Pendência inserida com sucesso: {std_number}")
+        return std_number
+    except sqlite3.IntegrityError:
+        logger.warning(f"Pendência já existe: {std_number}")
+        return std_number
     except Exception as e:
-        logger.error(f"Erro ao salvar pendências: {str(e)}")
+        logger.error(f"Erro ao inserir pendência: {str(e)}")
+        raise
 
 
-def add_pending(contact_number: str, deal_type: str):
+def update_pending_sale(
+    contact_number: str, sale_id: str, billing_id: str, pdf_url: str
+) -> bool:
+    std_number = standardize_phone_number(contact_number)
+    logger.info(
+        f"Atualizando pendência: {std_number} com sale_id {sale_id}, billing_id {billing_id}"
+    )
+
+    try:
+        with get_db_connection() as conn:
+            cur = conn.execute(
+                """UPDATE certif_pending_renewals 
+                SET sale_id = ?, billing_id = ?, pdf_url = ?, status = 'billing_created' 
+                WHERE contact_number = ?""",
+                (sale_id, billing_id, pdf_url, std_number),
+            )
+            conn.commit()
+            updated = cur.rowcount > 0
+            if updated:
+                logger.info(f"Pendência atualizada: {std_number}")
+            else:
+                logger.warning(
+                    f"Nenhuma pendência encontrada para atualizar: {std_number}"
+                )
+            return updated
+    except Exception as e:
+        logger.error(f"Erro ao atualizar pendência: {str(e)}")
+        raise
+
+
+def complete_pending(contact_number: str) -> bool:
     std_number = _standardize_phone(contact_number)
-    logger.debug(f"Adicionando pendência: {std_number} => {deal_type}")
+    with get_db_connection() as conn:
+        cur = conn.execute(
+            "DELETE FROM certif_pending_renewals WHERE contact_number = ?",
+            (std_number,),
+        )
+        return cur.rowcount > 0
 
-    pending = _load_pending()
-    pending[std_number] = deal_type
-    _save_pending(pending)
 
-    return std_number  # Retorna o número padronizado para debug
-
-
-def pop_pending(contact_number: str) -> str | None:
+def get_pending(contact_number: str) -> dict | None:
     std_number = _standardize_phone(contact_number)
-    logger.debug(f"Removendo pendência: {std_number}")
-
-    pending = _load_pending()
-    deal_type = pending.pop(std_number, None)
-
-    if deal_type:
-        _save_pending(pending)
-        return deal_type
-    return None
-
-
-def get_pending(contact_number: str) -> str | None:
-    """Consulta uma pendência sem removê-la"""
-    std_number = _standardize_phone(contact_number)
-    logger.debug(f"Consultando pendência: {std_number}")
-    pending = _load_pending()
-    return pending.get(std_number)
+    with get_db_connection() as conn:
+        row = conn.execute(
+            "SELECT * FROM certif_pending_renewals WHERE contact_number = ?",
+            (std_number,),
+        ).fetchone()
+        return dict(row) if row else None

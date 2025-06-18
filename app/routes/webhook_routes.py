@@ -20,7 +20,7 @@ from app.services.webhook_services import (
 from app.services.conta_azul.conta_azul_services import (
     handle_sale_creation_certif_digital,
 )
-from app.services.renewal_services import add_pending, pop_pending, get_pending
+from app.services.renewal_services import add_pending, update_pending_sale, get_pending
 
 webhook_bp = Blueprint("webhook", __name__)
 logger = logging.getLogger(__name__)
@@ -203,39 +203,37 @@ def renova_certificado():
         logger.error("Parâmetro 'contactNumber' ausente")
         return jsonify({"error": "contactNumber ausente"}), 400
 
-    # Consultar pendência SEM remover ainda
-    logger.debug(f"Consultando pendência para: {contact_number}")
-    deal_type = get_pending(contact_number)  # Nova função apenas para consulta
-
-    if not deal_type:
-        logger.error(f"Nenhuma pendência encontrada para {contact_number}")
-        return jsonify({"error": "Nenhuma solicitação pendente encontrada"}), 404
+    # Busca pendência
+    pending = get_pending(contact_number)
+    if not pending:
+        return jsonify({"error": "Nenhuma solicitação pendente"}), 404
 
     try:
-        logger.info(
-            f"Iniciando criação de venda na Conta Azul para {contact_number}, tipo: {deal_type}"
+        # Cria venda e gera cobrança
+        result = handle_sale_creation_certif_digital(
+            contact_number, pending["deal_type"]
         )
-        sale = handle_sale_creation_certif_digital(contact_number, deal_type)
-        logger.info(f"Venda criada com sucesso! ID: {sale.get('id')}")
+        sale_id = result["sale"].get("id")
+        billing_id = result["billing"].get("id")
+        pdf_url = result["billing"].get("url")  # URL do PDF do boleto
 
-        # REMOVER PENDÊNCIA APÓS SUCESSO NA CONTA AZUL
-        pop_pending(contact_number)  # Remove a pendência agora que a venda foi criada
-        logger.debug(f"Pendência removida para {contact_number}")
+        # Atualiza pendência com IDs e URL do PDF
+        update_pending_sale(contact_number, sale_id, billing_id, pdf_url)
 
         return (
             jsonify(
                 {
-                    "status": "success",
-                    "sale_id": sale.get("id"),
-                    "url_boleto": sale.get("url_boleto") or sale.get("boletoUrl"),
-                    "raw": sale,
+                    "status": "billing_created",
+                    "sale_id": sale_id,
+                    "billing_id": billing_id,
+                    "pdf_url": pdf_url,
                 }
             ),
             201,
         )
 
     except Exception as e:
-        logger.exception(f"Erro fatal ao criar venda: {str(e)}")
+        logger.exception(f"Erro ao criar cobrança: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
