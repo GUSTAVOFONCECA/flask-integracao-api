@@ -1,7 +1,19 @@
 {
   "itens": [
     {
-      "id": "a10a31a4-892f-4a3d-9c47-54460c8fefa4",
+      "id": "cb79692c-e24e-4f08-a76f-e6652e1847e8",
+      "banco": "BANCO_BRASIL",
+      "codigo_banco": 1,
+      "nome": "Banco do Brasil - Ag: 1840-6",
+      "ativo": true,
+      "tipo": "CONTA_CORRENTE",
+      "conta_padrao": false,
+      "possui_config_boleto_bancario": true,
+      "agencia": null,
+      "numero": null
+    },
+    {
+      "id": "832fb26a-286b-4024-a2b1-62e0a1a544a0",
       "banco": "BANCO_BRASIL",
       "codigo_banco": 1,
       "nome": "BANCO DO BRASIL - APLICAÇÃO",
@@ -13,10 +25,58 @@
       "numero": null
     },
     {
-      "id": "f2f77b61-6f53-4e61-98ca-84f33e5dff22",
+      "id": "a640c81e-b22a-4279-911a-5b78fe8d6a93",
       "banco": "NAO_BANCO",
       "codigo_banco": -10,
-      "nome": "Caixa - Tesouraria",
+      "nome": "Banco do Brasil - Conta garantida",
+      "ativo": true,
+      "tipo": "OUTROS",
+      "conta_padrao": false,
+      "possui_config_boleto_bancario": false,
+      "agencia": null,
+      "numero": null
+    },
+    {
+      "id": "f5c197c6-72ab-4527-ae5c-7d0d06b5113b",
+      "banco": "ITAU",
+      "codigo_banco": 341,
+      "nome": "Banco Itaú - Ag: 3277/ CC:88888-3",
+      "ativo": true,
+      "tipo": "CONTA_CORRENTE",
+      "conta_padrao": false,
+      "possui_config_boleto_bancario": true,
+      "agencia": "3277",
+      "numero": "888883"
+    },
+    {
+      "id": "51011039-2162-4c2e-aba6-28736751e392",
+      "banco": "ITAU",
+      "codigo_banco": 341,
+      "nome": "Banco Itaú - Conta Garantida 12060-0",
+      "ativo": true,
+      "tipo": "CONTA_CORRENTE",
+      "conta_padrao": false,
+      "possui_config_boleto_bancario": false,
+      "agencia": "3277",
+      "numero": "120600"
+    },
+    {
+      "id": "3de83d0f-2d79-4339-b1e1-0265b55ddec5",
+      "banco": "SICOOB",
+      "codigo_banco": 756,
+      "nome": "Banco Sicoob - Coop: 3351",
+      "ativo": true,
+      "tipo": "CONTA_CORRENTE",
+      "conta_padrao": false,
+      "possui_config_boleto_bancario": true,
+      "agencia": "3351",
+      "numero": "1123564"
+    },
+    {
+      "id": "b2409345-7994-45b9-9f5e-fe2b0c0ebbf3",
+      "banco": "NAO_BANCO",
+      "codigo_banco": -10,
+      "nome": "Caixa",
       "ativo": true,
       "tipo": "CAIXINHA",
       "conta_padrao": false,
@@ -25,10 +85,46 @@
       "numero": null
     },
     {
-      "id": "efa91453-f647-4d6f-879d-312817a337fe",
+      "id": "c98f0593-609b-4e7a-bbf2-8976d9c130f2",
       "banco": "BANCO_BRASIL",
       "codigo_banco": 1,
-      "nome": "CONTA CORRENTE BB",
+      "nome": "Cartão de Credito - Banco do Brasil",
+      "ativo": true,
+      "tipo": "CARTAO_CREDITO",
+      "conta_padrao": false,
+      "possui_config_boleto_bancario": false,
+      "agencia": null,
+      "numero": null
+    },
+    {
+      "id": "1359b7ef-94d8-4d3c-9ce0-f27316144504",
+      "banco": "SICOOB",
+      "codigo_banco": 756,
+      "nome": "Cartão de Credito Sicoob",
+      "ativo": true,
+      "tipo": "CARTAO_CREDITO",
+      "conta_padrao": false,
+      "possui_config_boleto_bancario": false,
+      "agencia": null,
+      "numero": null
+    },
+    {
+      "id": "aa065963-6d32-4ff9-bc9c-636cdfaf426b",
+      "banco": null,
+      "codigo_banco": null,
+      "nome": "Cheques",
+      "ativo": true,
+      "tipo": "MEIOS_RECEBIMENTO",
+      "conta_padrao": false,
+      "possui_config_boleto_bancario": false,
+      "agencia": null,
+      "numero": null
+    },
+    {
+      "id": "cb79692c-e24e-4f08-a76f-e6652e1847e8",
+      "banco": "BANCO_BRASIL",
+      "codigo_banco": 1,
+      "nome": "Banco do Brasil - Ag: 1840-6",
       "ativo": true,
       "tipo": "CONTA_CORRENTE",
       "conta_padrao": false,
@@ -37,19 +133,7 @@
       "numero": null
     },
     {
-      "id": "3ed5a229-9b94-4725-8f8e-0b462a2d0c60",
-      "banco": "IUGU",
-      "codigo_banco": 401,
-      "nome": "Conta PJ Conta Azul",
-      "ativo": true,
-      "tipo": "CONTA_CORRENTE",
-      "conta_padrao": false,
-      "possui_config_boleto_bancario": false,
-      "agencia": "0002",
-      "numero": "5233713"
-    },
-    {
-      "id": "a10a31a4-892f-4a3d-9c47-54460c8fefa4",
+      "id": "832fb26a-286b-4024-a2b1-62e0a1a544a0",
       "banco": "BANCO_BRASIL",
       "codigo_banco": 1,
       "nome": "BANCO DO BRASIL - APLICAÇÃO",
@@ -61,10 +145,58 @@
       "numero": null
     },
     {
-      "id": "f2f77b61-6f53-4e61-98ca-84f33e5dff22",
+      "id": "a640c81e-b22a-4279-911a-5b78fe8d6a93",
       "banco": "NAO_BANCO",
       "codigo_banco": -10,
-      "nome": "Caixa - Tesouraria",
+      "nome": "Banco do Brasil - Conta garantida",
+      "ativo": true,
+      "tipo": "OUTROS",
+      "conta_padrao": false,
+      "possui_config_boleto_bancario": false,
+      "agencia": null,
+      "numero": null
+    },
+    {
+      "id": "f5c197c6-72ab-4527-ae5c-7d0d06b5113b",
+      "banco": "ITAU",
+      "codigo_banco": 341,
+      "nome": "Banco Itaú - Ag: 3277/ CC:88888-3",
+      "ativo": true,
+      "tipo": "CONTA_CORRENTE",
+      "conta_padrao": false,
+      "possui_config_boleto_bancario": true,
+      "agencia": "3277",
+      "numero": "888883"
+    },
+    {
+      "id": "51011039-2162-4c2e-aba6-28736751e392",
+      "banco": "ITAU",
+      "codigo_banco": 341,
+      "nome": "Banco Itaú - Conta Garantida 12060-0",
+      "ativo": true,
+      "tipo": "CONTA_CORRENTE",
+      "conta_padrao": false,
+      "possui_config_boleto_bancario": false,
+      "agencia": "3277",
+      "numero": "120600"
+    },
+    {
+      "id": "3de83d0f-2d79-4339-b1e1-0265b55ddec5",
+      "banco": "SICOOB",
+      "codigo_banco": 756,
+      "nome": "Banco Sicoob - Coop: 3351",
+      "ativo": true,
+      "tipo": "CONTA_CORRENTE",
+      "conta_padrao": false,
+      "possui_config_boleto_bancario": true,
+      "agencia": "3351",
+      "numero": "1123564"
+    },
+    {
+      "id": "b2409345-7994-45b9-9f5e-fe2b0c0ebbf3",
+      "banco": "NAO_BANCO",
+      "codigo_banco": -10,
+      "nome": "Caixa",
       "ativo": true,
       "tipo": "CAIXINHA",
       "conta_padrao": false,
@@ -73,19 +205,43 @@
       "numero": null
     },
     {
-      "id": "efa91453-f647-4d6f-879d-312817a337fe",
+      "id": "c98f0593-609b-4e7a-bbf2-8976d9c130f2",
       "banco": "BANCO_BRASIL",
       "codigo_banco": 1,
-      "nome": "CONTA CORRENTE BB",
+      "nome": "Cartão de Credito - Banco do Brasil",
       "ativo": true,
-      "tipo": "CONTA_CORRENTE",
+      "tipo": "CARTAO_CREDITO",
       "conta_padrao": false,
-      "possui_config_boleto_bancario": true,
+      "possui_config_boleto_bancario": false,
       "agencia": null,
       "numero": null
     },
     {
-      "id": "3ed5a229-9b94-4725-8f8e-0b462a2d0c60",
+      "id": "1359b7ef-94d8-4d3c-9ce0-f27316144504",
+      "banco": "SICOOB",
+      "codigo_banco": 756,
+      "nome": "Cartão de Credito Sicoob",
+      "ativo": true,
+      "tipo": "CARTAO_CREDITO",
+      "conta_padrao": false,
+      "possui_config_boleto_bancario": false,
+      "agencia": null,
+      "numero": null
+    },
+    {
+      "id": "aa065963-6d32-4ff9-bc9c-636cdfaf426b",
+      "banco": null,
+      "codigo_banco": null,
+      "nome": "Cheques",
+      "ativo": true,
+      "tipo": "MEIOS_RECEBIMENTO",
+      "conta_padrao": false,
+      "possui_config_boleto_bancario": false,
+      "agencia": null,
+      "numero": null
+    },
+    {
+      "id": "88e4dbb7-e024-47f5-8e08-8b846c00172e",
       "banco": "IUGU",
       "codigo_banco": 401,
       "nome": "Conta PJ Conta Azul",
@@ -94,7 +250,19 @@
       "conta_padrao": false,
       "possui_config_boleto_bancario": false,
       "agencia": "0002",
-      "numero": "5233713"
+      "numero": "8240175"
+    },
+    {
+      "id": "88e4dbb7-e024-47f5-8e08-8b846c00172e",
+      "banco": "IUGU",
+      "codigo_banco": 401,
+      "nome": "Conta PJ Conta Azul",
+      "ativo": true,
+      "tipo": "CONTA_CORRENTE",
+      "conta_padrao": false,
+      "possui_config_boleto_bancario": false,
+      "agencia": "0002",
+      "numero": "8240175"
     }
   ]
 }

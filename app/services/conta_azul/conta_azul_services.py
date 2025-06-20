@@ -2,6 +2,7 @@
 import os
 import json
 import re
+import time
 from pathlib import Path
 import logging
 from datetime import datetime, timedelta
@@ -299,18 +300,18 @@ def build_sale_payload(
             {
                 "descricao": item_description,
                 "quantidade": 1,
-                "valor": price,
+                "valor": float(price),
                 "id": service_id,
             }
         ],
         "condicao_pagamento": {
             "tipo_pagamento": "BOLETO_BANCARIO",
             "id_conta_financeira": Config.CONTA_AZUL_CONTA_BANCARIA_UUID,
-            "opcao_condicao_pagamento": "À vista",
+            "opcao_condicao_pagamento": "1x",
             "parcelas": [
                 {
                     "data_vencimento": due_date.strftime("%Y-%m-%d"),
-                    "valor": price,
+                    "valor": float(price),
                     "descricao": "Parcela única",
                 }
             ],
@@ -330,7 +331,7 @@ def build_sale_certif_digital_params(deal_type: str) -> dict:
     if deal_type == "Pessoa jurídica":
         base.update(
             {
-                "id_service": "0b4f9a8b-01bb-4a89-93b3-7f56210bc75d",
+                "id_service": "5450a9be-346c-4878-b0bd-2cc1250d9c9e",
                 "item_description": "CERTIFICADO DIGITAL PJ",
                 "price": 180,
             }
@@ -338,7 +339,7 @@ def build_sale_certif_digital_params(deal_type: str) -> dict:
     elif deal_type == "Pessoa física - CPF":
         base.update(
             {
-                "id_service": "586d5eb2-23aa-47ff-8157-fd85de8b9932",
+                "id_service": "5450a9be-346c-4878-b0bd-2cc1250d9c9e",
                 "item_description": "CERTIFICADO DIGITAL PF",
                 "price": 130,
             }
@@ -346,7 +347,7 @@ def build_sale_certif_digital_params(deal_type: str) -> dict:
     elif deal_type == "Pessoa física - CEI":
         base.update(
             {
-                "id_service": "586d5eb2-23aa-47ff-8157-fd85de8b9932",
+                "id_service": "5450a9be-346c-4878-b0bd-2cc1250d9c9e",
                 "item_description": "CERTIFICADO DIGITAL PF",
                 "price": 130,
             }
@@ -357,27 +358,68 @@ def build_sale_certif_digital_params(deal_type: str) -> dict:
     return base
 
 
-def generate_billing(parcel_id: str, due_date: datetime, price: float) -> dict:
+def get_sale_details(sale_id: str) -> dict:
+    """Obtém detalhes completos de uma venda pelo ID"""
+    url = f"{API_BASE_URL}/v1/venda/{sale_id}"
+    headers = get_auth_headers()
+
+    try:
+        logger.debug(f"GET {url}")
+        response = requests.get(url, headers=headers, timeout=60)
+        response.raise_for_status()
+        logger.debug(f"Content: {response.content}")
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro ao obter detalhes da venda: {str(e)}")
+        if hasattr(e, "response") and e.response:
+            logger.error(f"Resposta do erro: {e.response.text}")
+        raise
+
+
+def generate_billing(parcel_id: str, due_date: datetime) -> dict:
     """Gera uma cobrança na Conta Azul"""
     url = f"{API_BASE_URL}/v1/financeiro/eventos-financeiros/contas-a-receber/gerar-cobranca"
     headers = get_auth_headers()
 
     payload = {
-        "conta_bancaria": Config.CONTA_AZUL_CONTA_BANCARIA_UUID,
+        "conta_bancaria": str(Config.CONTA_AZUL_CONTA_BANCARIA_UUID),
         "descricao_fatura": "Renovação de Certificado Digital",
         "id_parcela": parcel_id,
         "data_vencimento": due_date.strftime("%Y-%m-%d"),
         "tipo": "BOLETO",
+        "atributos": {}
     }
 
     logger.debug(f"POST {url}")
     logger.debug(f"Payload: {payload}")
 
     response = requests.post(url, json=payload, headers=headers, timeout=60)
+
+    # Adicione este log para capturar detalhes do erro
+    if response.status_code >= 400:
+        logger.error(f"Erro detalhado: {response.text}")
+
     response.raise_for_status()
 
     logger.info(f"Resposta HTTP {response.status_code}")
     return response.json()
+
+
+def get_sale_pdf(sale_id: str) -> bytes:
+    """Obtém PDF de uma venda da Conta Azul"""
+    url = f"{API_BASE_URL}/v1/venda/{sale_id}/imprimir"
+    headers = get_auth_headers()
+
+    try:
+        logger.debug(f"GET {url}")
+        response = requests.get(url, headers=headers, timeout=60)
+        response.raise_for_status()
+        return response.content
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro ao obter PDF da venda: {str(e)}")
+        if hasattr(e, "response") and e.response:
+            logger.error(f"Resposta do erro: {e.response.text}")
+        raise
 
 
 def handle_sale_creation_certif_digital(contact_number: str, deal_type: str) -> dict:
@@ -386,18 +428,15 @@ def handle_sale_creation_certif_digital(contact_number: str, deal_type: str) -> 
     1) Encontra o cliente pelo telefone.
     2) Monta parâmetros específicos (id_service, preço, datas).
     3) Constrói payload e chama create_sale().
+    4) Obtém o PDF do boleto diretamente da venda
     """
-    # Localiza o UUID do cliente pela lista local (person.json)
+    # Localiza o UUID do cliente
     client_uuid = find_person_uuid_by_phone(contact_number)
     if not client_uuid:
-        raise ValueError(
-            f"Cliente com telefone {contact_number} não encontrado."
-        )  # :contentReference[oaicite:0]{index=0}
+        raise ValueError(f"Cliente com telefone {contact_number} não encontrado")
 
-    # Prepara parâmetros (id_service, descrição, preço, datas)
-    params = build_sale_certif_digital_params(
-        deal_type
-    )  # :contentReference[oaicite:1]{index=1}
+    # Prepara parâmetros da venda
+    params = build_sale_certif_digital_params(deal_type)
 
     # Monta o payload da venda
     payload = build_sale_payload(
@@ -407,34 +446,27 @@ def handle_sale_creation_certif_digital(contact_number: str, deal_type: str) -> 
         sale_date=params["sale_date"],
         due_date=params["due_date"],
         item_description=params["item_description"],
-    )  # :contentReference[oaicite:2]{index=2}
+    )
 
-    # Cria a venda e retorna o resultado, que inclui URL do boleto
-    sale = create_sale(payload)  # :contentReference[oaicite:3]{index=3}
+    # Cria a venda
+    sale = create_sale(payload)
+    sale_id = sale["id"]
+    time.sleep(5)
+
+    # Obtém detalhes completos da venda
+    sale_details = get_sale_details(sale_id)
 
     # Extrai o ID da primeira parcela
-    parcelas = sale["condicao_pagamento"]["parcelas"]
+    parcelas = sale_details["venda"]["condicao_pagamento"]["parcelas"]
     if not parcelas:
         raise ValueError("Venda criada sem parcelas")
 
-    parcel_id = parcelas[0]["id"]
+    parcel_id = parcelas[0]["id"]  # ID da primeira parcela
 
     # Gera a cobrança (boleto)
-    billing = generate_billing(
-        parcel_id=parcel_id, due_date=params["due_date"], price=params["price"]
-    )
+    billing = generate_billing(parcel_id=parcel_id, due_date=params["due_date"])
 
-    return {"sale": sale, "billing": billing}
-
-
-def get_sale_pdf(sale_id: str) -> bytes:
-    """Obtém PDF de uma venda da Conta Azul"""
-    url = f"https://api.contaazul.com/v1/sales/{sale_id}/pdf"
-    headers = get_auth_headers()
-
-    response = requests.get(url, headers=headers, timeout=30)
-    response.raise_for_status()
-    return response.content
+    return {"sale": sale_details, "billing": billing}
 
 
 # Carrega tokens do arquivo ao inicializar

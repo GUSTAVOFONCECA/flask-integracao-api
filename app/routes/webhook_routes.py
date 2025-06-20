@@ -6,6 +6,7 @@ Rotas de webhook para integração com Bitrix24 e validação de CNPJ.
 
 import time
 import logging
+import requests
 from werkzeug.exceptions import BadRequest
 from flask import Blueprint, request, jsonify
 from app.services.webhook_services import (
@@ -16,11 +17,12 @@ from app.services.webhook_services import (
     get_contact_id_by_number,
     send_message_digisac,
     transfer_ticket_digisac,
+    send_pdf_via_digisac,
 )
 from app.services.conta_azul.conta_azul_services import (
     handle_sale_creation_certif_digital,
 )
-from app.services.renewal_services import add_pending, update_pending_sale, get_pending
+from app.services.renewal_services import add_pending, complete_pending, get_pending
 
 webhook_bp = Blueprint("webhook", __name__)
 logger = logging.getLogger(__name__)
@@ -195,7 +197,6 @@ def envia_comunicado_para_cliente_certif_digital():
 def renova_certificado():
     logger.debug("Iniciando processo de renovação de certificado")
 
-    # Obter número do contato
     contact_number = request.args.get("contactNumber") or request.json.get(
         "contactNumber"
     )
@@ -203,7 +204,6 @@ def renova_certificado():
         logger.error("Parâmetro 'contactNumber' ausente")
         return jsonify({"error": "contactNumber ausente"}), 400
 
-    # Busca pendência
     pending = get_pending(contact_number)
     if not pending:
         return jsonify({"error": "Nenhuma solicitação pendente"}), 404
@@ -213,23 +213,36 @@ def renova_certificado():
         result = handle_sale_creation_certif_digital(
             contact_number, pending["deal_type"]
         )
-        sale_id = result["sale"].get("id")
-        billing_id = result["billing"].get("id")
-        pdf_url = result["billing"].get("url")  # URL do PDF do boleto
+        sale_id = result["sale"]["venda"]["id"]
+        billing = result["billing"]
+        billing_id = billing["id"]
+        pdf_url = billing["url"]  # URL para download do boleto
 
-        # Atualiza pendência com IDs e URL do PDF
-        update_pending_sale(contact_number, sale_id, billing_id, pdf_url)
+        # Baixa o PDF do boleto
+        #headers = get_auth_headers()
+        response = requests.get(pdf_url, timeout=60)
+        response.raise_for_status()
+        pdf_content = response.content
+
+        # Envia via Digisac
+        filename = f"boleto-{billing_id[:8]}.pdf"
+        send_pdf_via_digisac(
+            contact_number=contact_number, pdf_content=pdf_content, filename=filename
+        )
+
+        # Remove a pendência
+        complete_pending(contact_number)
 
         return (
             jsonify(
                 {
-                    "status": "billing_created",
+                    "status": "success",
                     "sale_id": sale_id,
                     "billing_id": billing_id,
-                    "pdf_url": pdf_url,
+                    "message": "Boleto enviado com sucesso",
                 }
             ),
-            201,
+            200,
         )
 
     except Exception as e:
