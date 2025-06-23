@@ -112,7 +112,7 @@ def main() -> None:
         app_logger.info("Banco de dados inicializado")
 
         # Inicia workers
-        start_workers()
+        #start_workers()
 
         # Iniciar Flask em thread
         flask_thread = threading.Thread(target=manager.run_flask_server, daemon=True)

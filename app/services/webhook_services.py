@@ -260,6 +260,23 @@ def post_destination_api(processed_data: Dict, api_url: str) -> Dict:
         return {"error": str(e)}
 
 
+def update_crm_item_certif_digital(card_id: int, fields: Optional[dict]) -> dict:
+    url = "https://logic.bitrix24.com.br/rest/260/af4o31dew3vzuphs/crm.item.update"
+    payload = {
+        "entityTypeId": 137,
+        "id": card_id,
+        "fields": fields,
+    }
+
+    try:
+        response = requests.post(url, json=payload, timeout=60)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro ao atualizar card CRM: {str(e)}")
+        return {"error": str(e)}
+
+
 ############################################################################### DIGISAC SERVICES
 DIGISAC_URL = "https://logicassessoria.digisac.chat"
 DIGISAC_BASE_API = f"{DIGISAC_URL}/api/v1"

@@ -8,6 +8,7 @@ import time
 import logging
 import requests
 from werkzeug.exceptions import BadRequest
+from datetime import datetime
 from flask import Blueprint, request, jsonify
 from app.services.webhook_services import (
     get_cnpj_receita,
@@ -18,6 +19,7 @@ from app.services.webhook_services import (
     send_message_digisac,
     transfer_ticket_digisac,
     send_pdf_via_digisac,
+    update_crm_item_certif_digital,
 )
 from app.services.conta_azul.conta_azul_services import (
     handle_sale_creation_certif_digital,
@@ -134,6 +136,7 @@ def envia_comunicado_para_cliente_certif_digital():
 
     # Validação de parâmetros
     required_params = [
+        "cardID",
         "companyName",
         "contactName",
         "contactNumber",
@@ -173,8 +176,17 @@ def envia_comunicado_para_cliente_certif_digital():
     )
 
     # Adiciona pendência com número padronizado
-    std_number = add_pending(params["contactNumber"], params["dealType"])
+    std_number = add_pending(
+        params["contactNumber"], params["dealType"], int(params["cardID"])
+    )
     logger.debug(f"Pendência adicionada para {std_number}")
+
+    # Atualiza card sobre contato realizado
+    fields = {
+        "ufCrm18_1740158577862": datetime.now().strftime("%Y-%m-%d"),
+        "ufCrm18_1746464219165": "Enviado notificação para renovação via digisac",
+    }
+    update_crm_item_certif_digital(card_id=int(params["cardID"]), fields=fields)
 
     if "error" in result:
         logger.error(f"Erro ao enviar mensagem: {result['error']}")
@@ -186,7 +198,7 @@ def envia_comunicado_para_cliente_certif_digital():
                 "status": "success",
                 "message": "Comunicação enviada",
                 "digisac_response": result,
-                "std_phone": std_number,  # Para debug
+                "std_phone": std_number,
             }
         ),
         200,
@@ -219,7 +231,7 @@ def renova_certificado():
         pdf_url = billing["url"]  # URL para download do boleto
 
         # Baixa o PDF do boleto
-        #headers = get_auth_headers()
+        # headers = get_auth_headers()
         response = requests.get(pdf_url, timeout=60)
         response.raise_for_status()
         pdf_content = response.content

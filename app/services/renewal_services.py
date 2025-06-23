@@ -21,15 +21,15 @@ def _standardize_phone(phone: str) -> str:
     return std_phone
 
 
-def add_pending(contact_number: str, deal_type: str) -> str:
+def add_pending(contact_number: str, deal_type: str, card_crm_id: int) -> str:
     std_number = _standardize_phone(contact_number)
-    logger.info(f"Adicionando pendência: {std_number} - {deal_type}")
+    logger.info(f"Adicionando pendência: {std_number} - {deal_type} - Card CRM: {card_crm_id}")
 
     try:
         with get_db_connection() as conn:
             conn.execute(
-                "INSERT INTO certif_pending_renewals (contact_number, deal_type) VALUES (?, ?)",
-                (std_number, deal_type),
+                "INSERT INTO certif_pending_renewals (contact_number, deal_type, card_crm_id) VALUES (?, ?, ?)",
+                (std_number, deal_type, card_crm_id),
             )
             conn.commit()
         logger.info(f"Pendência inserida com sucesso: {std_number}")

@@ -293,7 +293,7 @@ def build_sale_payload(
 
     return {
         "id_cliente": client_id,
-        "numero": numero_venda,  # CAMPO OBRIGATÓRIO ADICIONADO
+        "numero": numero_venda,
         "situacao": "APROVADO",
         "data_venda": sale_date.strftime("%Y-%m-%d"),
         "itens": [
@@ -331,15 +331,15 @@ def build_sale_certif_digital_params(deal_type: str) -> dict:
     if deal_type == "Pessoa jurídica":
         base.update(
             {
-                "id_service": "5450a9be-346c-4878-b0bd-2cc1250d9c9e",
+                "id_service": "0b4f9a8b-01bb-4a89-93b3-7f56210bc75d",
                 "item_description": "CERTIFICADO DIGITAL PJ",
-                "price": 180,
+                "price": 185,
             }
         )
     elif deal_type == "Pessoa física - CPF":
         base.update(
             {
-                "id_service": "5450a9be-346c-4878-b0bd-2cc1250d9c9e",
+                "id_service": "586d5eb2-23aa-47ff-8157-fd85de8b9932",
                 "item_description": "CERTIFICADO DIGITAL PF",
                 "price": 130,
             }
@@ -347,7 +347,7 @@ def build_sale_certif_digital_params(deal_type: str) -> dict:
     elif deal_type == "Pessoa física - CEI":
         base.update(
             {
-                "id_service": "5450a9be-346c-4878-b0bd-2cc1250d9c9e",
+                "id_service": "586d5eb2-23aa-47ff-8157-fd85de8b9932",
                 "item_description": "CERTIFICADO DIGITAL PF",
                 "price": 130,
             }
@@ -383,7 +383,7 @@ def generate_billing(parcel_id: str, due_date: datetime) -> dict:
 
     payload = {
         "conta_bancaria": str(Config.CONTA_AZUL_CONTA_BANCARIA_UUID),
-        "descricao_fatura": "Renovação de Certificado Digital",
+        "descricao_fatura": "Emissão de Certificado Digital",
         "id_parcela": parcel_id,
         "data_vencimento": due_date.strftime("%Y-%m-%d"),
         "tipo": "BOLETO",
@@ -455,6 +455,7 @@ def handle_sale_creation_certif_digital(contact_number: str, deal_type: str) -> 
 
     # Obtém detalhes completos da venda
     sale_details = get_sale_details(sale_id)
+    time.sleep(5)
 
     # Extrai o ID da primeira parcela
     parcelas = sale_details["venda"]["condicao_pagamento"]["parcelas"]

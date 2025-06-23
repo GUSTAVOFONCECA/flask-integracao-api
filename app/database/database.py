@@ -31,17 +31,18 @@ def init_db():
                 deal_type TEXT NOT NULL,
                 sale_id TEXT,
                 status TEXT DEFAULT 'pending' CHECK(
-                                                    status IN (
-                                                        'pending',
-                                                        'sale_created',
-                                                        'charge_generated',
-                                                        'pdf_sent'
-                                                    )
-                                                ),
+                    status IN (
+                        'pending',
+                        'sale_created',
+                        'charge_generated',
+                        'pdf_sent'
+                    )
+                ),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 retry_count INTEGER NOT NULL DEFAULT 0,
-                pdf_url TEXT
-            );
+                pdf_url TEXT,
+                card_crm_id INTEGER NOT NULL
+            );            
             """
         )
         conn.commit()
