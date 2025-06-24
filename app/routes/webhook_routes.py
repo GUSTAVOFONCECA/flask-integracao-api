@@ -245,6 +245,8 @@ def renova_certificado():
         # Remove a pendência
         complete_pending(contact_number)
 
+        logger.info("Processo de renovação de certificado concluído")
+
         return (
             jsonify(
                 {
@@ -265,22 +267,35 @@ def renova_certificado():
 @webhook_bp.route("/nao-renova-certificado", methods=["POST"])
 def post_nao_renova_certificado_digisac():
     """Processa resposta de não renovação de certificado"""
-    # ─── DEBUG: tudo que chega na requisição ──────────────────────────────
-    # Query string (args)
-    logger.debug("→ Query String args: %s", request.args.to_dict(flat=False))
-    # Cabeçalhos
-    logger.debug("→ Headers: %s", dict(request.headers))
-    # Payload raw
-    logger.debug("→ Raw Data: %r", request.get_data())
-    # JSON (se houver)
+    logger.debug("Iniciando processo de recusa de certificado")
+    contact_number = request.args.get("contactNumber") or request.json.get(
+        "contactNumber"
+    )
+
+    if not contact_number:
+        logger.error("Parâmetro 'contactNumber' ausente")
+        return jsonify({"error": "contactNumber ausente"}), 400
+
+    pending = get_pending(contact_number)
+    if not pending:
+        return jsonify({"error": "Nenhuma solicitação pendente"}), 404
+
     try:
-        json_payload = request.get_json(silent=True)
-    except BadRequest as e:
-        json_payload = f"<invalid JSON: {e}>"
-    logger.debug("→ JSON: %s", json_payload)
-    # Form fields (application/x-www-form-urlencoded ou multipart/form-data)
-    logger.debug("→ Form: %s", request.form.to_dict(flat=False))
-    # Arquivos (se houver upload)
-    logger.debug("→ Files: %s", list(request.files.keys()))
-    # Valores combinados (args + form)
-    logger.debug("→ Values (args+form): %s", request.values.to_dict(flat=False))
+        fields = {"stageId": "DT137_36:UC_AY5334"}
+        update_crm_item_certif_digital(card_id=pending["card_crm_id"], fields=fields)
+
+        logger.info("Processo de recusa de certificado concluído")
+        
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "message": "Card enviado para retenção com sucesso",
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        logger.exception(f"Erro ao criar cobrança: {str(e)}")
+        return jsonify({"error": str(e)}), 500

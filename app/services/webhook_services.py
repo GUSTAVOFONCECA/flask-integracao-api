@@ -273,9 +273,24 @@ def update_crm_item_certif_digital(card_id: int, fields: Optional[dict]) -> dict
         response.raise_for_status()
         return response.json()
     except requests.exceptions.RequestException as e:
-        logger.error(f"Erro ao atualizar card CRM: {str(e)}")
+        logger.error(f"Erro ao atualizar card SPA: {str(e)}")
         return {"error": str(e)}
 
+def update_deal_item_certif_digital(card_id: int, fields: Optional[dict]) -> dict:
+    url = "https://logic.bitrix24.com.br/rest/260/af4o31dew3vzuphs/crm.deal.update"
+    payload = {
+        "entityTypeId": 18,
+        "id": card_id,
+        "fields": fields,
+    }
+
+    try:
+        response = requests.post(url, json=payload, timeout=60)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro ao atualizar card DEAL: {str(e)}")
+        return {"error": str(e)}
 
 ############################################################################### DIGISAC SERVICES
 DIGISAC_URL = "https://logicassessoria.digisac.chat"
