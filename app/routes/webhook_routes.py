@@ -281,11 +281,15 @@ def post_nao_renova_certificado_digisac():
         return jsonify({"error": "Nenhuma solicitação pendente"}), 404
 
     try:
-        fields = {"stageId": "DT137_36:UC_AY5334"}
+        fields = {
+            "stageId": "DT137_36:UC_AY5334",
+            "ufCrm18_1740159488678": "Y",
+            
+        }
         update_crm_item_certif_digital(card_id=pending["card_crm_id"], fields=fields)
 
         logger.info("Processo de recusa de certificado concluído")
-        
+
         return (
             jsonify(
                 {
