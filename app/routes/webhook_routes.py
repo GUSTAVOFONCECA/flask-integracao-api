@@ -282,9 +282,7 @@ def post_nao_renova_certificado_digisac():
 
     try:
         fields = {
-            "stageId": "DT137_36:UC_AY5334",
-            "ufCrm18_1740159488678": "Y",
-            
+            "stageId": "DT137_36:UC_AY5334"            
         }
         update_crm_item_certif_digital(card_id=pending["card_crm_id"], fields=fields)
 
