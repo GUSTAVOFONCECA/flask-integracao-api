@@ -11,6 +11,8 @@ import base64
 import requests
 from app.config import Config
 from app.services.conta_azul.conta_azul_auto_auth import automate_auth
+from app.services.renewal_services import get_pending, update_pending
+from app.services.webhook_services import build_billing_certification_pdf
 from app.utils import standardize_phone_number
 
 
@@ -424,50 +426,88 @@ def get_sale_pdf(sale_id: str) -> bytes:
 
 def handle_sale_creation_certif_digital(contact_number: str, deal_type: str) -> dict:
     """
-    Orquestra a criação de venda de certificado digital na Conta Azul:
-    1) Encontra o cliente pelo telefone.
-    2) Monta parâmetros específicos (id_service, preço, datas).
-    3) Constrói payload e chama create_sale().
-    4) Obtém o PDF do boleto diretamente da venda
+    Orquestra o fluxo de renovação de certificado digital:
+      1) Cria venda (sale_created)
+      2) Gera cobrança (billing_generated)
+      3) Busca PDF e envia via Digisac (billing_pdf_sent)
+    Cada etapa só é executada se o status ainda não tiver sido atingido.
     """
-    # Localiza o UUID do cliente
+    # 1) Carrega pendência atual
+    pending = get_pending(contact_number)
+    if not pending:
+        raise ValueError(f"Nenhuma solicitação pendente para {contact_number}")
+
+    card_id = pending["card_crm_id"]
+    last_status = pending.get("status", "pending")
+
+    # 2) Localiza o UUID do cliente (sempre necessário)
     client_uuid = find_person_uuid_by_phone(contact_number)
     if not client_uuid:
         raise ValueError(f"Cliente com telefone {contact_number} não encontrado")
 
-    # Prepara parâmetros da venda
+    # Preparar parâmetros de venda
     params = build_sale_certif_digital_params(deal_type)
 
-    # Monta o payload da venda
-    payload = build_sale_payload(
-        client_id=client_uuid,
-        service_id=params["id_service"],
-        price=params["price"],
-        sale_date=params["sale_date"],
-        due_date=params["due_date"],
-        item_description=params["item_description"],
-    )
+    result = {"sale": None, "billing": None, "pdf_content": None}
 
-    # Cria a venda
-    sale = create_sale(payload)
-    sale_id = sale["id"]
-    time.sleep(5)
+    # 3) Criação da venda
+    if last_status in (None, "", "pending"):
+        payload = build_sale_payload(
+            client_id=client_uuid,
+            service_id=params["id_service"],
+            price=params["price"],
+            sale_date=params["sale_date"],
+            due_date=params["due_date"],
+            item_description=params["item_description"],
+        )
+        sale = create_sale(payload)
+        sale_id = sale["id"]
+        update_pending(card_id, status="sale_created", sale_id=sale_id)
+        result["sale"] = sale
 
-    # Obtém detalhes completos da venda
-    sale_details = get_sale_details(sale_id)
-    time.sleep(5)
+        # forçar wait se necessário
+        time.sleep(5)
+        last_status = "sale_created"
+    else:
+        # já criou venda antes, apenas recarrega detalhes
+        sale_id = pending.get("sale_id")
+        result["sale"] = get_sale_details(sale_id)
 
-    # Extrai o ID da primeira parcela
-    parcelas = sale_details["venda"]["condicao_pagamento"]["parcelas"]
-    if not parcelas:
-        raise ValueError("Venda criada sem parcelas")
+    # 4) Geração de cobrança (boleto)
+    if last_status in ("sale_created",):
+        # Obtém detalhes da venda atualizados
+        sale_details = result["sale"] or get_sale_details(sale_id)
+        parcelas = sale_details["venda"]["condicao_pagamento"]["parcelas"]
+        if not parcelas:
+            raise ValueError("Venda criada sem parcelas")
+        parcel_id = parcelas[0]["id"]
 
-    parcel_id = parcelas[0]["id"]  # ID da primeira parcela
+        billing = generate_billing(parcel_id=parcel_id, due_date=params["due_date"])
+        billing_id = billing["id"]
+        update_pending(card_id, status="billing_generated", billing_id=billing_id)
+        result["billing"] = billing
 
-    # Gera a cobrança (boleto)
-    billing = generate_billing(parcel_id=parcel_id, due_date=params["due_date"])
+        # possível wait
+        time.sleep(2)
+        last_status = "billing_generated"
+    else:
+        billing_id = pending.get("billing_id")
+        result["billing"] = {"id": billing_id}
 
-    return {"sale": sale_details, "billing": billing}
+    # 5) Download do PDF e envio via Digisac
+    if last_status in ("billing_generated",):
+        pdf_url = result["billing"]["url"]
+        resp = requests.get(pdf_url, timeout=60)
+        resp.raise_for_status()
+        pdf_content = resp.content
+        filename = f"boleto-{billing_id[:8]}.pdf"
+
+        # Envia PDF via Digisac (construção e envio)
+        build_billing_certification_pdf(contact_number, pdf_content, filename)
+        update_pending(card_id, status="billing_pdf_sent", sale_id=sale_id, billing_id=billing_id)
+        result["pdf_content"] = pdf_content
+
+    return result
 
 
 # Carrega tokens do arquivo ao inicializar

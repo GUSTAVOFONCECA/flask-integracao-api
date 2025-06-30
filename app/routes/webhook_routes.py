@@ -5,26 +5,32 @@ Rotas de webhook para integração com Bitrix24 e validação de CNPJ.
 """
 
 import time
+from datetime import datetime
 import logging
 import requests
-from werkzeug.exceptions import BadRequest
-from datetime import datetime
 from flask import Blueprint, request, jsonify
+
 from app.services.webhook_services import (
     get_cnpj_receita,
     update_company_process_cnpj,
     post_destination_api,
     verify_webhook_signature,
-    get_contact_id_by_number,
-    send_message_digisac,
-    transfer_ticket_digisac,
-    send_pdf_via_digisac,
     update_crm_item_certif_digital,
+)
+
+# Importar wrappers do fluxo de Certificação Digital
+from app.services.webhook_services import (
+    build_certification_transfer,
+    build_certification_message,
+    build_billing_certification_pdf,
+    build_form_agendamento
 )
 from app.services.conta_azul.conta_azul_services import (
     handle_sale_creation_certif_digital,
 )
-from app.services.renewal_services import add_pending, complete_pending, get_pending
+from app.services.renewal_services import (
+    add_pending, get_pending, update_pending, complete_pending
+)
 
 webhook_bp = Blueprint("webhook", __name__)
 logger = logging.getLogger(__name__)
@@ -32,51 +38,13 @@ logger = logging.getLogger(__name__)
 
 @webhook_bp.route("/consulta-receita", methods=["POST"])
 def valida_cnpj_receita_bitrix():
-    """Endpoint para validação de CNPJ via webhook.
-
-    :formparam idEmpresa: ID da empresa no sistema Bitrix24 (obrigatório)
-    :formparam CNPJ: CNPJ a ser validado (obrigatório)
-    :formparam idCardCRM: ID do card CRM (opcional)
-
-    :return: JSON com status da operação e resposta da API
-    :rtype: tuple[flask.Response, int]
-
-    :raises HTTPException 400: Parâmetros obrigatórios faltando
-    :raises HTTPException 403: Assinatura inválida
-    :raises HTTPException 502: Erro na consulta à Receita Federal
-
-    .. rubric:: Exemplo de Requisição
-
-    .. code-block:: http
-
-        POST /webhooks/consulta-receita?idEmpresa=123&CNPJ=00.000.000/0001-91
-        X-Signature: sha256=abc123...
-
-    .. rubric:: Exemplo de Resposta
-
-    .. code-block:: json
-
-        {
-            "status": "received",
-            "response": {
-                "status_code": 200,
-                "content": {"id": 456}
-            }
-        }
-    """
-    # Obter a assinatura DO FORMULÁRIO (não do header)
     signature = request.form.get("auth[member_id]", "")
-
-    # Validar usando os dados BRUTOS da requisição (já URL-decoded)
     if not verify_webhook_signature(signature):
-        logger.warning("Assinatura inválida | Recebida: %s", signature)
         return jsonify({"error": "Assinatura inválida"}), 403
-    # Validar parâmetros obrigatórios
-    required_params = ["idEmpresa", "CNPJ"]
-    missing = [param for param in required_params if not request.args.get(param)]
 
+    required_params = ["idEmpresa", "CNPJ"]
+    missing = [p for p in required_params if not request.args.get(p)]
     if missing:
-        logger.error("Parâmetros obrigatórios faltando: %s", missing)
         return (
             jsonify(
                 {"error": f"Parâmetros obrigatórios faltando: {', '.join(missing)}"}
@@ -84,58 +52,33 @@ def valida_cnpj_receita_bitrix():
             400,
         )
 
-    try:
-        # Extrair parâmetros
-        post_url = (
-            "https://logic.bitrix24.com.br/rest/260/af4o31dew3vzuphs/crm.company.update"
-        )
-        id_empresa = request.args["idEmpresa"]
-        cnpj = request.args["CNPJ"]
+    id_empresa = request.args["idEmpresa"]
+    cnpj = request.args["CNPJ"]
+    raw = get_cnpj_receita(cnpj)
+    if not raw:
+        return jsonify({"error": "Dados do CNPJ não encontrados"}), 502
 
-        logger.info(
-            "Nova requisição de validação de CNPJ - ID Empresa: %s, CNPJ: %s",
-            id_empresa,
-            cnpj,
-        )
-
-        # Consultar dados do CNPJ
-        raw_cnpj_json = get_cnpj_receita(cnpj)
-        if not raw_cnpj_json:
-            logger.error("Falha na consulta do CNPJ %s", cnpj)
-            return jsonify({"error": "Dados do CNPJ não encontrados"}), 502
-
-        # Processar e enviar dados
-        processed_data = update_company_process_cnpj(raw_cnpj_json, id_empresa)
-        api_response = post_destination_api(processed_data, post_url)
-
-        logger.info("CNPJ %s validado com sucesso para a empresa %s", cnpj, id_empresa)
-
-        return (
-            jsonify({"status": "received", "response": api_response}),
-            200,
-        )
-
-    except (KeyError, ValueError, TypeError) as e:
-        logger.critical("Erro crítico no processamento: %s", str(e))
-        return jsonify({"error": "Erro interno no processamento"}), 500
+    processed = update_company_process_cnpj(raw, id_empresa)
+    api_url = (
+        "https://logic.bitrix24.com.br/rest/260/af4o31dew3vzuphs/crm.company.update"
+    )
+    response = post_destination_api(processed, api_url)
+    return jsonify({"status": "received", "response": response}), 200
 
 
 @webhook_bp.route("/aviso-certificado", methods=["POST"])
-def envia_comunicado_para_cliente_certif_digital():
-    # Log detalhado da requisição
+def envia_comunicado_para_cliente_certif_digital_digisac():
     logger.debug(f"Headers: {dict(request.headers)}")
     logger.debug(f"Args: {request.args.to_dict()}")
     logger.debug(f"Form: {request.form.to_dict()}")
     logger.debug(f"JSON: {request.get_json(silent=True)}")
 
-    # Validação de assinatura
     signature = request.form.get("auth[member_id]", "")
     if not verify_webhook_signature(signature):
-        logger.warning(f"Assinatura inválida: {signature}")
         return jsonify({"error": "Assinatura inválida"}), 403
 
-    # Validação de parâmetros
-    required_params = [
+    params = request.args
+    required = [
         "cardID",
         "companyName",
         "contactName",
@@ -143,10 +86,8 @@ def envia_comunicado_para_cliente_certif_digital():
         "daysToExpire",
         "dealType",
     ]
-    missing = [p for p in required_params if not request.args.get(p)]
-
+    missing = [p for p in required if not params.get(p)]
     if missing:
-        logger.error(f"Parâmetros faltando: {missing}")
         return (
             jsonify(
                 {"error": f"Parâmetros obrigatórios faltando: {', '.join(missing)}"}
@@ -154,51 +95,40 @@ def envia_comunicado_para_cliente_certif_digital():
             400,
         )
 
-    # Coleta parâmetros
-    params = {p: request.args[p] for p in required_params}
-    logger.info(f"Novo aviso de certificado: {params}")
+    card_id = int(params["cardID"])
+    contact_name = params["contactName"]
+    company_name = params["companyName"]
+    contact_number = params["contactNumber"]
+    days_to_expire = int(params["daysToExpire"])
+    deal_type = params["dealType"]
 
-    # Busca contact ID
-    contact_id = get_contact_id_by_number(params["contactNumber"])
-    if not contact_id:
-        logger.error(f"Contact ID não encontrado: {params['contactNumber']}")
-        return jsonify({"error": "Número não encontrado"}), 404
-
-    # Processamento Digisac
-    transfer_ticket_digisac(contact_id=contact_id)
+    # Fluxo Certificação Digital
+    build_certification_transfer(contact_number)
     time.sleep(1)
-
-    result = send_message_digisac(
-        contact_id=contact_id,
-        contact_name=params["contactName"],
-        company_name=params["companyName"],
-        days_to_expire=params["daysToExpire"],
+    result = build_certification_message(
+        contact_number, contact_name, company_name, days_to_expire
     )
 
-    # Adiciona pendência com número padronizado
-    std_number = add_pending(
-        params["contactNumber"], params["dealType"], int(params["cardID"])
+    std_number = add_pending(company_name, contact_number, deal_type, card_id)
+    update_crm_item_certif_digital(
+        card_id=card_id,
+        fields={
+            "ufCrm18_1740158577862": datetime.now().strftime("%Y-%m-%d"),
+            "ufCrm18_1746464219165": "Enviado notificação para renovação via digisac",
+        },
     )
-    logger.debug(f"Pendência adicionada para {std_number}")
-
-    # Atualiza card sobre contato realizado
-    fields = {
-        "ufCrm18_1740158577862": datetime.now().strftime("%Y-%m-%d"),
-        "ufCrm18_1746464219165": "Enviado notificação para renovação via digisac",
-    }
-    update_crm_item_certif_digital(card_id=int(params["cardID"]), fields=fields)
 
     if "error" in result:
-        logger.error(f"Erro ao enviar mensagem: {result['error']}")
         return jsonify(result), 500
 
     return (
         jsonify(
             {
                 "status": "success",
-                "message": "Comunicação enviada",
-                "digisac_response": result,
                 "std_phone": std_number,
+                "card_id": card_id,
+                "message": "Comunicação enviada",
+                "digisac_response": result
             }
         ),
         200,
@@ -206,14 +136,16 @@ def envia_comunicado_para_cliente_certif_digital():
 
 
 @webhook_bp.route("/renova-certificado", methods=["POST"])
-def renova_certificado():
-    logger.debug("Iniciando processo de renovação de certificado")
+def renova_certificado_digisac():
+    logger.debug(f"Headers: {dict(request.headers)}")
+    logger.debug(f"Args: {request.args.to_dict()}")
+    logger.debug(f"Form: {request.form.to_dict()}")
+    logger.debug(f"JSON: {request.get_json(silent=True)}")
 
     contact_number = request.args.get("contactNumber") or request.json.get(
         "contactNumber"
     )
     if not contact_number:
-        logger.error("Parâmetro 'contactNumber' ausente")
         return jsonify({"error": "contactNumber ausente"}), 400
 
     pending = get_pending(contact_number)
@@ -221,31 +153,21 @@ def renova_certificado():
         return jsonify({"error": "Nenhuma solicitação pendente"}), 404
 
     try:
-        # Cria venda e gera cobrança
         result = handle_sale_creation_certif_digital(
             contact_number, pending["deal_type"]
         )
         sale_id = result["sale"]["venda"]["id"]
         billing = result["billing"]
         billing_id = billing["id"]
-        pdf_url = billing["url"]  # URL para download do boleto
+        pdf_url = billing["url"]
 
-        # Baixa o PDF do boleto
-        # headers = get_auth_headers()
-        response = requests.get(pdf_url, timeout=60)
-        response.raise_for_status()
-        pdf_content = response.content
-
-        # Envia via Digisac
+        resp = requests.get(pdf_url, timeout=60)
+        resp.raise_for_status()
+        pdf_content = resp.content
         filename = f"boleto-{billing_id[:8]}.pdf"
-        send_pdf_via_digisac(
-            contact_number=contact_number, pdf_content=pdf_content, filename=filename
-        )
 
-        # Remove a pendência
-        complete_pending(contact_number)
-
-        logger.info("Processo de renovação de certificado concluído")
+        build_billing_certification_pdf(contact_number, pdf_content, filename)
+        update_pending(pending["card_crm_id"], "billing_pdf_sent", sale_id, billing_id)
 
         return (
             jsonify(
@@ -260,20 +182,21 @@ def renova_certificado():
         )
 
     except Exception as e:
-        logger.exception(f"Erro ao criar cobrança: {str(e)}")
+        logger.exception("Erro ao criar cobrança: %s", str(e))
         return jsonify({"error": str(e)}), 500
 
 
 @webhook_bp.route("/nao-renova-certificado", methods=["POST"])
-def post_nao_renova_certificado_digisac():
-    """Processa resposta de não renovação de certificado"""
-    logger.debug("Iniciando processo de recusa de certificado")
+def nao_renova_certificado_digisac():
+    logger.debug(f"Headers: {dict(request.headers)}")
+    logger.debug(f"Args: {request.args.to_dict()}")
+    logger.debug(f"Form: {request.form.to_dict()}")
+    logger.debug(f"JSON: {request.get_json(silent=True)}")
+
     contact_number = request.args.get("contactNumber") or request.json.get(
         "contactNumber"
     )
-
     if not contact_number:
-        logger.error("Parâmetro 'contactNumber' ausente")
         return jsonify({"error": "contactNumber ausente"}), 400
 
     pending = get_pending(contact_number)
@@ -281,13 +204,10 @@ def post_nao_renova_certificado_digisac():
         return jsonify({"error": "Nenhuma solicitação pendente"}), 404
 
     try:
-        fields = {
-            "stageId": "DT137_36:UC_AY5334"            
-        }
-        update_crm_item_certif_digital(card_id=pending["card_crm_id"], fields=fields)
-
-        logger.info("Processo de recusa de certificado concluído")
-
+        update_crm_item_certif_digital(
+            card_id=pending["card_crm_id"], fields={"stageId": "DT137_36:UC_AY5334"}
+        )
+        update_pending(pending["card_crm_id"], "customer_retention")
         return (
             jsonify(
                 {
@@ -297,7 +217,41 @@ def post_nao_renova_certificado_digisac():
             ),
             200,
         )
-
     except Exception as e:
-        logger.exception(f"Erro ao criar cobrança: {str(e)}")
+        logger.exception("Erro ao recusar certificado: %s", str(e))
+        return jsonify({"error": str(e)}), 500
+
+
+@webhook_bp.route("/agendamento-certificado", methods=["POST"])
+def envia_form_agendamento_digisac() -> dict:
+    """Função para envio de formulário para agendamento ao cliente"""
+    logger.debug(f"Headers: {dict(request.headers)}")
+    logger.debug(f"Args: {request.args.to_dict()}")
+    logger.debug(f"Form: {request.form.to_dict()}")
+    logger.debug(f"JSON: {request.get_json(silent=True)}")
+
+    signature = request.form.get("auth[member_id]", "")
+    if not verify_webhook_signature(signature):
+        return jsonify({"error": "Assinatura inválida"}), 403
+    try:
+        company_name = request.args.get("companyName")
+        contact_number = request.args.get("contactNumber")
+        schedule_form_link = request.args.get("linkFormAgendamento")
+        card_id = request.args.get("idSPA")
+
+        build_form_agendamento(contact_number, company_name, schedule_form_link)
+        update_pending(card_id, "scheduling_form_sent")
+
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "message": "Formulário para agendamento \
+                        de videoconferência enviado com sucesso",
+                }
+            ),
+            200,
+        )
+    except Exception as e:
+        logger.exception("Erro ao enviar agendamento: %s", str(e))
         return jsonify({"error": str(e)}), 500

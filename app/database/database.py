@@ -27,20 +27,23 @@ def init_db():
             """
             CREATE TABLE IF NOT EXISTS certif_pending_renewals (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                contact_number TEXT NOT NULL UNIQUE,
+                company_name TEXT NOT NULL,
+                contact_number TEXT NOT NULL,
                 deal_type TEXT NOT NULL,
                 sale_id TEXT,
+                billing_id TEXT,
                 status TEXT DEFAULT 'pending' CHECK(
                     status IN (
                         'pending',
+                        'customer_retention',
                         'sale_created',
-                        'charge_generated',
-                        'pdf_sent'
+                        'billing_generated',
+                        'billing_pdf_sent',
+                        'scheduling_form_sent'
                     )
                 ),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 retry_count INTEGER NOT NULL DEFAULT 0,
-                pdf_url TEXT,
                 card_crm_id INTEGER NOT NULL
             );            
             """

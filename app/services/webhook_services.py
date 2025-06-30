@@ -9,7 +9,6 @@ import hmac
 import re
 import json
 import base64
-from json import JSONDecodeError
 import logging
 from datetime import datetime, timedelta
 from functools import wraps
@@ -276,6 +275,7 @@ def update_crm_item_certif_digital(card_id: int, fields: Optional[dict]) -> dict
         logger.error(f"Erro ao atualizar card SPA: {str(e)}")
         return {"error": str(e)}
 
+
 def update_deal_item_certif_digital(card_id: int, fields: Optional[dict]) -> dict:
     url = "https://logic.bitrix24.com.br/rest/260/af4o31dew3vzuphs/crm.deal.update"
     payload = {
@@ -291,6 +291,7 @@ def update_deal_item_certif_digital(card_id: int, fields: Optional[dict]) -> dic
     except requests.exceptions.RequestException as e:
         logger.error(f"Erro ao atualizar card DEAL: {str(e)}")
         return {"error": str(e)}
+
 
 ############################################################################### DIGISAC SERVICES
 DIGISAC_URL = "https://logicassessoria.digisac.chat"
@@ -378,8 +379,8 @@ def refresh_auth_digisac(refresh_token: str) -> dict:
         return {"error": str(e)}
 
 
-def get_contact_id_by_number(contact_number: str) -> str | None:
-    # Padroniza o número antes do processamento
+def _get_contact_id_by_number(contact_number: str) -> str | None:
+    """Privado: retorna contact_id a partir do número, ou None se não existir"""
     std_number = standardize_phone_number(contact_number, debug=True)
     logger.debug(f"Buscando contact ID para número padronizado: {std_number}")
 
@@ -417,132 +418,203 @@ def get_contact_id_by_number(contact_number: str) -> str | None:
         return None
 
 
-@retry_with_backoff(retries=3, backoff_in_seconds=2)
-def transfer_ticket_digisac(contact_id: str) -> dict:
-    """Transfere ticket no Digisac"""
-    department_id = "154521dc-71c0-4117-a697-bd978cd442aa"
-    comments = "Chamado aberto via automação para renovação de certificado."
-
-    url = f"{DIGISAC_BASE_API}/contacts/{contact_id}/ticket/transfer"
-    payload = {
+# --- Builders genéricos ---
+def build_transfer_payload(
+    contact_id: str, department_id: str, comments: str, user_id: str = DIGISAC_USER_ID
+) -> dict:
+    """Gera payload para transferência de ticket no Digisac"""
+    return {
         "departmentId": department_id,
-        "userId": DIGISAC_USER_ID,
+        "userId": user_id,
         "comments": comments,
+        "contactId": contact_id,
     }
 
-    try:
-        response = requests.post(
-            url, headers=get_auth_headers(), json=payload, timeout=60
-        )
-        response.raise_for_status()
 
-        content_type = response.headers.get("Content-Type", "")
-        # Se vier JSON, retorna o json; senão, devolve texto bruto
-        if response.content and "application/json" in content_type:
-            try:
-                data = response.json()
-                logger.debug("Response JSON:\n%s", data)
-                return data
-            except (JSONDecodeError, ValueError):
-                logger.warning(
-                    "[TRANSFER] Retorno sem JSON válido (length=%d). Texto recebido:\n%s",
-                    len(response.content),
-                    response.text,
-                )
-                return {"status_code": response.status_code, "text": response.text}
-        else:
-            logger.debug(
-                "[TRANSFER] Content-Type não indica JSON (%s). Texto recebido:\n%s",
-                content_type,
-                response.text,
-            )
-            return {"status_code": response.status_code, "text": response.text}
-
-    except requests.RequestException as e:
-        logger.error("[TRANSFER] Erro de requisição: %s", e)
-        return {"error": str(e)}
-
-
-# REFATORAR CÓDIGO PARA SER MAIS GENERALISTA, RECEBENDO MSG TEXT E DEPARTMENT ID
-@retry_with_backoff(retries=3, backoff_in_seconds=2)
-def send_message_digisac(
-    contact_id: str,
-    contact_name: str,
-    company_name: str,
-    days_to_expire: str,
+def build_message_payload(
+    contact_id: str, department_id: str, text: str, user_id: str
 ) -> dict:
-    """Envia mensagem automática via Digisac"""
+    """Gera payload para envio de mensagem via Digisac"""
+    return {
+        "contactId": contact_id,
+        "ticketDepartmentId": department_id,
+        "userId": user_id,
+        "text": text,
+        "origin": "bot",
+    }
 
-    # ID do departamento fixo certificação digital
-    department_id = "154521dc-71c0-4117-a697-bd978cd442aa"
 
-    url = f"{DIGISAC_BASE_API}/messages"
+def build_pdf_payload(
+    contact_id: str, pdf_content: bytes, filename: str, text: str
+) -> dict:
+    """Gera payload para envio de arquivo PDF via Digisac"""
+    pdf_base64 = base64.b64encode(pdf_content).decode("utf-8")
+    user_id = DIGISAC_USER_ID
+    return {
+        "contactId": contact_id,
+        "userId": user_id,
+        "text": text,
+        "file": {"base64": pdf_base64, "mimetype": "application/pdf", "name": filename},
+    }
 
-    if int(days_to_expire) >= 0:
-        text = (
+
+# --- Builders específicos para Certificação Digital ---
+CERT_DEPT_ID = "154521dc-71c0-4117-a697-bd978cd442aa"
+CERT_TRANSFER_COMMENTS = "Chamado aberto via automação para renovação de certificado."
+CERT_PDF_TEXT = "Segue boleto para pagamento referente à emissão de certificado digital"
+
+
+def build_certification_transfer(contact_number: str) -> dict:
+    """Gera payload para transferência de ticket ao departamento de Certificação Digital"""
+    contact_id = _get_contact_id_by_number(contact_number)
+    payload = build_transfer_payload(
+        contact_id=contact_id,
+        department_id=CERT_DEPT_ID,
+        comments=CERT_TRANSFER_COMMENTS,
+    )
+    return transfer_ticket_digisac(payload, contact_id)
+
+
+def _build_certification_message_text(
+    contact_name: str, company_name: str, days_to_expire: int
+) -> str:
+    """Gera texto da mensagem de aviso de vencimento do certificado"""
+    days = abs(days_to_expire)
+    if days_to_expire >= 0:
+        return (
             "*Bot*\n"
             f"Olá {contact_name}, o certificado da empresa *{company_name}* "
-            f"irá expirar dentro de {abs(int(days_to_expire))} dias.\n"
+            f"irá expirar dentro de {days} dias.\n"
             "Deseja renovar seu certificado? (Digite a opção)\n\n"
             "1 - Sim\n"
             "2 - Não"
         )
     else:
-        text = (
+        return (
             "*Bot*\n"
             f"Olá {contact_name}, o certificado da empresa *{company_name}* "
-            f"expirou há {abs(int(days_to_expire))} dias.\n"
+            f"expirou há {days} dias.\n"
             "Deseja renovar seu certificado? (Digite a opção)\n\n"
             "1 - Sim\n"
             "2 - Não"
         )
 
-    payload = {
-        "text": text,
-        "contactId": contact_id,
-        "userId": DIGISAC_USER_ID,
-        "ticketDepartmentId": department_id,
-        "origin": "bot",
-    }
 
+def build_certification_message(
+    contact_number: str, contact_name: str, company_name: str, days_to_expire: int
+) -> dict:
+    """Gera payload de mensagem para Certificação Digital"""
+    contact_id = _get_contact_id_by_number(contact_number)
+    text = _build_certification_message_text(contact_name, company_name, days_to_expire)
+    payload = build_message_payload(
+        contact_id=contact_id,
+        department_id=CERT_DEPT_ID,
+        text=text,
+        user_id=DIGISAC_USER_ID,
+    )
+
+    return send_message_digisac(payload)
+
+
+def build_billing_certification_pdf(
+    contact_number: str, pdf_content: bytes, filename: str
+) -> dict:
+    """Gera payload para envio de PDF (boleto) da Certificação Digital"""
+    contact_id = _get_contact_id_by_number(contact_number)
+    payload = build_pdf_payload(
+        contact_id=contact_id,
+        pdf_content=pdf_content,
+        filename=filename,
+        text=CERT_PDF_TEXT,
+    )
+
+    return send_pdf_digisac(payload)
+
+
+def build_form_agendamento(
+    contact_number: str, company_name: str, form_link: str
+) -> dict:
+    """Gera payload para envio do formulário de agendamento para Certificação Digital"""
+    contact_id = _get_contact_id_by_number(contact_number)
+    text = (
+        "*Bot*\n"
+        "Segue abaixo link para agendamento de videoconferência"
+        f"referente à emissão do certificado digital da empresa *{company_name}*\n\n"
+        f"Link:\n{form_link}"
+    )
+    payload = build_message_payload(
+        contact_id=contact_id,
+        department_id=CERT_DEPT_ID,
+        text=text,
+        user_id=DIGISAC_USER_ID,
+    )
+
+    return send_message_digisac(payload)
+
+
+# --- Funções de envio/refatoradas ---
+@retry_with_backoff(retries=3, backoff_in_seconds=2)
+def transfer_ticket_digisac(payload: dict, contact_id: str) -> dict:
+    """Transfere ticket no Digisac usando parâmetros genéricos"""
+    url = f"{DIGISAC_BASE_API}/contacts/{contact_id}/ticket/transfer"
     try:
         response = requests.post(
             url, headers=get_auth_headers(), json=payload, timeout=60
         )
         response.raise_for_status()
-        logger.debug("Response:\n%s", response.json())
-        return response.json()
+        return _parse_response(response)
+    except requests.RequestException as e:
+        logger.error("[TRANSFER] Erro de requisição: %s", e)
+        return {"error": str(e)}
+
+
+@retry_with_backoff(retries=3, backoff_in_seconds=2)
+def send_message_digisac(payload: dict) -> dict:
+    """Envia mensagem automática via Digisac usando parâmetros genéricos"""
+    url = f"{DIGISAC_BASE_API}/messages"
+    try:
+        response = requests.post(
+            url, headers=get_auth_headers(), json=payload, timeout=60
+        )
+        response.raise_for_status()
+        return _parse_response(response)
     except requests.RequestException as e:
         logger.error("[MSG] Erro: %s", e)
         return {"error": str(e)}
 
 
-def send_pdf_via_digisac(
-    contact_number: str, pdf_content: bytes, filename: str
-) -> dict:
-    """Envia PDF via Digisac"""
-    contact_id = get_contact_id_by_number(contact_number)
-    if not contact_id:
-        return {"error": "Contact ID não encontrado"}
-
-    # Converte para base64
-    pdf_base64 = base64.b64encode(pdf_content).decode("utf-8")
-
-    payload = {
-        "text": "Segue o boleto para pagamento da renovação do seu certificado digital",
-        "contactId": contact_id,
-        "file": {"base64": pdf_base64, "mimetype": "application/pdf", "name": filename},
-        "userId": DIGISAC_USER_ID,
-    }
-
+@retry_with_backoff(retries=3, backoff_in_seconds=2)
+def send_pdf_digisac(payload: dict) -> dict:
+    """Envia PDF via Digisac usando parâmetros genéricos"""
+    url = f"{DIGISAC_BASE_API}/messages"
     try:
         response = requests.post(
-            f"{DIGISAC_BASE_API}/messages",
-            headers=get_auth_headers(),
-            json=payload,
-            timeout=60,
+            url, headers=get_auth_headers(), json=payload, timeout=60
         )
         response.raise_for_status()
-        return response.json()
+        return _parse_response(response)
     except requests.RequestException as e:
+        logger.error("[PDF] Erro: %s", e)
         return {"error": str(e)}
+
+
+def _parse_response(response) -> dict:
+    """Parseia resposta da API do Digisac, tratando JSON ou texto"""
+    content_type = response.headers.get("Content-Type", "")
+    if response.content and "application/json" in content_type:
+        try:
+            data = response.json()
+            logger.debug("Response JSON:\n%s", data)
+            return data
+        except ValueError:
+            logger.warning(
+                "Retorno sem JSON válido. Texto recebido:\n%s", response.text
+            )
+            return {"status_code": response.status_code, "text": response.text}
+    else:
+        logger.debug(
+            "Content-Type não indica JSON (%s). Texto recebido:\n%s",
+            content_type,
+            response.text,
+        )
+        return {"status_code": response.status_code, "text": response.text}

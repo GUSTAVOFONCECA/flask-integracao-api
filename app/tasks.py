@@ -5,7 +5,7 @@ import logging
 import requests
 from app.database.database import get_db_connection
 from app.services.conta_azul.conta_azul_services import get_sale_pdf
-from app.services.webhook_services import send_pdf_via_digisac
+from app.services.webhook_services import build_billing_certification_pdf
 from app.services.renewal_services import complete_pending
 
 logger = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ def pdf_sender_worker():
                         filename = f"boleto-{task['billing_id'][:8]}.pdf"
 
                         # Envia via Digisac
-                        send_pdf_via_digisac(
+                        build_billing_certification_pdf(
                             contact_number=task["contact_number"],
                             pdf_content=pdf_content,
                             filename=filename,

@@ -21,15 +21,27 @@ def _standardize_phone(phone: str) -> str:
     return std_phone
 
 
-def add_pending(contact_number: str, deal_type: str, card_crm_id: int) -> str:
+def add_pending(
+    company_name: str, contact_number: str, deal_type: str, card_crm_id: int
+) -> str:
     std_number = _standardize_phone(contact_number)
-    logger.info(f"Adicionando pendência: {std_number} - {deal_type} - Card CRM: {card_crm_id}")
+    logger.info(
+        f"Adicionando pendência: {std_number} - {deal_type} - Card SPA: {card_crm_id}"
+    )
 
     try:
         with get_db_connection() as conn:
             conn.execute(
-                "INSERT INTO certif_pending_renewals (contact_number, deal_type, card_crm_id) VALUES (?, ?, ?)",
-                (std_number, deal_type, card_crm_id),
+                """
+                INSERT INTO certif_pending_renewals (
+                    company_name,
+                    contact_number,
+                    deal_type,
+                    card_crm_id
+                )
+                VALUES (?, ?, ?, ?)
+                """,
+                (company_name, std_number, deal_type, card_crm_id),
             )
             conn.commit()
         logger.info(f"Pendência inserida com sucesso: {std_number}")
@@ -42,33 +54,72 @@ def add_pending(contact_number: str, deal_type: str, card_crm_id: int) -> str:
         raise
 
 
-def update_pending_sale(
-    contact_number: str, sale_id: str, billing_id: str, pdf_url: str
+def update_pending(
+    card_crm_id: str, status: str, sale_id: str = None, billing_id: str = None
 ) -> bool:
-    std_number = standardize_phone_number(contact_number)
+    """
+    Atualiza campos da pendência apenas se os argumentos não forem None.
+    Apenas statuses permitidos podem ser usados.
+    """
+    ALLOWED_STATUSES = {
+        "pending",
+        "customer_retention",
+        "sale_created",
+        "billing_generated",
+        "billing_pdf_sent",
+        "scheduling_form_sent",
+    }
+
     logger.info(
-        f"Atualizando pendência: {std_number} com sale_id {sale_id}, billing_id {billing_id}"
+        f"Atualizando pendência: {card_crm_id} "
+        f"com sale_id={sale_id}, billing_id={billing_id}, status={status}"
     )
+
+    # Valida status
+    if status is not None and status not in ALLOWED_STATUSES:
+        msg = f"Status inválido para pendência: {status}"
+        logger.warning(msg)
+        raise ValueError(msg)
+
+    # Monta dinamicamente as colunas a atualizar
+    set_clauses = []
+    params = []
+    if sale_id is not None:
+        set_clauses.append("sale_id = ?")
+        params.append(sale_id)
+    if billing_id is not None:
+        set_clauses.append("billing_id = ?")
+        params.append(billing_id)
+    if status is not None:
+        set_clauses.append("status = ?")
+        params.append(status)
+
+    # Se nenhum campo para atualizar, aborta
+    if not set_clauses:
+        logger.warning(f"Nenhum campo para atualizar para pendência {card_crm_id}")
+        return False
+
+    sql = f"""
+        UPDATE certif_pending_renewals
+        SET {', '.join(set_clauses)}
+        WHERE card_crm_id = ?
+    """
+    params.append(card_crm_id)
 
     try:
         with get_db_connection() as conn:
-            cur = conn.execute(
-                """UPDATE certif_pending_renewals 
-                SET sale_id = ?, billing_id = ?, pdf_url = ?, status = 'billing_created' 
-                WHERE contact_number = ?""",
-                (sale_id, billing_id, pdf_url, std_number),
-            )
+            cur = conn.execute(sql, tuple(params))
             conn.commit()
             updated = cur.rowcount > 0
             if updated:
-                logger.info(f"Pendência atualizada: {std_number}")
+                logger.info(f"Pendência atualizada: {card_crm_id}")
             else:
                 logger.warning(
-                    f"Nenhuma pendência encontrada para atualizar: {std_number}"
+                    f"Nenhuma pendência encontrada para atualizar: {card_crm_id}"
                 )
             return updated
     except Exception as e:
-        logger.error(f"Erro ao atualizar pendência: {str(e)}")
+        logger.error(f"Erro ao atualizar pendência: {e}")
         raise
 
 
