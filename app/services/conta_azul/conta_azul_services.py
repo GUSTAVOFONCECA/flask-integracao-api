@@ -333,7 +333,7 @@ def build_sale_certif_digital_params(deal_type: str) -> dict:
     if deal_type == "Pessoa jurídica":
         base.update(
             {
-                "id_service": "0b4f9a8b-01bb-4a89-93b3-7f56210bc75d",
+                "id_service": "5450a9be-346c-4878-b0bd-2cc1250d9c9e",
                 "item_description": "CERTIFICADO DIGITAL PJ",
                 "price": 185,
             }
@@ -341,7 +341,7 @@ def build_sale_certif_digital_params(deal_type: str) -> dict:
     elif deal_type == "Pessoa física - CPF":
         base.update(
             {
-                "id_service": "586d5eb2-23aa-47ff-8157-fd85de8b9932",
+                "id_service": "5450a9be-346c-4878-b0bd-2cc1250d9c9e",
                 "item_description": "CERTIFICADO DIGITAL PF",
                 "price": 130,
             }
@@ -349,7 +349,7 @@ def build_sale_certif_digital_params(deal_type: str) -> dict:
     elif deal_type == "Pessoa física - CEI":
         base.update(
             {
-                "id_service": "586d5eb2-23aa-47ff-8157-fd85de8b9932",
+                "id_service": "5450a9be-346c-4878-b0bd-2cc1250d9c9e",
                 "item_description": "CERTIFICADO DIGITAL PF",
                 "price": 130,
             }
@@ -389,7 +389,7 @@ def generate_billing(parcel_id: str, due_date: datetime) -> dict:
         "id_parcela": parcel_id,
         "data_vencimento": due_date.strftime("%Y-%m-%d"),
         "tipo": "BOLETO",
-        "atributos": {}
+        "atributos": {},
     }
 
     logger.debug(f"POST {url}")
@@ -426,31 +426,23 @@ def get_sale_pdf(sale_id: str) -> bytes:
 
 def handle_sale_creation_certif_digital(contact_number: str, deal_type: str) -> dict:
     """
-    Orquestra o fluxo de renovação de certificado digital:
-      1) Cria venda (sale_created)
-      2) Gera cobrança (billing_generated)
-      3) Busca PDF e envia via Digisac (billing_pdf_sent)
-    Cada etapa só é executada se o status ainda não tiver sido atingido.
+    1) Cria venda (sale_created)
+    2) Aguarda webhook externo para geração de cobrança manual
     """
-    # 1) Carrega pendência atual
     pending = get_pending(contact_number)
     if not pending:
         raise ValueError(f"Nenhuma solicitação pendente para {contact_number}")
 
     card_id = pending["card_crm_id"]
-    last_status = pending.get("status", "pending")
+    last_status = pending["status"]
 
-    # 2) Localiza o UUID do cliente (sempre necessário)
     client_uuid = find_person_uuid_by_phone(contact_number)
     if not client_uuid:
         raise ValueError(f"Cliente com telefone {contact_number} não encontrado")
 
-    # Preparar parâmetros de venda
     params = build_sale_certif_digital_params(deal_type)
 
-    result = {"sale": None, "billing": None, "pdf_content": None}
-
-    # 3) Criação da venda
+    # apenas cria venda na primeira vez
     if last_status in (None, "", "pending"):
         payload = build_sale_payload(
             client_id=client_uuid,
@@ -463,51 +455,98 @@ def handle_sale_creation_certif_digital(contact_number: str, deal_type: str) -> 
         sale = create_sale(payload)
         sale_id = sale["id"]
         update_pending(card_id, status="sale_created", sale_id=sale_id)
-        result["sale"] = sale
+        return {"sale": sale}
 
-        # forçar wait se necessário
-        time.sleep(5)
-        last_status = "sale_created"
-    else:
-        # já criou venda antes, apenas recarrega detalhes
-        sale_id = pending.get("sale_id")
-        result["sale"] = get_sale_details(sale_id)
+    # se já tiver criado, retorna o registro existente
+    sale_id = pending.get("sale_id")
+    sale = get_sale_details(sale_id)
+    return {"sale": sale}
 
-    # 4) Geração de cobrança (boleto)
-    if last_status in ("sale_created",):
-        # Obtém detalhes da venda atualizados
-        sale_details = result["sale"] or get_sale_details(sale_id)
-        parcelas = sale_details["venda"]["condicao_pagamento"]["parcelas"]
-        if not parcelas:
-            raise ValueError("Venda criada sem parcelas")
-        parcel_id = parcelas[0]["id"]
 
-        billing = generate_billing(parcel_id=parcel_id, due_date=params["due_date"])
-        billing_id = billing["id"]
-        update_pending(card_id, status="billing_generated", billing_id=billing_id)
-        result["billing"] = billing
+def get_fin_event_billings(fin_event_id: str) -> list:
+    """Obtém as parcelas de um evento financeiro"""
+    url = f"{API_BASE_URL}/v1/financeiro/eventos-financeiros/{fin_event_id}/parcelas"
+    headers = get_auth_headers()
 
-        # possível wait
-        time.sleep(2)
-        last_status = "billing_generated"
-    else:
-        billing_id = pending.get("billing_id")
-        result["billing"] = {"id": billing_id}
+    try:
+        logger.debug(f"GET {url}")
+        response = requests.get(url, headers=headers, timeout=60)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro ao obter parcelas do evento financeiro: {str(e)}")
+        if hasattr(e, "response") and e.response:
+            logger.error(f"Resposta do erro: {e.response.text}")
+        raise
 
-    # 5) Download do PDF e envio via Digisac
-    if last_status in ("billing_generated",):
-        pdf_url = result["billing"]["url"]
-        resp = requests.get(pdf_url, timeout=60)
-        resp.raise_for_status()
-        pdf_content = resp.content
-        filename = f"boleto-{billing_id[:8]}.pdf"
 
-        # Envia PDF via Digisac (construção e envio)
-        build_billing_certification_pdf(contact_number, pdf_content, filename)
-        update_pending(card_id, status="billing_pdf_sent", sale_id=sale_id, billing_id=billing_id)
-        result["pdf_content"] = pdf_content
+def handle_billing_generated_certif_digital(contact_number: str) -> dict:
+    """
+    1) Recupera sale_id de pending
+    2) Busca detalhes da venda e extrai evento_financeiro_id
+    3) Obtém parcelas usando get_evento_financeiro_parcelas
+    4) Extrai URL do boleto da primeira solicitação de cobrança
+    5) Faz download do PDF
+    6) Envia via Digisac
+    7) Atualiza pendência para status 'billing_pdf_sent'
+    """
+    pending = get_pending(contact_number)
+    if not pending:
+        raise ValueError(f"Nenhuma solicitação pendente para {contact_number}")
 
-    return result
+    card_id = pending.get("card_crm_id")
+    sale_id = pending.get("sale_id")
+    company_name = pending.get("company_name")
+
+    if not sale_id:
+        raise ValueError(f"Sale ID ausente para {contact_number}")
+
+    # Recupera detalhes da venda
+    sale_details = get_sale_details(sale_id)
+
+    # Extrai ID do evento financeiro
+    evento_financeiro = sale_details.get("evento_financeiro")
+    if not evento_financeiro:
+        raise ValueError("Evento financeiro não encontrado na venda")
+
+    evento_financeiro_id = evento_financeiro.get("id")
+    if not evento_financeiro_id:
+        raise ValueError("ID do evento financeiro ausente")
+
+    # Obtém as parcelas do evento financeiro
+    parcelas = get_fin_event_billings(evento_financeiro_id)
+
+    # Procura por uma URL de boleto nas solicitações de cobrança
+    pdf_url = None
+    for parcela in parcelas:
+        solicitacoes = parcela.get("solicitacoes_cobrancas", [])
+        for solicitacao in solicitacoes:
+            if solicitacao.get("tipo_solicitacao_cobranca") == "BOLETO_REGISTRADO":
+                pdf_url = solicitacao.get("url")
+                if pdf_url:
+                    break
+        if pdf_url:
+            break
+
+    if not pdf_url:
+        raise ValueError("URL do PDF não encontrada nas solicitações de cobrança")
+
+    # Baixa o PDF do boleto
+    resp = requests.get(pdf_url, timeout=60)
+    resp.raise_for_status()
+    pdf_content = resp.content
+    filename = f"Cobrança certificado digital - {company_name}.pdf"
+
+    # Enviar via Digisac
+    build_billing_certification_pdf(contact_number, company_name, pdf_content, filename)
+
+    # Atualiza status
+    update_pending(
+        card_id,
+        status="billing_pdf_sent",
+    )
+
+    return {"pdf_sent": True, "pdf_url": pdf_url}
 
 
 # Carrega tokens do arquivo ao inicializar

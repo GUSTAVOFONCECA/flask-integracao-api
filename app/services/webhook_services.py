@@ -461,7 +461,6 @@ def build_pdf_payload(
 # --- Builders específicos para Certificação Digital ---
 CERT_DEPT_ID = "154521dc-71c0-4117-a697-bd978cd442aa"
 CERT_TRANSFER_COMMENTS = "Chamado aberto via automação para renovação de certificado."
-CERT_PDF_TEXT = "Segue boleto para pagamento referente à emissão de certificado digital"
 
 
 def build_certification_transfer(contact_number: str) -> dict:
@@ -517,15 +516,17 @@ def build_certification_message(
 
 
 def build_billing_certification_pdf(
-    contact_number: str, pdf_content: bytes, filename: str
+    contact_number: str, company_name:str, pdf_content: bytes, filename: str
 ) -> dict:
     """Gera payload para envio de PDF (boleto) da Certificação Digital"""
     contact_id = _get_contact_id_by_number(contact_number)
+    text = f"Segue boleto para pagamento referente à emissão de \
+        certificado digital da empresa {company_name}"
     payload = build_pdf_payload(
         contact_id=contact_id,
         pdf_content=pdf_content,
         filename=filename,
-        text=CERT_PDF_TEXT,
+        text=text,
     )
 
     return send_pdf_digisac(payload)

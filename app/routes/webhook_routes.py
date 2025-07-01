@@ -23,13 +23,17 @@ from app.services.webhook_services import (
     build_certification_transfer,
     build_certification_message,
     build_billing_certification_pdf,
-    build_form_agendamento
+    build_form_agendamento,
 )
 from app.services.conta_azul.conta_azul_services import (
     handle_sale_creation_certif_digital,
+    handle_billing_generated_certif_digital,
 )
 from app.services.renewal_services import (
-    add_pending, get_pending, update_pending, complete_pending
+    add_pending,
+    get_pending,
+    update_pending,
+    complete_pending,
 )
 
 webhook_bp = Blueprint("webhook", __name__)
@@ -128,7 +132,7 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
                 "std_phone": std_number,
                 "card_id": card_id,
                 "message": "Comunicação enviada",
-                "digisac_response": result
+                "digisac_response": result,
             }
         ),
         200,
@@ -139,7 +143,6 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
 def renova_certificado_digisac():
     logger.debug(f"Headers: {dict(request.headers)}")
     logger.debug(f"Args: {request.args.to_dict()}")
-    logger.debug(f"Form: {request.form.to_dict()}")
     logger.debug(f"JSON: {request.get_json(silent=True)}")
 
     contact_number = request.args.get("contactNumber") or request.json.get(
@@ -153,36 +156,71 @@ def renova_certificado_digisac():
         return jsonify({"error": "Nenhuma solicitação pendente"}), 404
 
     try:
+        # Apenas cria a venda e retorna sale_id
         result = handle_sale_creation_certif_digital(
             contact_number, pending["deal_type"]
         )
-        sale_id = result["sale"]["venda"]["id"]
-        billing = result["billing"]
-        billing_id = billing["id"]
-        pdf_url = billing["url"]
-
-        resp = requests.get(pdf_url, timeout=60)
-        resp.raise_for_status()
-        pdf_content = resp.content
-        filename = f"boleto-{billing_id[:8]}.pdf"
-
-        build_billing_certification_pdf(contact_number, pdf_content, filename)
-        update_pending(pending["card_crm_id"], "billing_pdf_sent", sale_id, billing_id)
+        sale = result["sale"]
+        sale_id = sale.get("id") or sale.get("venda", {}).get("id")
+        update_pending(pending["card_crm_id"], status="sale_created", sale_id=sale_id)
 
         return (
             jsonify(
                 {
-                    "status": "success",
+                    "status": "sale_created",
                     "sale_id": sale_id,
-                    "billing_id": billing_id,
-                    "message": "Boleto enviado com sucesso",
+                    "message": "Venda criada com sucesso. Aguardando geração de boleto.",
                 }
             ),
             200,
         )
 
     except Exception as e:
-        logger.exception("Erro ao criar cobrança: %s", str(e))
+        logger.exception("Erro ao criar venda: %s", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@webhook_bp.route("/cobranca-gerada", methods=["POST"])
+def envia_cobranca_digisac():
+    logger.debug(f"Headers: %s", dict(request.headers))
+    logger.debug(f"Args:    %s", request.args.to_dict())
+    logger.debug(f"Form:    %s", request.form.to_dict())
+    logger.debug(f"JSON:    %s", request.get_json(silent=True))
+
+    signature = request.form.get("auth[member_id]", "")
+    if not verify_webhook_signature(signature):
+        return jsonify({"error": "Assinatura inválida"}), 403
+
+    contact_number = request.args.get("contactNumber") or request.json.get(
+        "contactNumber"
+    )
+    if not contact_number:
+        return jsonify({"error": "contactNumber ausente"}), 400
+
+    pending = get_pending(contact_number)
+    if not pending:
+        return jsonify({"error": "Nenhuma solicitação pendente"}), 404
+
+    try:
+        # Chama o serviço para processar o envio da cobrança
+        result = handle_billing_generated_certif_digital(contact_number)
+
+        # Se tudo ocorrer bem, retorna sucesso
+        return (
+            jsonify(
+                {
+                    "status": "billing_pdf_sent",
+                    "message": "Boleto baixado e enviado com sucesso",
+                    "pdf_url": result.get(
+                        "pdf_url", ""
+                    ),  # Adiciona URL para referência
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        logger.exception("Erro ao enviar boleto: %s", e)
         return jsonify({"error": str(e)}), 500
 
 

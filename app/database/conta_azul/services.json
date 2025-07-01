@@ -1,10 +1,10 @@
 {
   "itens": [
     {
-      "id": "8ede2335-9a05-48dc-aed2-fd7be969d955",
-      "id_servico": 381078950,
+      "id": "9e82f7ab-7ebf-4063-9645-b8dbaebcf638",
+      "id_servico": 230036156,
       "codigo": "",
-      "descricao": "13º HONORARIOS",
+      "descricao": "13° Honorario",
       "preco": 0,
       "custo": 0,
       "status": "INATIVO",
@@ -19,10 +19,82 @@
       }
     },
     {
-      "id": "99e22dca-d4bd-48ce-8a48-9afe6d5ebded",
-      "id_servico": 353604321,
+      "id": "0a4e7fcd-4aad-4e11-9d00-5b5900642641",
+      "id_servico": 190247012,
+      "codigo": "",
+      "descricao": "620230000 | 1.05 - Desenvolvimento e licenciamento de programas de computador customizáveis.",
+      "preco": 0,
+      "custo": 1783.98,
+      "status": "ATIVO",
+      "tipo_servico": "TOMADO",
+      "codigo_cnae": "",
+      "lei_116": "",
+      "codigo_municipio_servico": "",
+      "id_externo": "",
+      "lista_cenario_tributario": [],
+      "natureza_operacional": {
+        "id": ""
+      }
+    },
+    {
+      "id": "b5645489-b3bf-440f-a0a8-66ea0c4a76ad",
+      "id_servico": 194032033,
+      "codigo": "",
+      "descricao": "631940000 | 1.08 - Portais, provedores de conteúdo e outros serviços de informação na internet.",
+      "preco": 0,
+      "custo": 2023.44,
+      "status": "ATIVO",
+      "tipo_servico": "TOMADO",
+      "codigo_cnae": "",
+      "lei_116": "",
+      "codigo_municipio_servico": "",
+      "id_externo": "",
+      "lista_cenario_tributario": [],
+      "natureza_operacional": {
+        "id": ""
+      }
+    },
+    {
+      "id": "601ab489-9e76-4b86-8d1c-71ed7d51a8b8",
+      "id_servico": 194035778,
+      "codigo": "",
+      "descricao": "932989900 | 11.01 - Outras atividades de recreação e lazer não especificadas anteriormente (gara- g",
+      "preco": 0,
+      "custo": 3500,
+      "status": "ATIVO",
+      "tipo_servico": "TOMADO",
+      "codigo_cnae": "",
+      "lei_116": "",
+      "codigo_municipio_servico": "",
+      "id_externo": "",
+      "lista_cenario_tributario": [],
+      "natureza_operacional": {
+        "id": ""
+      }
+    },
+    {
+      "id": "59cda266-87e8-4b95-9952-f3cffce4352c",
+      "id_servico": 190751628,
       "codigo": "",
       "descricao": "ABERTURA DE EMPRESA",
+      "preco": 1045,
+      "custo": 0,
+      "status": "ATIVO",
+      "tipo_servico": "PRESTADO",
+      "codigo_cnae": "",
+      "lei_116": "",
+      "codigo_municipio_servico": "",
+      "id_externo": "",
+      "lista_cenario_tributario": [],
+      "natureza_operacional": {
+        "id": ""
+      }
+    },
+    {
+      "id": "788728b4-4102-47bd-a270-f84b37cb6674",
+      "id_servico": 232607451,
+      "codigo": "",
+      "descricao": "ABERTURA DE FILIAL",
       "preco": 0,
       "custo": 0,
       "status": "ATIVO",
@@ -37,46 +109,10 @@
       }
     },
     {
-      "id": "79fafa3e-931c-4254-94c9-ad116a480906",
-      "id_servico": 355105058,
+      "id": "e2c741ec-2cfb-4a69-b024-b1b994dabec1",
+      "id_servico": 365467691,
       "codigo": "",
-      "descricao": "ABERTURA DE FILIAIS",
-      "preco": 0,
-      "custo": 0,
-      "status": "ATIVO",
-      "tipo_servico": "PRESTADO",
-      "codigo_cnae": "",
-      "lei_116": "",
-      "codigo_municipio_servico": "",
-      "id_externo": "",
-      "lista_cenario_tributario": [],
-      "natureza_operacional": {
-        "id": ""
-      }
-    },
-    {
-      "id": "f7e5524f-28fe-4dd8-a576-ca3f33b90953",
-      "id_servico": 356653398,
-      "codigo": "",
-      "descricao": "ABERTURA MEI",
-      "preco": 0,
-      "custo": 0,
-      "status": "ATIVO",
-      "tipo_servico": "PRESTADO",
-      "codigo_cnae": "",
-      "lei_116": "",
-      "codigo_municipio_servico": "",
-      "id_externo": "",
-      "lista_cenario_tributario": [],
-      "natureza_operacional": {
-        "id": ""
-      }
-    },
-    {
-      "id": "e07f1cd9-373a-454d-a4d3-f7fbf4bb18d3",
-      "id_servico": 384741231,
-      "codigo": "",
-      "descricao": "ADMINISTRACAO DE CARTEIRA - LOTEAMENTO",
+      "descricao": "ABERTURA DE INSCRIÇÃO DE SUBSTITUDO TRIBUTÁRIO",
       "preco": 0,
       "custo": 0,
       "status": "ATIVO",
@@ -91,86 +127,50 @@
       }
     },
     {
-      "id": "944abc6b-252b-4652-8400-523879fc772c",
-      "id_servico": 352913663,
+      "id": "9b164090-19e7-4003-9d90-554cc8213caf",
+      "id_servico": 229601418,
+      "codigo": "",
+      "descricao": "ABERTURA DE MEI",
+      "preco": 0,
+      "custo": 0,
+      "status": "ATIVO",
+      "tipo_servico": "PRESTADO",
+      "codigo_cnae": "",
+      "lei_116": "",
+      "codigo_municipio_servico": "",
+      "id_externo": "",
+      "lista_cenario_tributario": [],
+      "natureza_operacional": {
+        "id": ""
+      }
+    },
+    {
+      "id": "5450a9be-346c-4878-b0bd-2cc1250d9c9e",
+      "id_servico": 219222094,
+      "codigo": "",
+      "descricao": "ACORDO",
+      "preco": 0,
+      "custo": 0,
+      "status": "ATIVO",
+      "tipo_servico": "",
+      "codigo_cnae": "",
+      "lei_116": "",
+      "codigo_municipio_servico": "",
+      "id_externo": "",
+      "lista_cenario_tributario": [],
+      "natureza_operacional": {
+        "id": ""
+      }
+    },
+    {
+      "id": "b0d5a155-3cb4-40a9-80fd-009cb417e29a",
+      "id_servico": 190752449,
       "codigo": "",
       "descricao": "ALTERAÇÃO CONTRATUAL",
-      "preco": 0,
+      "preco": 1045,
       "custo": 0,
       "status": "ATIVO",
       "tipo_servico": "PRESTADO",
-      "codigo_cnae": "",
-      "lei_116": "",
-      "codigo_municipio_servico": "",
-      "id_externo": "",
-      "lista_cenario_tributario": [],
-      "natureza_operacional": {
-        "id": ""
-      }
-    },
-    {
-      "id": "6ede25e3-3c25-48b7-af36-496196ef7514",
-      "id_servico": 357219091,
-      "codigo": "",
-      "descricao": "BAIXA DA EMPRESA",
-      "preco": 0,
-      "custo": 0,
-      "status": "ATIVO",
-      "tipo_servico": "PRESTADO",
-      "codigo_cnae": "",
-      "lei_116": "",
-      "codigo_municipio_servico": "",
-      "id_externo": "",
-      "lista_cenario_tributario": [],
-      "natureza_operacional": {
-        "id": ""
-      }
-    },
-    {
-      "id": "586d5eb2-23aa-47ff-8157-fd85de8b9932",
-      "id_servico": 352320176,
-      "codigo": "",
-      "descricao": "CERTIFICADO DIGITAL PF",
-      "preco": 0,
-      "custo": 0,
-      "status": "ATIVO",
-      "tipo_servico": "PRESTADO",
-      "codigo_cnae": "",
-      "lei_116": "",
-      "codigo_municipio_servico": "",
-      "id_externo": "",
-      "lista_cenario_tributario": [],
-      "natureza_operacional": {
-        "id": ""
-      }
-    },
-    {
-      "id": "0b4f9a8b-01bb-4a89-93b3-7f56210bc75d",
-      "id_servico": 351494840,
-      "codigo": "",
-      "descricao": "CERTIFICADO DIGITAL PJ",
-      "preco": 0,
-      "custo": 0,
-      "status": "ATIVO",
-      "tipo_servico": "PRESTADO",
-      "codigo_cnae": "",
-      "lei_116": "",
-      "codigo_municipio_servico": "",
-      "id_externo": "",
-      "lista_cenario_tributario": [],
-      "natureza_operacional": {
-        "id": ""
-      }
-    },
-    {
-      "id": "b21b2586-2292-460d-9901-78f86d12058f",
-      "id_servico": 356782514,
-      "codigo": "",
-      "descricao": "DECLARAÇÃO DE IRPF",
-      "preco": 0,
-      "custo": 0,
-      "status": "ATIVO",
-      "tipo_servico": "",
       "codigo_cnae": "",
       "lei_116": "",
       "codigo_municipio_servico": "",
