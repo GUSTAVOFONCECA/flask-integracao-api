@@ -72,6 +72,7 @@ def valida_cnpj_receita_bitrix():
 
 @webhook_bp.route("/aviso-certificado", methods=["POST"])
 def envia_comunicado_para_cliente_certif_digital_digisac():
+    logger.info("/aviso-certificado recebido, criando pendência")
     logger.debug(f"Headers: {dict(request.headers)}")
     logger.debug(f"Args: {request.args.to_dict()}")
     logger.debug(f"Form: {request.form.to_dict()}")
@@ -141,6 +142,7 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
 
 @webhook_bp.route("/renova-certificado", methods=["POST"])
 def renova_certificado_digisac():
+    logger.info("/renova-certificado recebido, criando venda")
     logger.debug(f"Headers: {dict(request.headers)}")
     logger.debug(f"Args: {request.args.to_dict()}")
     logger.debug(f"JSON: {request.get_json(silent=True)}")
@@ -182,6 +184,7 @@ def renova_certificado_digisac():
 
 @webhook_bp.route("/cobranca-gerada", methods=["POST"])
 def envia_cobranca_digisac():
+    logger.info("/cobranca-gerada recebido, enviando boleto")
     logger.debug(f"Headers: %s", dict(request.headers))
     logger.debug(f"Args:    %s", request.args.to_dict())
     logger.debug(f"Form:    %s", request.form.to_dict())
@@ -226,6 +229,7 @@ def envia_cobranca_digisac():
 
 @webhook_bp.route("/nao-renova-certificado", methods=["POST"])
 def nao_renova_certificado_digisac():
+    logger.info("/nao-renova-certificado recebido, enviando negócio para rentenção")
     logger.debug(f"Headers: {dict(request.headers)}")
     logger.debug(f"Args: {request.args.to_dict()}")
     logger.debug(f"Form: {request.form.to_dict()}")
@@ -263,6 +267,9 @@ def nao_renova_certificado_digisac():
 @webhook_bp.route("/agendamento-certificado", methods=["POST"])
 def envia_form_agendamento_digisac() -> dict:
     """Função para envio de formulário para agendamento ao cliente"""
+    logger.info(
+        "/agendamento-certificado recebido, enviando agendamento de videoconferência"
+    )
     logger.debug(f"Headers: {dict(request.headers)}")
     logger.debug(f"Args: {request.args.to_dict()}")
     logger.debug(f"Form: {request.form.to_dict()}")
@@ -284,8 +291,10 @@ def envia_form_agendamento_digisac() -> dict:
             jsonify(
                 {
                     "status": "success",
-                    "message": "Formulário para agendamento \
-                        de videoconferência enviado com sucesso",
+                    "message": """
+                    Formulário para agendamento de 
+                    videoconferência enviado com sucesso
+                    """,
                 }
             ),
             200,
