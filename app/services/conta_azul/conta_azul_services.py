@@ -255,33 +255,6 @@ def find_person_uuid_by_phone(phone: str) -> str | None:
 
 
 ############################################################################### CONTA AZUL SALE SERVICES
-def create_sale(sale_payload: dict) -> dict:
-    url = f"{API_BASE_URL}/v1/venda"
-    headers = get_auth_headers()
-
-    try:
-        # ADICIONAR LOG DA REQUISIÇÃO
-        logger.debug(f"POST {url}")
-        logger.debug(f"Headers: {headers}")
-        logger.debug(f"Payload: {sale_payload}")
-
-        response = requests.post(url, json=sale_payload, headers=headers, timeout=60)
-        response.raise_for_status()
-
-        # LOG DA RESPOSTA
-        logger.info(f"Resposta HTTP {response.status_code}")
-        logger.debug(f"Conteúdo: {response.text}")
-
-        return response.json()
-
-    except requests.exceptions.RequestException as e:
-        # LOG DETALHADO DE ERROS DE REDE
-        logger.error(f"Erro na requisição: {str(e)}")
-        if hasattr(e, "response") and e.response:
-            logger.error(f"Resposta do erro: {e.response.text}")
-        raise
-
-
 def build_sale_payload(
     client_id: str,
     service_id: str,
@@ -333,7 +306,7 @@ def build_sale_certif_digital_params(deal_type: str) -> dict:
     if deal_type == "Pessoa jurídica":
         base.update(
             {
-                "id_service": "5450a9be-346c-4878-b0bd-2cc1250d9c9e",
+                "id_service": "0b4f9a8b-01bb-4a89-93b3-7f56210bc75d",
                 "item_description": "CERTIFICADO DIGITAL PJ",
                 "price": 185,
             }
@@ -341,7 +314,7 @@ def build_sale_certif_digital_params(deal_type: str) -> dict:
     elif deal_type == "Pessoa física - CPF":
         base.update(
             {
-                "id_service": "5450a9be-346c-4878-b0bd-2cc1250d9c9e",
+                "id_service": "586d5eb2-23aa-47ff-8157-fd85de8b9932",
                 "item_description": "CERTIFICADO DIGITAL PF",
                 "price": 130,
             }
@@ -349,7 +322,7 @@ def build_sale_certif_digital_params(deal_type: str) -> dict:
     elif deal_type == "Pessoa física - CEI":
         base.update(
             {
-                "id_service": "5450a9be-346c-4878-b0bd-2cc1250d9c9e",
+                "id_service": "586d5eb2-23aa-47ff-8157-fd85de8b9932",
                 "item_description": "CERTIFICADO DIGITAL PF",
                 "price": 130,
             }
@@ -358,6 +331,33 @@ def build_sale_certif_digital_params(deal_type: str) -> dict:
         raise ValueError(f"Tipo de negócio inválido: {deal_type}")
 
     return base
+
+
+def create_sale(sale_payload: dict) -> dict:
+    url = f"{API_BASE_URL}/v1/venda"
+    headers = get_auth_headers()
+
+    try:
+        # ADICIONAR LOG DA REQUISIÇÃO
+        logger.debug(f"POST {url}")
+        logger.debug(f"Headers: {headers}")
+        logger.debug(f"Payload: {sale_payload}")
+
+        response = requests.post(url, json=sale_payload, headers=headers, timeout=60)
+        response.raise_for_status()
+
+        # LOG DA RESPOSTA
+        logger.info(f"Resposta HTTP {response.status_code}")
+        logger.debug(f"Conteúdo: {response.text}")
+
+        return response.json()
+
+    except requests.exceptions.RequestException as e:
+        # LOG DETALHADO DE ERROS DE REDE
+        logger.error(f"Erro na requisição: {str(e)}")
+        if hasattr(e, "response") and e.response:
+            logger.error(f"Resposta do erro: {e.response.text}")
+        raise
 
 
 def get_sale_details(sale_id: str) -> dict:
@@ -373,6 +373,23 @@ def get_sale_details(sale_id: str) -> dict:
         return response.json()
     except requests.exceptions.RequestException as e:
         logger.error(f"Erro ao obter detalhes da venda: {str(e)}")
+        if hasattr(e, "response") and e.response:
+            logger.error(f"Resposta do erro: {e.response.text}")
+        raise
+
+
+def get_fin_event_billings(fin_event_id: str) -> list:
+    """Obtém as parcelas de um evento financeiro"""
+    url = f"{API_BASE_URL}/v1/financeiro/eventos-financeiros/{fin_event_id}/parcelas"
+    headers = get_auth_headers()
+
+    try:
+        logger.debug(f"GET {url}")
+        response = requests.get(url, headers=headers, timeout=60)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro ao obter parcelas do evento financeiro: {str(e)}")
         if hasattr(e, "response") and e.response:
             logger.error(f"Resposta do erro: {e.response.text}")
         raise
@@ -463,90 +480,41 @@ def handle_sale_creation_certif_digital(contact_number: str, deal_type: str) -> 
     return {"sale": sale}
 
 
-def get_fin_event_billings(fin_event_id: str) -> list:
-    """Obtém as parcelas de um evento financeiro"""
-    url = f"{API_BASE_URL}/v1/financeiro/eventos-financeiros/{fin_event_id}/parcelas"
-    headers = get_auth_headers()
-
-    try:
-        logger.debug(f"GET {url}")
-        response = requests.get(url, headers=headers, timeout=60)
-        response.raise_for_status()
-        return response.json()
-    except requests.exceptions.RequestException as e:
-        logger.error(f"Erro ao obter parcelas do evento financeiro: {str(e)}")
-        if hasattr(e, "response") and e.response:
-            logger.error(f"Resposta do erro: {e.response.text}")
-        raise
-
-
-def handle_billing_generated_certif_digital(contact_number: str) -> dict:
-    """
-    1) Recupera sale_id de pending
-    2) Busca detalhes da venda e extrai evento_financeiro_id
-    3) Obtém parcelas usando get_evento_financeiro_parcelas
-    4) Extrai URL do boleto da primeira solicitação de cobrança
-    5) Faz download do PDF
-    6) Envia via Digisac
-    7) Atualiza pendência para status 'billing_pdf_sent'
-    """
+def extract_billing_info(contact_number: str) -> dict:
     pending = get_pending(contact_number)
     if not pending:
         raise ValueError(f"Nenhuma solicitação pendente para {contact_number}")
 
-    card_id = pending.get("card_crm_id")
     sale_id = pending.get("sale_id")
-    company_name = pending.get("company_name")
-
     if not sale_id:
-        raise ValueError(f"Sale ID ausente para {contact_number}")
+        raise ValueError("Sale ID não encontrado")
 
-    # Recupera detalhes da venda
     sale_details = get_sale_details(sale_id)
+    evento = sale_details.get("evento_financeiro") or {}
+    evento_id = evento.get("id")
+    if not evento_id:
+        raise ValueError("ID do evento financeiro não encontrado")
 
-    # Extrai ID do evento financeiro
-    evento_financeiro = sale_details.get("evento_financeiro")
-    if not evento_financeiro:
-        raise ValueError("Evento financeiro não encontrado na venda")
+    parcelas = get_fin_event_billings(evento_id)
 
-    evento_financeiro_id = evento_financeiro.get("id")
-    if not evento_financeiro_id:
-        raise ValueError("ID do evento financeiro ausente")
-
-    # Obtém as parcelas do evento financeiro
-    parcelas = get_fin_event_billings(evento_financeiro_id)
-
-    # Procura por uma URL de boleto nas solicitações de cobrança
-    pdf_url = None
+    boleto_url = None
     for parcela in parcelas:
         solicitacoes = parcela.get("solicitacoes_cobrancas", [])
         for solicitacao in solicitacoes:
             if solicitacao.get("tipo_solicitacao_cobranca") == "BOLETO_REGISTRADO":
-                pdf_url = solicitacao.get("url")
-                if pdf_url:
+                boleto_url = solicitacao.get("url")
+                if boleto_url:
                     break
-        if pdf_url:
+        if boleto_url:
             break
 
-    if not pdf_url:
-        raise ValueError("URL do PDF não encontrada nas solicitações de cobrança")
+    if not boleto_url:
+        raise ValueError("URL do boleto não encontrada")
 
-    # Baixa o PDF do boleto
-    resp = requests.get(pdf_url, timeout=60)
-    resp.raise_for_status()
-    pdf_content = resp.content
-    filename = f"Cobrança certificado digital - {company_name}.pdf"
-
-    # Enviar via Digisac
-    build_billing_certification_pdf(contact_number, company_name, pdf_content, filename)
-
-    # Atualiza status
-    update_pending(
-        card_id,
-        status="billing_pdf_sent",
-    )
-
-    return {"pdf_sent": True, "pdf_url": pdf_url}
+    return {
+        "financial_event_id": evento_id,
+        "boleto_url": boleto_url
+    }
 
 
 # Carrega tokens do arquivo ao inicializar

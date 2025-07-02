@@ -27,11 +27,13 @@ def init_db():
             """
             CREATE TABLE IF NOT EXISTS certif_pending_renewals (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
+                card_crm_id INTEGER NOT NULL,
+                digisac_contact_id TEXT,
                 company_name TEXT NOT NULL,
                 contact_number TEXT NOT NULL,
                 deal_type TEXT NOT NULL,
                 sale_id TEXT,
-                billing_id TEXT,
+                financial_event_id TEXT,
                 status TEXT DEFAULT 'pending' CHECK(
                     status IN (
                         'pending',
@@ -43,8 +45,7 @@ def init_db():
                     )
                 ),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                retry_count INTEGER NOT NULL DEFAULT 0,
-                card_crm_id INTEGER NOT NULL
+                retry_count INTEGER NOT NULL DEFAULT 0
             );            
             """
         )

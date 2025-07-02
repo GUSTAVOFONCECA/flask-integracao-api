@@ -6,65 +6,16 @@ contactName=Gustavo+Fonceca&\
 daysToExpire=5"
 
 
-curl -X POST "https://logic-1997.loca.lt/webhooks/renova-certificado?contactNumber=556293159124"
+curl -X POST "https://logic-1997.loca.lt/webhooks/renova-certificado" \
+  -H "Content-Type: application/json" \
+  -d '{"event":"bot.command","data":{"id":"c9b767bb-6dc2-43b5-a1f4-34877a7cc840","contactId":"829dca6d-200d-4df7-81c8-082cd3482105","serviceId":"d5b7f951-43b6-422b-aa1e-4338ec2eac27","accountId":"64bc5bd2-52b2-49df-86f0-00d67993278a","command":"Certificado Digital - Renova","message":{"id":"00d6e341-bea3-45bc-bb1a-df1f72fe71c0","isFromMe":false,"sent":true,"type":"chat","timestamp":"2025-07-02T14:04:21.480Z","data":{"ack":1,"isNew":true,"isFirst":false},"visible":true,"accountId":"64bc5bd2-52b2-49df-86f0-00d67993278a","contactId":"829dca6d-200d-4df7-81c8-082cd3482105","fromId":"829dca6d-200d-4df7-81c8-082cd3482105","serviceId":"d5b7f951-43b6-422b-aa1e-4338ec2eac27","toId":null,"userId":null,"ticketId":"f3802a0e-c4f1-42a7-8c02-ed035a2102b9","ticketUserId":"af8f3dc8-5dd2-493c-92ac-6c6d7ba7cdba","ticketDepartmentId":"154521dc-71c0-4117-a697-bd978cd442aa","quotedMessageId":null,"origin":null,"createdAt":"2025-07-02T14:04:21.427Z","updatedAt":"2025-07-02T14:04:21.483Z","deletedAt":null,"hsmId":null,"isComment":false,"reactionParentMessageId":null,"isTranscribing":null,"transcribeError":null,"text":"1","obfuscated":false,"file":null,"files":null,"quotedMessage":null,"isFromBot":false}},"webhookId":"ada23196-19bf-4212-aed4-1522961dcadf","timestamp":"2025-07-02T14:04:34.970Z"}'
+
+
+
+
+
 
 curl -X POST "https://logic-1997.loca.lt/webhooks/nao-renova-certificado?contactNumber=556293159124"
 
 
-
-
-
-
-
-
-curl -X POST https://api-v2.contaazul.com/v1/venda \
-  -H "Authorization: Bearer eyJraWQiOiJUa1BRbWs0UlR3M3RuWlZXcDdEanBURFhcL2RTajNvMU5SckI0R3I3ZzFTMD0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI1OGU2OWE5Yi1jNDZjLTQ1MmQtYjU2YS02Zjg3NjI3MzRhYTQiLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAuc2EtZWFzdC0xLmFtYXpvbmF3cy5jb21cL3NhLWVhc3QtMV9WcDgzSjExd0EiLCJ2ZXJzaW9uIjoyLCJjbGllbnRfaWQiOiIyNWM3bGlqcm4yZWY5YmZsMWpwcW4wZjk4Iiwib3JpZ2luX2p0aSI6IjExM2IxZmZhLWQ2NTQtNGMzMS05N2U0LTUzZDFhMzJiYmJjMyIsImV2ZW50X2lkIjoiOWJhOWEwYmQtNjljZC00YzcyLWJjYTAtODI3NDU0YmE4OTA1IiwidG9rZW5fdXNlIjoiYWNjZXNzIiwic2NvcGUiOiJhd3MuY29nbml0by5zaWduaW4udXNlci5hZG1pbiBvcGVuaWQgcHJvZmlsZSIsImF1dGhfdGltZSI6MTc1MDY4MTI2OSwiZXhwIjoxNzUwNjg0ODY5LCJpYXQiOjE3NTA2ODEyNjksImp0aSI6IjhlNGFmZDhmLWEyYTYtNGU3NC04OTA4LTFkNjc0ZTIwNzA2YyIsInVzZXJuYW1lIjoiZ3VzdGF2by5mb25zZWNhQGxvZ2ljYXNzZXNzb3JpYS5jb20uYnIifQ.kRyVrX0sQcvfRMe8-gg9LucIsMHMFuDUA1Y2ufm_GQK2mhsDPAI4ZI6ICoHQkNfsI0MxY62izN_u9kq6plhebXC89TIKbC8oFj4lj_7ifraoqH-zjq27gxA_Bvf-MeFnPQg5mnwmtO4VLK5dsWDAqbb0apeIujX8iyDF1dgyiwcsfcRXIaY0jn71chwYpOOxVVx1qlLlZZRBj4aNMQrwkMOETIaaKrXir1wVxU9GHCHNZoHfxMWZKGAileHt6v78wRGb9kNIU4-Zf3qhPatIO7ABuEEdaBxpv84F0s1CR7YmqjqcVZU-patihrpqtaWjhq9lp1ctsEvwXb0g1u01Zg" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "id_cliente": "2bb92623-07b4-402f-9bb4-717dc741a0e9",
-    "numero": 1750682411,
-    "situacao": "APROVADO",
-    "data_venda": "2025-06-23",
-    "itens": [
-      {
-        "descricao": "CERTIFICADO DIGITAL PJ",
-        "quantidade": 1,
-        "valor": 180.0,
-        "id": "0b4f9a8b-01bb-4a89-93b3-7f56210bc75d"
-      }
-    ],
-    "condicao_pagamento": {
-      "tipo_pagamento": "BOLETO_BANCARIO",
-      "id_conta_financeira": "efa91453-f647-4d6f-879d-312817a337fe",
-      "opcao_condicao_pagamento": "1x",
-      "parcelas": [
-        {
-          "data_vencimento": "2025-06-28",
-          "valor": 180.0,
-          "descricao": "Parcela unica"
-        }
-      ]
-    }
-  }'
-
-
-
-
-curl -X GET "https://api-v2.contaazul.com/v1/venda/e280418a-2ed3-4354-a013-45b1609012e3" \
-  -H "Authorization: Bearer eyJraWQiOiJUa1BRbWs0UlR3M3RuWlZXcDdEanBURFhcL2RTajNvMU5SckI0R3I3ZzFTMD0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI1OGU2OWE5Yi1jNDZjLTQ1MmQtYjU2YS02Zjg3NjI3MzRhYTQiLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAuc2EtZWFzdC0xLmFtYXpvbmF3cy5jb21cL3NhLWVhc3QtMV9WcDgzSjExd0EiLCJ2ZXJzaW9uIjoyLCJjbGllbnRfaWQiOiIyNWM3bGlqcm4yZWY5YmZsMWpwcW4wZjk4Iiwib3JpZ2luX2p0aSI6IjExM2IxZmZhLWQ2NTQtNGMzMS05N2U0LTUzZDFhMzJiYmJjMyIsImV2ZW50X2lkIjoiOWJhOWEwYmQtNjljZC00YzcyLWJjYTAtODI3NDU0YmE4OTA1IiwidG9rZW5fdXNlIjoiYWNjZXNzIiwic2NvcGUiOiJhd3MuY29nbml0by5zaWduaW4udXNlci5hZG1pbiBvcGVuaWQgcHJvZmlsZSIsImF1dGhfdGltZSI6MTc1MDY4MTI2OSwiZXhwIjoxNzUwNjg0ODY5LCJpYXQiOjE3NTA2ODEyNjksImp0aSI6IjhlNGFmZDhmLWEyYTYtNGU3NC04OTA4LTFkNjc0ZTIwNzA2YyIsInVzZXJuYW1lIjoiZ3VzdGF2by5mb25zZWNhQGxvZ2ljYXNzZXNzb3JpYS5jb20uYnIifQ.kRyVrX0sQcvfRMe8-gg9LucIsMHMFuDUA1Y2ufm_GQK2mhsDPAI4ZI6ICoHQkNfsI0MxY62izN_u9kq6plhebXC89TIKbC8oFj4lj_7ifraoqH-zjq27gxA_Bvf-MeFnPQg5mnwmtO4VLK5dsWDAqbb0apeIujX8iyDF1dgyiwcsfcRXIaY0jn71chwYpOOxVVx1qlLlZZRBj4aNMQrwkMOETIaaKrXir1wVxU9GHCHNZoHfxMWZKGAileHt6v78wRGb9kNIU4-Zf3qhPatIO7ABuEEdaBxpv84F0s1CR7YmqjqcVZU-patihrpqtaWjhq9lp1ctsEvwXb0g1u01Zg" \
-  -H "Content-Type: application/json"
-
-
-
-curl -X POST https://api-v2.contaazul.com/v1/financeiro/eventos-financeiros/contas-a-receber/gerar-cobranca \
-  -H "Authorization: Bearer eyJraWQiOiJUa1BRbWs0UlR3M3RuWlZXcDdEanBURFhcL2RTajNvMU5SckI0R3I3ZzFTMD0iLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI1OGU2OWE5Yi1jNDZjLTQ1MmQtYjU2YS02Zjg3NjI3MzRhYTQiLCJpc3MiOiJodHRwczpcL1wvY29nbml0by1pZHAuc2EtZWFzdC0xLmFtYXpvbmF3cy5jb21cL3NhLWVhc3QtMV9WcDgzSjExd0EiLCJ2ZXJzaW9uIjoyLCJjbGllbnRfaWQiOiIyNWM3bGlqcm4yZWY5YmZsMWpwcW4wZjk4Iiwib3JpZ2luX2p0aSI6IjExM2IxZmZhLWQ2NTQtNGMzMS05N2U0LTUzZDFhMzJiYmJjMyIsImV2ZW50X2lkIjoiOWJhOWEwYmQtNjljZC00YzcyLWJjYTAtODI3NDU0YmE4OTA1IiwidG9rZW5fdXNlIjoiYWNjZXNzIiwic2NvcGUiOiJhd3MuY29nbml0by5zaWduaW4udXNlci5hZG1pbiBvcGVuaWQgcHJvZmlsZSIsImF1dGhfdGltZSI6MTc1MDY4MTI2OSwiZXhwIjoxNzUwNjg0ODY5LCJpYXQiOjE3NTA2ODEyNjksImp0aSI6IjhlNGFmZDhmLWEyYTYtNGU3NC04OTA4LTFkNjc0ZTIwNzA2YyIsInVzZXJuYW1lIjoiZ3VzdGF2by5mb25zZWNhQGxvZ2ljYXNzZXNzb3JpYS5jb20uYnIifQ.kRyVrX0sQcvfRMe8-gg9LucIsMHMFuDUA1Y2ufm_GQK2mhsDPAI4ZI6ICoHQkNfsI0MxY62izN_u9kq6plhebXC89TIKbC8oFj4lj_7ifraoqH-zjq27gxA_Bvf-MeFnPQg5mnwmtO4VLK5dsWDAqbb0apeIujX8iyDF1dgyiwcsfcRXIaY0jn71chwYpOOxVVx1qlLlZZRBj4aNMQrwkMOETIaaKrXir1wVxU9GHCHNZoHfxMWZKGAileHt6v78wRGb9kNIU4-Zf3qhPatIO7ABuEEdaBxpv84F0s1CR7YmqjqcVZU-patihrpqtaWjhq9lp1ctsEvwXb0g1u01Zg" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "conta_bancaria": "efa91453-f647-4d6f-879d-312817a337fe",
-    "descricao_fatura": "Emissao de Certificado Digital",
-    "id_parcela": "6d7e51c8-0d44-4331-bd29-3b481cbc4e91",
-    "data_vencimento": "2025-06-28",
-    "tipo": "BOLETO",
-    "atributos": {}
-  }'
 

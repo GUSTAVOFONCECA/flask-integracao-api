@@ -22,7 +22,11 @@ def _standardize_phone(phone: str) -> str:
 
 
 def add_pending(
-    company_name: str, contact_number: str, deal_type: str, card_crm_id: int
+    company_name: str,
+    contact_number: str,
+    deal_type: str,
+    card_crm_id: int,
+    digisac_contact_id: str = None,
 ) -> str:
     std_number = _standardize_phone(contact_number)
     logger.info(
@@ -37,11 +41,12 @@ def add_pending(
                     company_name,
                     contact_number,
                     deal_type,
-                    card_crm_id
+                    card_crm_id,
+                    digisac_contact_id
                 )
-                VALUES (?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?)
                 """,
-                (company_name, std_number, deal_type, card_crm_id),
+                (company_name, std_number, deal_type, card_crm_id, digisac_contact_id),
             )
             conn.commit()
         logger.info(f"Pendência inserida com sucesso: {std_number}")
@@ -55,7 +60,7 @@ def add_pending(
 
 
 def update_pending(
-    card_crm_id: str, status: str, sale_id: str = None, billing_id: str = None
+    card_crm_id: str, status: str, sale_id: str = None, financial_event_id: str = None
 ) -> bool:
     """
     Atualiza campos da pendência apenas se os argumentos não forem None.
@@ -72,7 +77,7 @@ def update_pending(
 
     logger.info(
         f"Atualizando pendência: {card_crm_id} "
-        f"com sale_id={sale_id}, billing_id={billing_id}, status={status}"
+        f"com sale_id={sale_id}, financial_event_id={financial_event_id}, status={status}"
     )
 
     # Valida status
@@ -87,9 +92,9 @@ def update_pending(
     if sale_id is not None:
         set_clauses.append("sale_id = ?")
         params.append(sale_id)
-    if billing_id is not None:
-        set_clauses.append("billing_id = ?")
-        params.append(billing_id)
+    if financial_event_id is not None:
+        set_clauses.append("financial_event_id = ?")
+        params.append(financial_event_id)
     if status is not None:
         set_clauses.append("status = ?")
         params.append(status)
@@ -133,11 +138,21 @@ def complete_pending(contact_number: str) -> bool:
         return cur.rowcount > 0
 
 
-def get_pending(contact_number: str) -> dict | None:
-    std_number = _standardize_phone(contact_number)
+def get_pending(contact_number: str = None, contact_id: str = None) -> dict | None:
+    if not contact_number and not contact_id:
+        raise ValueError("É necessário fornecer contact_number ou contact_id")
+
     with get_db_connection() as conn:
-        row = conn.execute(
-            "SELECT * FROM certif_pending_renewals WHERE contact_number = ?",
-            (std_number,),
-        ).fetchone()
+        if contact_number:
+            std_number = _standardize_phone(contact_number)
+            row = conn.execute(
+                "SELECT * FROM certif_pending_renewals WHERE contact_number = ?",
+                (std_number,),
+            ).fetchone()
+        else:
+            row = conn.execute(
+                "SELECT * FROM certif_pending_renewals WHERE digisac_contact_id = ?",
+                (contact_id,),
+            ).fetchone()
+
         return dict(row) if row else None

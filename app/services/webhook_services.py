@@ -276,11 +276,11 @@ def update_crm_item_certif_digital(card_id: int, fields: Optional[dict]) -> dict
         return {"error": str(e)}
 
 
-def update_deal_item_certif_digital(card_id: int, fields: Optional[dict]) -> dict:
+def update_deal_item_certif_digital(deal_id: int, fields: Optional[dict]) -> dict:
     url = "https://logic.bitrix24.com.br/rest/260/af4o31dew3vzuphs/crm.deal.update"
     payload = {
         "entityTypeId": 18,
-        "id": card_id,
+        "id": deal_id,
         "fields": fields,
     }
 

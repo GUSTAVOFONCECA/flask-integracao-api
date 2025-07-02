@@ -16,6 +16,8 @@ from app.services.webhook_services import (
     post_destination_api,
     verify_webhook_signature,
     update_crm_item_certif_digital,
+    update_deal_item_certif_digital,
+    _get_contact_id_by_number,
 )
 
 # Importar wrappers do fluxo de Certificação Digital
@@ -27,7 +29,7 @@ from app.services.webhook_services import (
 )
 from app.services.conta_azul.conta_azul_services import (
     handle_sale_creation_certif_digital,
-    handle_billing_generated_certif_digital,
+    extract_billing_info,
 )
 from app.services.renewal_services import (
     add_pending,
@@ -84,7 +86,7 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
 
     params = request.args
     required = [
-        "cardID",
+        "spaId",
         "companyName",
         "contactName",
         "contactNumber",
@@ -100,7 +102,7 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
             400,
         )
 
-    card_id = int(params["cardID"])
+    card_id = int(params["spaId"])
     contact_name = params["contactName"]
     company_name = params["companyName"]
     contact_number = params["contactNumber"]
@@ -113,8 +115,18 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
     result = build_certification_message(
         contact_number, contact_name, company_name, days_to_expire
     )
+    # Obter contactId do Digisac
+    contact_id = _get_contact_id_by_number(contact_number)
 
-    std_number = add_pending(company_name, contact_number, deal_type, card_id)
+    # Adicionar pendência com contactId
+    std_number = add_pending(
+        company_name=company_name,
+        contact_number=contact_number,
+        deal_type=deal_type,
+        card_crm_id=card_id,
+        digisac_contact_id=contact_id,  # Novo argumento
+    )
+
     update_crm_item_certif_digital(
         card_id=card_id,
         fields={
@@ -145,17 +157,17 @@ def renova_certificado_digisac():
     logger.info("/renova-certificado recebido, criando venda")
     logger.debug(f"Headers: {dict(request.headers)}")
     logger.debug(f"Args: {request.args.to_dict()}")
+    logger.debug(f"Form: {request.form.to_dict()}")
     logger.debug(f"JSON: {request.get_json(silent=True)}")
 
-    contact_number = request.args.get("contactNumber") or request.json.get(
-        "contactNumber"
-    )
-    if not contact_number:
-        return jsonify({"error": "contactNumber ausente"}), 400
+    request_json = request.get_json(silent=True)
+    contact_id = request_json["data"]["contactId"]
 
-    pending = get_pending(contact_number)
+    pending = get_pending(contact_id=contact_id)
     if not pending:
         return jsonify({"error": "Nenhuma solicitação pendente"}), 404
+
+    contact_number = pending["contact_number"]
 
     try:
         # Apenas cria a venda e retorna sale_id
@@ -183,20 +195,18 @@ def renova_certificado_digisac():
 
 
 @webhook_bp.route("/cobranca-gerada", methods=["POST"])
-def envia_cobranca_digisac():
-    logger.info("/cobranca-gerada recebido, enviando boleto")
-    logger.debug(f"Headers: %s", dict(request.headers))
-    logger.debug(f"Args:    %s", request.args.to_dict())
-    logger.debug(f"Form:    %s", request.form.to_dict())
-    logger.debug(f"JSON:    %s", request.get_json(silent=True))
-
-    signature = request.form.get("auth[member_id]", "")
-    if not verify_webhook_signature(signature):
-        return jsonify({"error": "Assinatura inválida"}), 403
+def cobranca_gerada():
+    logger.info("/cobranca-gerada recebido — salvando dados de cobrança")
+    logger.debug(f"Headers: {dict(request.headers)}")
+    logger.debug(f"Args: {request.args.to_dict()}")
+    logger.debug(f"Form: {request.form.to_dict()}")
+    logger.debug(f"JSON: {request.get_json(silent=True)}")
 
     contact_number = request.args.get("contactNumber") or request.json.get(
         "contactNumber"
     )
+    deal_id = request.args.get("dealId")
+
     if not contact_number:
         return jsonify({"error": "contactNumber ausente"}), 400
 
@@ -205,18 +215,78 @@ def envia_cobranca_digisac():
         return jsonify({"error": "Nenhuma solicitação pendente"}), 404
 
     try:
-        # Chama o serviço para processar o envio da cobrança
-        result = handle_billing_generated_certif_digital(contact_number)
+        info = extract_billing_info(contact_number)
+        update_pending(
+            card_crm_id=pending["card_crm_id"],
+            status="billing_generated",
+            financial_event_id=info["financial_event_id"],
+        )
 
-        # Se tudo ocorrer bem, retorna sucesso
+        update_deal_item_certif_digital(
+            deal_id=deal_id,
+            fields={
+                "stageId": "C18:PREPARATION",
+                "UF_CRM_1751478607": info["boleto_url"],
+            },
+        )
+
         return (
             jsonify(
                 {
-                    "status": "billing_pdf_sent",
-                    "message": "Boleto baixado e enviado com sucesso",
-                    "pdf_url": result.get(
-                        "pdf_url", ""
-                    ),  # Adiciona URL para referência
+                    "status": "billing_generated",
+                    "message": "Cobrança identificada e status atualizado",
+                    "event_id": info["financial_event_id"],
+                }
+            ),
+            200,
+        )
+
+    except Exception as e:
+        logger.exception("Erro ao processar cobrança: %s", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@webhook_bp.route("/envio-cobranca", methods=["POST"])
+def envio_cobranca():
+    logger.info("/envio-cobranca recebido — enviando boleto via Digisac")
+    logger.debug(f"Headers: {dict(request.headers)}")
+    logger.debug(f"Args: {request.args.to_dict()}")
+    logger.debug(f"Form: {request.form.to_dict()}")
+    logger.debug(f"JSON: {request.get_json(silent=True)}")
+
+    contact_number = request.args.get("contactNumber") or request.json.get(
+        "contactNumber"
+    )
+    pdf_url = request.args.get("pdfUrl") or request.json.get(
+        "pdfUrl"
+    )  # vindo do Bitrix24
+
+    if not contact_number or not pdf_url:
+        return jsonify({"error": "Parâmetros obrigatórios ausentes"}), 400
+
+    pending = get_pending(contact_number)
+    if not pending:
+        return jsonify({"error": "Nenhuma solicitação pendente"}), 404
+
+    try:
+        company_name = pending.get("company_name")
+        pdf_resp = requests.get(pdf_url, timeout=60)
+        pdf_resp.raise_for_status()
+        pdf_content = pdf_resp.content
+        filename = f"Cobrança certificado digital - {company_name}.pdf"
+
+        build_billing_certification_pdf(
+            contact_number, company_name, pdf_content, filename
+        )
+
+        update_pending(card_crm_id=pending["card_crm_id"], status="billing_pdf_sent")
+
+        return (
+            jsonify(
+                {
+                    "status": "billing_sent",
+                    "message": "Boleto enviado com sucesso via Digisac",
+                    "url": pdf_url,
                 }
             ),
             200,
@@ -229,7 +299,7 @@ def envia_cobranca_digisac():
 
 @webhook_bp.route("/nao-renova-certificado", methods=["POST"])
 def nao_renova_certificado_digisac():
-    logger.info("/nao-renova-certificado recebido, enviando negócio para rentenção")
+    logger.info("/nao-renova-certificado recebido, enviando negócio para retenção")
     logger.debug(f"Headers: {dict(request.headers)}")
     logger.debug(f"Args: {request.args.to_dict()}")
     logger.debug(f"Form: {request.form.to_dict()}")
