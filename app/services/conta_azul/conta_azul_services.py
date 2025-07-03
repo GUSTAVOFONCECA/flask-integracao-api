@@ -450,7 +450,7 @@ def handle_sale_creation_certif_digital(contact_number: str, deal_type: str) -> 
     if not pending:
         raise ValueError(f"Nenhuma solicitação pendente para {contact_number}")
 
-    card_id = pending["card_crm_id"]
+    spa_id = pending["card_crm_id"]
     last_status = pending["status"]
 
     client_uuid = find_person_uuid_by_phone(contact_number)
@@ -471,7 +471,7 @@ def handle_sale_creation_certif_digital(contact_number: str, deal_type: str) -> 
         )
         sale = create_sale(payload)
         sale_id = sale["id"]
-        update_pending(card_id, status="sale_created", sale_id=sale_id)
+        update_pending(spa_id, status="sale_created", sale_id=sale_id)
         return {"sale": sale}
 
     # se já tiver criado, retorna o registro existente

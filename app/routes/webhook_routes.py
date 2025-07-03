@@ -18,6 +18,7 @@ from app.services.webhook_services import (
     update_crm_item_certif_digital,
     update_deal_item_certif_digital,
     _get_contact_id_by_number,
+    add_comment_crm_timeline
 )
 
 # Importar wrappers do fluxo de Certificação Digital
@@ -102,7 +103,7 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
             400,
         )
 
-    card_id = int(params["spaId"])
+    spa_id = int(params["spaId"])
     contact_name = params["contactName"]
     company_name = params["companyName"]
     contact_number = params["contactNumber"]
@@ -123,15 +124,15 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
         company_name=company_name,
         contact_number=contact_number,
         deal_type=deal_type,
-        card_crm_id=card_id,
+        card_crm_id=spa_id,
         digisac_contact_id=contact_id,  # Novo argumento
     )
 
-    update_crm_item_certif_digital(
-        card_id=card_id,
+    add_comment_crm_timeline(
         fields={
-            "ufCrm18_1740158577862": datetime.now().strftime("%Y-%m-%d"),
-            "ufCrm18_1746464219165": "Enviado notificação para renovação via digisac",
+            "ENTITY_ID": spa_id,
+            "ENTITY_TYPE": "DYNAMIC_137",
+            "COMMENT": f"Enviado notificação para renovação via digisac em {datetime.now().strftime("%Y-%m-%d")}",
         },
     )
 
@@ -143,7 +144,7 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
             {
                 "status": "success",
                 "std_phone": std_number,
-                "card_id": card_id,
+                "spa_id": spa_id,
                 "message": "Comunicação enviada",
                 "digisac_response": result,
             }
@@ -225,7 +226,6 @@ def cobranca_gerada():
         update_deal_item_certif_digital(
             deal_id=deal_id,
             fields={
-                "stageId": "C18:PREPARATION",
                 "UF_CRM_1751478607": info["boleto_url"],
             },
         )
@@ -257,9 +257,12 @@ def envio_cobranca():
     contact_number = request.args.get("contactNumber") or request.json.get(
         "contactNumber"
     )
+    deal_id = request.args.get("dealId") or request.json.get(
+        "dealId"
+    )
     pdf_url = request.args.get("pdfUrl") or request.json.get(
         "pdfUrl"
-    )  # vindo do Bitrix24
+    )
 
     if not contact_number or not pdf_url:
         return jsonify({"error": "Parâmetros obrigatórios ausentes"}), 400
@@ -280,6 +283,13 @@ def envio_cobranca():
         )
 
         update_pending(card_crm_id=pending["card_crm_id"], status="billing_pdf_sent")
+
+        update_deal_item_certif_digital(
+            deal_id=deal_id,
+            fields={
+                "stageId": "C18:PREPARATION",
+            },
+        )
 
         return (
             jsonify(
@@ -317,7 +327,7 @@ def nao_renova_certificado_digisac():
 
     try:
         update_crm_item_certif_digital(
-            card_id=pending["card_crm_id"], fields={"stageId": "DT137_36:UC_AY5334"}
+            spa_id=pending["card_crm_id"], fields={"stageId": "DT137_36:UC_AY5334"}
         )
         update_pending(pending["card_crm_id"], "customer_retention")
         return (
@@ -352,10 +362,10 @@ def envia_form_agendamento_digisac() -> dict:
         company_name = request.args.get("companyName")
         contact_number = request.args.get("contactNumber")
         schedule_form_link = request.args.get("linkFormAgendamento")
-        card_id = request.args.get("idSPA")
+        spa_id = request.args.get("idSPA")
 
         build_form_agendamento(contact_number, company_name, schedule_form_link)
-        update_pending(card_id, "scheduling_form_sent")
+        update_pending(spa_id, "scheduling_form_sent")
 
         return (
             jsonify(

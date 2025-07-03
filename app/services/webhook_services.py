@@ -259,11 +259,11 @@ def post_destination_api(processed_data: Dict, api_url: str) -> Dict:
         return {"error": str(e)}
 
 
-def update_crm_item_certif_digital(card_id: int, fields: Optional[dict]) -> dict:
+def update_crm_item_certif_digital(spa_id: int, fields: Optional[dict]) -> dict:
     url = "https://logic.bitrix24.com.br/rest/260/af4o31dew3vzuphs/crm.item.update"
     payload = {
         "entityTypeId": 137,
-        "id": card_id,
+        "id": spa_id,
         "fields": fields,
     }
 
@@ -282,6 +282,21 @@ def update_deal_item_certif_digital(deal_id: int, fields: Optional[dict]) -> dic
         "entityTypeId": 18,
         "id": deal_id,
         "fields": fields,
+    }
+
+    try:
+        response = requests.post(url, json=payload, timeout=60)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro ao atualizar card DEAL: {str(e)}")
+        return {"error": str(e)}
+
+
+def add_comment_crm_timeline(fields: Optional[dict]) -> dict:
+    url = "https://logic.bitrix24.com.br/rest/260/af4o31dew3vzuphs/crm.timeline.comment.add"
+    payload = {
+        "fields": fields
     }
 
     try:
