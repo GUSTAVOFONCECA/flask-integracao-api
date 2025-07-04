@@ -27,7 +27,7 @@ def init_db():
             """
             CREATE TABLE IF NOT EXISTS certif_pending_renewals (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                card_crm_id INTEGER NOT NULL,
+                spa_id INTEGER NOT NULL,
                 digisac_contact_id TEXT,
                 company_name TEXT NOT NULL,
                 contact_number TEXT NOT NULL,

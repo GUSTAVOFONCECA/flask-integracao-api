@@ -450,7 +450,7 @@ def handle_sale_creation_certif_digital(contact_number: str, deal_type: str) -> 
     if not pending:
         raise ValueError(f"Nenhuma solicitação pendente para {contact_number}")
 
-    spa_id = pending["card_crm_id"]
+    spa_id = pending["spa_id"]
     last_status = pending["status"]
 
     client_uuid = find_person_uuid_by_phone(contact_number)

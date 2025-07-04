@@ -15,8 +15,8 @@ from app.services.webhook_services import (
     update_company_process_cnpj,
     post_destination_api,
     verify_webhook_signature,
-    update_crm_item_certif_digital,
-    update_deal_item_certif_digital,
+    update_crm_item,
+    update_deal_item,
     _get_contact_id_by_number,
     add_comment_crm_timeline
 )
@@ -124,7 +124,7 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
         company_name=company_name,
         contact_number=contact_number,
         deal_type=deal_type,
-        card_crm_id=spa_id,
+        spa_id=spa_id,
         digisac_contact_id=contact_id,  # Novo argumento
     )
 
@@ -177,7 +177,15 @@ def renova_certificado_digisac():
         )
         sale = result["sale"]
         sale_id = sale.get("id") or sale.get("venda", {}).get("id")
-        update_pending(pending["card_crm_id"], status="sale_created", sale_id=sale_id)
+        update_pending(pending["spa_id"], status="sale_created", sale_id=sale_id)
+
+        update_crm_item(
+            entity_type_id=137,
+            spa_id=pending["spa_id"],
+            fields={
+                "stageId": "DT137_36:UC_90X241"
+            }
+        )
 
         return (
             jsonify(
@@ -218,12 +226,13 @@ def cobranca_gerada():
     try:
         info = extract_billing_info(contact_number)
         update_pending(
-            card_crm_id=pending["card_crm_id"],
+            spa_id=pending["spa_id"],
             status="billing_generated",
             financial_event_id=info["financial_event_id"],
         )
 
-        update_deal_item_certif_digital(
+        update_deal_item(
+            entity_type_id=18,
             deal_id=deal_id,
             fields={
                 "UF_CRM_1751478607": info["boleto_url"],
@@ -282,13 +291,14 @@ def envio_cobranca():
             contact_number, company_name, pdf_content, filename
         )
 
-        update_pending(card_crm_id=pending["card_crm_id"], status="billing_pdf_sent")
+        update_pending(spa_id=pending["spa_id"], status="billing_pdf_sent")
 
-        update_deal_item_certif_digital(
+        update_deal_item(
+            entity_type_id=18,
             deal_id=deal_id,
             fields={
                 "stageId": "C18:PREPARATION",
-            },
+            }
         )
 
         return (
@@ -326,10 +336,12 @@ def nao_renova_certificado_digisac():
         return jsonify({"error": "Nenhuma solicitação pendente"}), 404
 
     try:
-        update_crm_item_certif_digital(
-            spa_id=pending["card_crm_id"], fields={"stageId": "DT137_36:UC_AY5334"}
+        update_crm_item(
+            entity_type_id=137,
+            spa_id=pending["spa_id"],
+            fields={"stageId": "DT137_36:UC_AY5334"}
         )
-        update_pending(pending["card_crm_id"], "customer_retention")
+        update_pending(pending["spa_id"], "customer_retention")
         return (
             jsonify(
                 {

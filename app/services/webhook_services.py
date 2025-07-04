@@ -259,10 +259,10 @@ def post_destination_api(processed_data: Dict, api_url: str) -> Dict:
         return {"error": str(e)}
 
 
-def update_crm_item_certif_digital(spa_id: int, fields: Optional[dict]) -> dict:
+def update_crm_item(entity_type_id: int, spa_id: int, fields: Optional[dict]) -> dict:
     url = "https://logic.bitrix24.com.br/rest/260/af4o31dew3vzuphs/crm.item.update"
     payload = {
-        "entityTypeId": 137,
+        "entityTypeId": entity_type_id,
         "id": spa_id,
         "fields": fields,
     }
@@ -276,10 +276,10 @@ def update_crm_item_certif_digital(spa_id: int, fields: Optional[dict]) -> dict:
         return {"error": str(e)}
 
 
-def update_deal_item_certif_digital(deal_id: int, fields: Optional[dict]) -> dict:
+def update_deal_item(entity_type_id: int, deal_id: int, fields: Optional[dict]) -> dict:
     url = "https://logic.bitrix24.com.br/rest/260/af4o31dew3vzuphs/crm.deal.update"
     payload = {
-        "entityTypeId": 18,
+        "entityTypeId": entity_type_id,
         "id": deal_id,
         "fields": fields,
     }
