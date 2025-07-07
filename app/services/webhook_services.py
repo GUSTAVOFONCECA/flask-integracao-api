@@ -295,9 +295,7 @@ def update_deal_item(entity_type_id: int, deal_id: int, fields: Optional[dict]) 
 
 def add_comment_crm_timeline(fields: Optional[dict]) -> dict:
     url = "https://logic.bitrix24.com.br/rest/260/af4o31dew3vzuphs/crm.timeline.comment.add"
-    payload = {
-        "fields": fields
-    }
+    payload = {"fields": fields}
 
     try:
         response = requests.post(url, json=payload, timeout=60)
@@ -531,12 +529,11 @@ def build_certification_message(
 
 
 def build_billing_certification_pdf(
-    contact_number: str, company_name:str, pdf_content: bytes, filename: str
+    contact_number: str, company_name: str, pdf_content: bytes, filename: str
 ) -> dict:
     """Gera payload para envio de PDF (boleto) da Certificação Digital"""
     contact_id = _get_contact_id_by_number(contact_number)
-    text = f"Segue boleto para pagamento referente à emissão de \
-        certificado digital da empresa {company_name}"
+    text = f"Segue boleto para pagamento referente à emissão de certificado digital da empresa {company_name}"
     payload = build_pdf_payload(
         contact_id=contact_id,
         pdf_content=pdf_content,
@@ -554,8 +551,9 @@ def build_form_agendamento(
     contact_id = _get_contact_id_by_number(contact_number)
     text = (
         "*Bot*\n"
-        "Segue abaixo link para agendamento de videoconferência"
-        f"referente à emissão do certificado digital da empresa *{company_name}*\n\n"
+        "Segue abaixo link para agendamento de videoconferência "
+        "referente à emissão do certificado digital da empresa "
+        f"*{company_name}*\n\n"
         f"Link:\n{form_link}"
     )
     payload = build_message_payload(

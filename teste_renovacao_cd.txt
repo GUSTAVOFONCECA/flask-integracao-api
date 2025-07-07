@@ -19,3 +19,7 @@ curl -X POST "https://logic-1997.loca.lt/webhooks/nao-renova-certificado?contact
 
 
 
+
+curl -X POST "https://logic-1997.loca.lt/webhooks/envio-cobranca?dealId=990&contactNumber=%5562993159124&billDatetime=07/07/2025%2014:21:39"
+
+

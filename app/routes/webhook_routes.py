@@ -285,7 +285,7 @@ def envio_cobranca():
         pdf_resp = requests.get(pdf_url, timeout=60)
         pdf_resp.raise_for_status()
         pdf_content = pdf_resp.content
-        filename = f"Cobrança certificado digital - {company_name}.pdf"
+        filename = f"Cobrança_certificado_digital_-_{company_name}.pdf"
 
         build_billing_certification_pdf(
             contact_number, company_name, pdf_content, filename
