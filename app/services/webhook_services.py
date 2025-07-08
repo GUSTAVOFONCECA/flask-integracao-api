@@ -287,6 +287,7 @@ def update_deal_item(entity_type_id: int, deal_id: int, fields: Optional[dict]) 
     try:
         response = requests.post(url, json=payload, timeout=60)
         response.raise_for_status()
+        logger.debug(f"Response:\n{response.json}")
         return response.json()
     except requests.exceptions.RequestException as e:
         logger.error(f"Erro ao atualizar card DEAL: {str(e)}")
@@ -498,8 +499,8 @@ def _build_certification_message_text(
             f"Olá {contact_name}, o certificado da empresa *{company_name}* "
             f"irá expirar dentro de {days} dias.\n"
             "Deseja renovar seu certificado? (Digite a opção)\n\n"
-            "1 - Sim\n"
-            "2 - Não"
+            "# - Sim\n"
+            "@ - Não"
         )
     else:
         return (
@@ -507,8 +508,8 @@ def _build_certification_message_text(
             f"Olá {contact_name}, o certificado da empresa *{company_name}* "
             f"expirou há {days} dias.\n"
             "Deseja renovar seu certificado? (Digite a opção)\n\n"
-            "1 - Sim\n"
-            "2 - Não"
+            "# - Sim\n"
+            "@ - Não"
         )
 
 

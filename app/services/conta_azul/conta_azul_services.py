@@ -387,6 +387,7 @@ def get_fin_event_billings(fin_event_id: str) -> list:
         logger.debug(f"GET {url}")
         response = requests.get(url, headers=headers, timeout=60)
         response.raise_for_status()
+        logger.debug(f"Response:\n{response.json()}")
         return response.json()
     except requests.exceptions.RequestException as e:
         logger.error(f"Erro ao obter parcelas do evento financeiro: {str(e)}")

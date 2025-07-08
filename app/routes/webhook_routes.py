@@ -273,7 +273,7 @@ def envio_cobranca():
         "pdfUrl"
     )
 
-    if not contact_number or not pdf_url:
+    if not contact_number or not pdf_url or pdf_url == "":
         return jsonify({"error": "Parâmetros obrigatórios ausentes"}), 400
 
     pending = get_pending(contact_number)
@@ -297,7 +297,7 @@ def envio_cobranca():
             entity_type_id=18,
             deal_id=deal_id,
             fields={
-                "stageId": "C18:PREPARATION",
+                "STAGE_ID": "C18:PREPARATION",
             }
         )
 
