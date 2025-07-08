@@ -491,26 +491,22 @@ def build_certification_transfer(contact_number: str) -> dict:
 def _build_certification_message_text(
     contact_name: str, company_name: str, days_to_expire: int
 ) -> str:
-    """Gera texto da mensagem de aviso de vencimento do certificado"""
+    """Mensagem de aviso com comandos case-sensitive e sem acento"""
     days = abs(days_to_expire)
-    if days_to_expire >= 0:
-        return (
-            "*Bot*\n"
-            f"Olá {contact_name}, o certificado da empresa *{company_name}* "
-            f"irá expirar dentro de {days} dias.\n"
-            "Deseja renovar seu certificado? (Digite a opção)\n\n"
-            "Renovar\n"
-            "Não_renovar"
-        )
-    else:
-        return (
-            "*Bot*\n"
-            f"Olá {contact_name}, o certificado da empresa *{company_name}* "
-            f"expirou há {days} dias.\n"
-            "Deseja renovar seu certificado? (Digite a opção)\n\n"
-            "Renovar\n"
-            "Não_renovar"
-        )
+    validade_msg = (
+        f"IRA EXPIRAR EM {days} DIAS."
+        if days_to_expire >= 0
+        else f"EXPIROU HA {days} DIAS."
+    )
+
+    return (
+        "*Bot Certificado Digital*\n"
+        f"Olá {contact_name}, o certificado da empresa *{company_name}* {validade_msg}\n\n"
+        "Digite *exatamente* uma das palavras abaixo (sem acento e em MAIÚSCULAS):\n\n"
+        "✅ Digite: *RENOVAR_CERTIFICADO* → Receber proposta para renovação\n"
+        "ℹ️ Digite: *INFO_CERTIFICADO* → Obter mais informações sobre o certificado\n"
+        "❌ Digite: *NAO_CERTIFICADO* → Não deseja renovar neste momento"
+    )
 
 
 def build_certification_message(
