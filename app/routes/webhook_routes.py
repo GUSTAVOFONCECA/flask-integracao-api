@@ -18,7 +18,7 @@ from app.services.webhook_services import (
     update_crm_item,
     update_deal_item,
     _get_contact_id_by_number,
-    add_comment_crm_timeline
+    add_comment_crm_timeline,
 )
 
 # Importar wrappers do fluxo de Certificação Digital
@@ -132,7 +132,7 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
         fields={
             "ENTITY_ID": spa_id,
             "ENTITY_TYPE": "DYNAMIC_137",
-            "COMMENT": f"Enviado notificação para renovação via digisac em {datetime.now().strftime("%Y-%m-%d")}",
+            "COMMENT": f"Enviado notificação para renovação via digisac em {datetime.now().strftime("%Y-%m-%d %H:%M")}",
         },
     )
 
@@ -153,9 +153,9 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
     )
 
 
-@webhook_bp.route("/renova-certificado", methods=["POST"])
-def renova_certificado_digisac():
-    logger.info("/renova-certificado recebido, criando venda")
+@webhook_bp.route("/digisac", methods=["POST"])
+def resposta_certificado_digisac():
+    logger.info("/digisac recebido")
     logger.debug(f"Headers: {dict(request.headers)}")
     logger.debug(f"Args: {request.args.to_dict()}")
     logger.debug(f"Form: {request.form.to_dict()}")
@@ -170,37 +170,70 @@ def renova_certificado_digisac():
 
     contact_number = pending["contact_number"]
 
-    try:
-        # Apenas cria a venda e retorna sale_id
-        result = handle_sale_creation_certif_digital(
-            contact_number, pending["deal_type"]
-        )
-        sale = result["sale"]
-        sale_id = sale.get("id") or sale.get("venda", {}).get("id")
-        update_pending(pending["spa_id"], status="sale_created", sale_id=sale_id)
+    renova_list = ["Renovar", "Renova", "renovar", "renova"]
 
-        update_crm_item(
-            entity_type_id=137,
-            spa_id=pending["spa_id"],
-            fields={
-                "stageId": "DT137_36:UC_90X241"
-            }
-        )
+    nao_renova_list = [
+        "Não_renovar",
+        "Nao_renovar",
+        "nao_renovar",
+        "Não_renova",
+        "Nao_renova",
+        "nao_renova",
+    ]
 
-        return (
-            jsonify(
-                {
-                    "status": "sale_created",
-                    "sale_id": sale_id,
-                    "message": "Venda criada com sucesso. Aguardando geração de boleto.",
-                }
-            ),
-            200,
-        )
+    if request_json["data"]["message"]["text"] in renova_list:
+        try:
+            logger.info("Renovação solicitada, criando venda")
+            # Apenas cria a venda e retorna sale_id
+            result = handle_sale_creation_certif_digital(
+                contact_number, pending["deal_type"]
+            )
+            sale = result["sale"]
+            sale_id = sale.get("id") or sale.get("venda", {}).get("id")
+            update_pending(pending["spa_id"], status="sale_created", sale_id=sale_id)
 
-    except Exception as e:
-        logger.exception("Erro ao criar venda: %s", e)
-        return jsonify({"error": str(e)}), 500
+            update_crm_item(
+                entity_type_id=137,
+                spa_id=pending["spa_id"],
+                fields={"stageId": "DT137_36:UC_90X241"},
+            )
+
+            return (
+                jsonify(
+                    {
+                        "status": "sale_created",
+                        "sale_id": sale_id,
+                        "message": "Venda criada com sucesso. Aguardando geração de boleto.",
+                    }
+                ),
+                200,
+            )
+
+        except Exception as e:
+            logger.exception("Erro ao criar venda: %s", e)
+            return jsonify({"error": str(e)}), 500
+
+    elif request_json["data"]["message"]["text"] in nao_renova_list:
+        try:
+            logger.info("Renovação recusada, enviando para retenção")
+            update_crm_item(
+                entity_type_id=137,
+                spa_id=pending["spa_id"],
+                fields={"stageId": "DT137_36:UC_AY5334"},
+            )
+            update_pending(pending["spa_id"], "customer_retention")
+            return (
+                jsonify(
+                    {
+                        "status": "success",
+                        "message": "Card enviado para retenção com sucesso",
+                    }
+                ),
+                200,
+            )
+        except Exception as e:
+            logger.exception("Erro ao recusar certificado: %s", str(e))
+            return jsonify({"error": str(e)}), 500
 
 
 @webhook_bp.route("/cobranca-gerada", methods=["POST"])
@@ -266,12 +299,8 @@ def envio_cobranca():
     contact_number = request.args.get("contactNumber") or request.json.get(
         "contactNumber"
     )
-    deal_id = request.args.get("dealId") or request.json.get(
-        "dealId"
-    )
-    pdf_url = request.args.get("pdfUrl") or request.json.get(
-        "pdfUrl"
-    )
+    deal_id = request.args.get("dealId") or request.json.get("dealId")
+    pdf_url = request.args.get("pdfUrl") or request.json.get("pdfUrl")
 
     if not contact_number or not pdf_url or pdf_url == "":
         return jsonify({"error": "Parâmetros obrigatórios ausentes"}), 400
@@ -298,7 +327,7 @@ def envio_cobranca():
             deal_id=deal_id,
             fields={
                 "STAGE_ID": "C18:PREPARATION",
-            }
+            },
         )
 
         return (
@@ -314,45 +343,6 @@ def envio_cobranca():
 
     except Exception as e:
         logger.exception("Erro ao enviar boleto: %s", e)
-        return jsonify({"error": str(e)}), 500
-
-
-@webhook_bp.route("/nao-renova-certificado", methods=["POST"])
-def nao_renova_certificado_digisac():
-    logger.info("/nao-renova-certificado recebido, enviando negócio para retenção")
-    logger.debug(f"Headers: {dict(request.headers)}")
-    logger.debug(f"Args: {request.args.to_dict()}")
-    logger.debug(f"Form: {request.form.to_dict()}")
-    logger.debug(f"JSON: {request.get_json(silent=True)}")
-
-    contact_number = request.args.get("contactNumber") or request.json.get(
-        "contactNumber"
-    )
-    if not contact_number:
-        return jsonify({"error": "contactNumber ausente"}), 400
-
-    pending = get_pending(contact_number)
-    if not pending:
-        return jsonify({"error": "Nenhuma solicitação pendente"}), 404
-
-    try:
-        update_crm_item(
-            entity_type_id=137,
-            spa_id=pending["spa_id"],
-            fields={"stageId": "DT137_36:UC_AY5334"}
-        )
-        update_pending(pending["spa_id"], "customer_retention")
-        return (
-            jsonify(
-                {
-                    "status": "success",
-                    "message": "Card enviado para retenção com sucesso",
-                }
-            ),
-            200,
-        )
-    except Exception as e:
-        logger.exception("Erro ao recusar certificado: %s", str(e))
         return jsonify({"error": str(e)}), 500
 
 

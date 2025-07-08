@@ -499,8 +499,8 @@ def _build_certification_message_text(
             f"Olá {contact_name}, o certificado da empresa *{company_name}* "
             f"irá expirar dentro de {days} dias.\n"
             "Deseja renovar seu certificado? (Digite a opção)\n\n"
-            "# - Sim\n"
-            "@ - Não"
+            "Renovar\n"
+            "Não_renovar"
         )
     else:
         return (
@@ -508,8 +508,8 @@ def _build_certification_message_text(
             f"Olá {contact_name}, o certificado da empresa *{company_name}* "
             f"expirou há {days} dias.\n"
             "Deseja renovar seu certificado? (Digite a opção)\n\n"
-            "# - Sim\n"
-            "@ - Não"
+            "Renovar\n"
+            "Não_renovar"
         )
 
 
