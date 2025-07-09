@@ -629,3 +629,19 @@ def _parse_response(response) -> dict:
             response.text,
         )
         return {"status_code": response.status_code, "text": response.text}
+
+def send_proposal_file(contact_number: str, company_name: str, filename: str = "Proposta_certificado_digital.pdf") -> dict:
+    """Envia proposta de renovação para o cliente via Digisac (PDF)"""
+    path = os.path.join("app", "assets", "docs", filename)
+    try:
+        with open(path, "rb") as file:
+            pdf_content = file.read()
+    except FileNotFoundError:
+        return {"error": f"Arquivo de proposta não encontrado em {path}"}
+
+    return send_pdf_digisac(
+        contact_number=contact_number,
+        company_name=company_name,
+        pdf_content=pdf_content,
+        filename=filename,
+    )

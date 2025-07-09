@@ -170,18 +170,8 @@ def resposta_certificado_digisac():
 
     contact_number = pending["contact_number"]
 
-    renova_list = ["Renovar", "Renova", "renovar", "renova"]
 
-    nao_renova_list = [
-        "Não_renovar",
-        "Nao_renovar",
-        "nao_renovar",
-        "Não_renova",
-        "Nao_renova",
-        "nao_renova",
-    ]
-
-    if request_json["data"]["message"]["text"] in renova_list:
+    if request_json["data"]["message"]["text"] == "RENOVAR_CERTIFICADO":
         try:
             logger.info("Renovação solicitada, criando venda")
             # Apenas cria a venda e retorna sale_id
@@ -213,7 +203,7 @@ def resposta_certificado_digisac():
             logger.exception("Erro ao criar venda: %s", e)
             return jsonify({"error": str(e)}), 500
 
-    elif request_json["data"]["message"]["text"] in nao_renova_list:
+    elif request_json["data"]["message"]["text"] == "NAO_CERTIFICADO":
         try:
             logger.info("Renovação recusada, enviando para retenção")
             update_crm_item(
