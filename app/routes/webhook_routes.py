@@ -23,15 +23,23 @@ from app.services.webhook_services import (
 
 # Importar wrappers do fluxo de Certificação Digital
 from app.services.webhook_services import (
+    interpret_certification_response,
+    send_proposal_file,
     build_certification_transfer,
     build_certification_message,
-    build_billing_certification_pdf,
+    build_message_payload,
+    send_message_digisac,
     build_form_agendamento,
+    build_billing_certification_pdf,
+    CERT_DEPT_ID,
+    DIGISAC_USER_ID,
 )
+
 from app.services.conta_azul.conta_azul_services import (
     handle_sale_creation_certif_digital,
     extract_billing_info,
 )
+
 from app.services.renewal_services import (
     add_pending,
     get_pending,
@@ -163,23 +171,25 @@ def resposta_certificado_digisac():
 
     request_json = request.get_json(silent=True)
     contact_id = request_json["data"]["contactId"]
+    user_message = request_json["data"]["message"]["text"]
 
     pending = get_pending(contact_id=contact_id)
     if not pending:
         return jsonify({"error": "Nenhuma solicitação pendente"}), 404
 
     contact_number = pending["contact_number"]
+    company_name = pending["company_name"]
+    response_type = interpret_certification_response(user_message)
 
-
-    if request_json["data"]["message"]["text"] == "RENOVAR_CERTIFICADO":
+    if response_type == "renew":
         try:
             logger.info("Renovação solicitada, criando venda")
-            # Apenas cria a venda e retorna sale_id
             result = handle_sale_creation_certif_digital(
                 contact_number, pending["deal_type"]
             )
             sale = result["sale"]
             sale_id = sale.get("id") or sale.get("venda", {}).get("id")
+
             update_pending(pending["spa_id"], status="sale_created", sale_id=sale_id)
 
             update_crm_item(
@@ -188,12 +198,14 @@ def resposta_certificado_digisac():
                 fields={"stageId": "DT137_36:UC_90X241"},
             )
 
+            send_proposal_file(contact_number, company_name)
+
             return (
                 jsonify(
                     {
                         "status": "sale_created",
                         "sale_id": sale_id,
-                        "message": "Venda criada com sucesso. Aguardando geração de boleto.",
+                        "message": "Venda criada e proposta enviada com sucesso.",
                     }
                 ),
                 200,
@@ -203,7 +215,23 @@ def resposta_certificado_digisac():
             logger.exception("Erro ao criar venda: %s", e)
             return jsonify({"error": str(e)}), 500
 
-    elif request_json["data"]["message"]["text"] == "NAO_CERTIFICADO":
+    elif response_type == "info":
+        try:
+            logger.info("Cliente solicitou mais informações, enviando proposta")
+            send_proposal_file(contact_number, company_name)
+
+            return (
+                jsonify(
+                    {"status": "info_sent", "message": "Proposta enviada com sucesso."}
+                ),
+                200,
+            )
+
+        except Exception as e:
+            logger.exception("Erro ao enviar proposta: %s", e)
+            return jsonify({"error": str(e)}), 500
+
+    elif response_type == "refuse":
         try:
             logger.info("Renovação recusada, enviando para retenção")
             update_crm_item(
@@ -215,15 +243,44 @@ def resposta_certificado_digisac():
             return (
                 jsonify(
                     {
-                        "status": "success",
+                        "status": "refused",
                         "message": "Card enviado para retenção com sucesso",
                     }
                 ),
                 200,
             )
+
         except Exception as e:
             logger.exception("Erro ao recusar certificado: %s", str(e))
             return jsonify({"error": str(e)}), 500
+
+    else:
+        logger.info("Comando não reconhecido, solicitando nova resposta")
+        text = (
+            "*Bot*\n"
+            "Desculpe, não entendi sua resposta.\n"
+            "Por favor, digite uma das opções válidas:\n\n"
+            "*RENOVAR_CERTIFICADO* — Para renovar o certificado\n"
+            "*INFO_CERTIFICADO* — Para mais informações\n"
+            "*NAO_CERTIFICADO* — Se não deseja renovar"
+        )
+        message_payload = build_message_payload(
+            contact_id=contact_id,
+            department_id=CERT_DEPT_ID,
+            text=text,
+            user_id=DIGISAC_USER_ID,
+        )
+        send_message_digisac(message_payload)
+
+        return (
+            jsonify(
+                {
+                    "status": "unknown_option",
+                    "message": "Resposta inválida, instruções reenviadas.",
+                }
+            ),
+            200,
+        )
 
 
 @webhook_bp.route("/cobranca-gerada", methods=["POST"])

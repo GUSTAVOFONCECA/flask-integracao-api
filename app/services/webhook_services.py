@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 from typing import Optional, Dict
 import requests
+import unicodedata
 from flask import request, jsonify
 from app.config import Config
 from app.utils import retry_with_backoff, standardize_phone_number
@@ -500,7 +501,7 @@ def _build_certification_message_text(
     )
 
     return (
-        "*Bot Certificado Digital*\n"
+        "*Bot*\n"
         f"Olá {contact_name}, o certificado da empresa *{company_name}* {validade_msg}\n\n"
         "Digite *exatamente* uma das palavras abaixo (sem acento e em MAIÚSCULAS):\n\n"
         "✅ Digite: *RENOVAR_CERTIFICADO* → Receber proposta para renovação\n"
@@ -523,6 +524,60 @@ def build_certification_message(
     )
 
     return send_message_digisac(payload)
+
+
+def build_proposal_certification_pdf(
+    contact_number: str, company_name: str, pdf_content: bytes, filename: str
+) -> dict:
+    """Gera payload para envio de proposta comercial (PDF) da Certificação Digital"""
+    contact_id = _get_contact_id_by_number(contact_number)
+    text = f"Segue proposta comercial referente à renovação do certificado digital da empresa {company_name}"
+    payload = build_pdf_payload(
+        contact_id=contact_id,
+        pdf_content=pdf_content,
+        filename=filename,
+        text=text,
+    )
+    return payload
+
+
+def send_proposal_file(
+    contact_number: str,
+    company_name: str,
+    filename: str = "Proposta_certificado_digital_-_Logic_Assessoria_Empresarial.pdf",
+) -> dict:
+    """Envia proposta de renovação para o cliente via Digisac (mensagem + PDF)"""
+    path = os.path.join("app", "assets", "docs", filename)
+    try:
+        with open(path, "rb") as file:
+            pdf_content = file.read()
+    except FileNotFoundError:
+        return {"error": f"Arquivo de proposta não encontrado em {path}"}
+
+    contact_id = _get_contact_id_by_number(contact_number)
+
+    # Envia mensagem de acompanhamento
+    message_text = (
+        f"*Bot*\n"
+        f"Olá! Segue abaixo a proposta comercial para renovação do certificado digital da empresa *{company_name}*.\n"
+        f"Qualquer dúvida, estamos à disposição."
+    )
+    message_payload = build_message_payload(
+        contact_id=contact_id,
+        department_id=CERT_DEPT_ID,
+        text=message_text,
+        user_id=DIGISAC_USER_ID,
+    )
+    send_message_digisac(message_payload)
+
+    # Envia o PDF da proposta
+    payload = build_proposal_certification_pdf(
+        contact_number=contact_number,
+        company_name=company_name,
+        pdf_content=pdf_content,
+        filename=filename,
+    )
+    return send_pdf_digisac(payload)
 
 
 def build_billing_certification_pdf(
@@ -630,18 +685,46 @@ def _parse_response(response) -> dict:
         )
         return {"status_code": response.status_code, "text": response.text}
 
-def send_proposal_file(contact_number: str, company_name: str, filename: str = "Proposta_certificado_digital.pdf") -> dict:
-    """Envia proposta de renovação para o cliente via Digisac (PDF)"""
-    path = os.path.join("app", "assets", "docs", filename)
-    try:
-        with open(path, "rb") as file:
-            pdf_content = file.read()
-    except FileNotFoundError:
-        return {"error": f"Arquivo de proposta não encontrado em {path}"}
 
-    return send_pdf_digisac(
-        contact_number=contact_number,
-        company_name=company_name,
-        pdf_content=pdf_content,
-        filename=filename,
+def _build_certification_message_text(
+    contact_name: str, company_name: str, days_to_expire: int
+) -> str:
+    """Gera texto da mensagem de aviso de vencimento do certificado com comandos claros e específicos"""
+    days = abs(days_to_expire)
+    validade_msg = (
+        f"IRA EXPIRAR EM {days} DIAS."
+        if days_to_expire >= 0
+        else f"EXPIROU HA {days} DIAS."
     )
+
+    return (
+        "*Bot*\n"
+        f"Olá {contact_name}, o certificado da empresa *{company_name}* {validade_msg}\n\n"
+        "Digite *exatamente* uma das palavras abaixo (sem acento e em MAIÚSCULAS):\n\n"
+        "✅ Digite: *RENOVAR_CERTIFICADO* → Iniciar renovação e receber proposta para renovação\n"
+        "ℹ️ Digite: *INFO_CERTIFICADO* → Obter mais informações sobre o certificado digital\n"
+        "❌ Digite: *NAO_CERTIFICADO* → Não deseja renovar o certificado no momento"
+    )
+
+
+def sanitize_user_input(user_input: str) -> str:
+    return (
+        unicodedata.normalize("NFKD", user_input)
+        .encode("ASCII", "ignore")
+        .decode("utf-8")
+        .strip()
+        .upper()
+    )
+
+
+def interpret_certification_response(text: str) -> str:
+    """Interpreta o texto do usuário sanitizado para mapear ações específicas"""
+    text_clean = sanitize_user_input(text)
+
+    if text_clean == "RENOVAR_CERTIFICADO":
+        return "renew"
+    if text_clean == "INFO_CERTIFICADO":
+        return "info"
+    if text_clean == "NAO_CERTIFICADO":
+        return "refuse"
+    return "unknown"
