@@ -28,7 +28,6 @@ from app.services.webhook_services import (
     build_certification_transfer,
     build_certification_message,
     build_message_payload,
-    send_message_digisac,
     build_form_agendamento,
     build_billing_certification_pdf,
     CERT_DEPT_ID,
@@ -44,7 +43,7 @@ from app.services.renewal_services import (
     add_pending,
     get_pending,
     update_pending,
-    complete_pending,
+    complete_pending
 )
 
 webhook_bp = Blueprint("webhook", __name__)
@@ -100,7 +99,7 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
         "contactName",
         "contactNumber",
         "daysToExpire",
-        "dealType",
+        "dealType"
     ]
     missing = [p for p in required if not params.get(p)]
     if missing:
@@ -198,7 +197,7 @@ def resposta_certificado_digisac():
                 fields={"stageId": "DT137_36:UC_90X241"},
             )
 
-            send_proposal_file(contact_number, company_name)
+            send_proposal_file(contact_number, company_name, pending["spa_id"])
 
             return (
                 jsonify(
@@ -218,7 +217,7 @@ def resposta_certificado_digisac():
     elif response_type == "info":
         try:
             logger.info("Cliente solicitou mais informações, enviando proposta")
-            send_proposal_file(contact_number, company_name)
+            send_proposal_file(contact_number, company_name, pending["spa_id"])
 
             return (
                 jsonify(
@@ -253,34 +252,6 @@ def resposta_certificado_digisac():
         except Exception as e:
             logger.exception("Erro ao recusar certificado: %s", str(e))
             return jsonify({"error": str(e)}), 500
-
-    else:
-        logger.info("Comando não reconhecido, solicitando nova resposta")
-        text = (
-            "*Bot*\n"
-            "Desculpe, não entendi sua resposta.\n"
-            "Por favor, digite uma das opções válidas:\n\n"
-            "*RENOVAR_CERTIFICADO* — Para renovar o certificado\n"
-            "*INFO_CERTIFICADO* — Para mais informações\n"
-            "*NAO_CERTIFICADO* — Se não deseja renovar"
-        )
-        message_payload = build_message_payload(
-            contact_id=contact_id,
-            department_id=CERT_DEPT_ID,
-            text=text,
-            user_id=DIGISAC_USER_ID,
-        )
-        send_message_digisac(message_payload)
-
-        return (
-            jsonify(
-                {
-                    "status": "unknown_option",
-                    "message": "Resposta inválida, instruções reenviadas.",
-                }
-            ),
-            200,
-        )
 
 
 @webhook_bp.route("/cobranca-gerada", methods=["POST"])

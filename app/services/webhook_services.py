@@ -277,6 +277,23 @@ def update_crm_item(entity_type_id: int, spa_id: int, fields: Optional[dict]) ->
         return {"error": str(e)}
 
 
+def get_crm_item(entity_type_id: int, spa_id: int) -> dict:
+    url = "https://logic.bitrix24.com.br/rest/260/af4o31dew3vzuphs/crm.item.get"
+    query = {
+        "entityTypeId": entity_type_id,
+        "id": spa_id,
+        "useOriginalUfNames": "Y",
+    }
+
+    try:
+        response = requests.get(url, params=query, timeout=60)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro ao atualizar card SPA: {str(e)}")
+        return {"error": str(e)}
+
+
 def update_deal_item(entity_type_id: int, deal_id: int, fields: Optional[dict]) -> dict:
     url = "https://logic.bitrix24.com.br/rest/260/af4o31dew3vzuphs/crm.deal.update"
     payload = {
@@ -466,9 +483,9 @@ def build_pdf_payload(
     pdf_base64 = base64.b64encode(pdf_content).decode("utf-8")
     user_id = DIGISAC_USER_ID
     return {
+        "text": text,
         "contactId": contact_id,
         "userId": user_id,
-        "text": text,
         "file": {"base64": pdf_base64, "mimetype": "application/pdf", "name": filename},
     }
 
@@ -476,6 +493,8 @@ def build_pdf_payload(
 # --- Builders específicos para Certificação Digital ---
 CERT_DEPT_ID = "154521dc-71c0-4117-a697-bd978cd442aa"
 CERT_TRANSFER_COMMENTS = "Chamado aberto via automação para renovação de certificado."
+NO_BOT_DEPT_ID = "d9fe4658-1ad6-43ba-a00e-cf0b998852c2"
+NO_BOT_TRANSFER_COMMENTS = "Transferência para o grupo sem bot via automação."
 
 
 def build_certification_transfer(contact_number: str) -> dict:
@@ -485,6 +504,17 @@ def build_certification_transfer(contact_number: str) -> dict:
         contact_id=contact_id,
         department_id=CERT_DEPT_ID,
         comments=CERT_TRANSFER_COMMENTS,
+    )
+    return transfer_ticket_digisac(payload, contact_id)
+
+
+def build_transfer_to_group_without_bot(contact_number: str) -> dict:
+    """Gera payload para transferência de ticket para grupo sem bot no Digisac"""
+    contact_id = _get_contact_id_by_number(contact_number)
+    payload = build_transfer_payload(
+        contact_id=contact_id,
+        department_id=NO_BOT_DEPT_ID,
+        comments=NO_BOT_TRANSFER_COMMENTS
     )
     return transfer_ticket_digisac(payload, contact_id)
 
@@ -527,16 +557,15 @@ def build_certification_message(
 
 
 def build_proposal_certification_pdf(
-    contact_number: str, company_name: str, pdf_content: bytes, filename: str
+    contact_number: str, pdf_content: bytes, filename: str
 ) -> dict:
     """Gera payload para envio de proposta comercial (PDF) da Certificação Digital"""
     contact_id = _get_contact_id_by_number(contact_number)
-    text = f"Segue proposta comercial referente à renovação do certificado digital da empresa {company_name}"
     payload = build_pdf_payload(
         contact_id=contact_id,
         pdf_content=pdf_content,
         filename=filename,
-        text=text,
+        text="Proposta"
     )
     return payload
 
@@ -544,40 +573,56 @@ def build_proposal_certification_pdf(
 def send_proposal_file(
     contact_number: str,
     company_name: str,
+    spa_id: int,
     filename: str = "Proposta_certificado_digital_-_Logic_Assessoria_Empresarial.pdf",
 ) -> dict:
-    """Envia proposta de renovação para o cliente via Digisac (mensagem + PDF)"""
-    path = os.path.join("app", "assets", "docs", filename)
+    """Envia proposta de renovação via Digisac, buscando o PDF salvo como documento no CRM."""
+
+    # Busca o card no CRM
+    crm = get_crm_item(entity_type_id=137, spa_id=spa_id)
+    doc_info = crm.get("result", {}).get("item", {}).get("UF_CRM_18_1752245366")
+
+    if not doc_info or not isinstance(doc_info, dict) or "urlMachine" not in doc_info:
+        return {
+            "error": "Arquivo da proposta não encontrado no campo UF_CRM_18_1752245366"
+        }
+
+    # Baixa o PDF via urlMachine (com token de autenticação)
     try:
-        with open(path, "rb") as file:
-            pdf_content = file.read()
-    except FileNotFoundError:
-        return {"error": f"Arquivo de proposta não encontrado em {path}"}
-
+        response = requests.get(doc_info["urlMachine"], timeout=60)
+        response.raise_for_status()
+        pdf_bytes = response.content
+    except Exception as e:
+        logger.exception("Erro ao baixar PDF do Bitrix")
+        return {"error": f"Erro ao baixar PDF: {e}"}
+    # Envia mensagem de texto no Digisac
     contact_id = _get_contact_id_by_number(contact_number)
-
-    # Envia mensagem de acompanhamento
-    message_text = (
-        f"*Bot*\n"
-        f"Olá! Segue abaixo a proposta comercial para renovação do certificado digital da empresa *{company_name}*.\n"
-        f"Qualquer dúvida, estamos à disposição."
+    text = (
+        "*Bot*\n"
+        "Olá! Segue abaixo a proposta comercial para renovação do "
+        f"certificado digital da empresa *{company_name}*.\n"
+        "Qualquer dúvida, estamos à disposição."
     )
+    build_transfer_to_group_without_bot(contact_number)
     message_payload = build_message_payload(
         contact_id=contact_id,
         department_id=CERT_DEPT_ID,
-        text=message_text,
-        user_id=DIGISAC_USER_ID,
+        text=text,
+        user_id=DIGISAC_USER_ID
     )
     send_message_digisac(message_payload)
 
-    # Envia o PDF da proposta
+    # Gera payload e envia o PDF via Digisac
     payload = build_proposal_certification_pdf(
         contact_number=contact_number,
-        company_name=company_name,
-        pdf_content=pdf_content,
+        pdf_content=pdf_bytes,
         filename=filename,
     )
-    return send_pdf_digisac(payload)
+
+    pdf_response = send_pdf_digisac(payload)
+    build_transfer_to_group_without_bot(contact_number)
+    close_ticket_digisac(contact_id)
+    return pdf_response
 
 
 def build_billing_certification_pdf(
@@ -585,15 +630,30 @@ def build_billing_certification_pdf(
 ) -> dict:
     """Gera payload para envio de PDF (boleto) da Certificação Digital"""
     contact_id = _get_contact_id_by_number(contact_number)
-    text = f"Segue boleto para pagamento referente à emissão de certificado digital da empresa {company_name}"
+    text = (
+        "*Bot*\n"
+        "Segue boleto para pagamento referente à emissão "
+        f"de certificado digital da empresa {company_name}"
+    )
+    message_payload = build_message_payload(
+        contact_id=contact_id,
+        department_id=CERT_DEPT_ID,
+        text=text,
+        user_id=DIGISAC_USER_ID
+    )
+    build_transfer_to_group_without_bot(contact_number)
+    send_message_digisac(message_payload)
     payload = build_pdf_payload(
         contact_id=contact_id,
         pdf_content=pdf_content,
         filename=filename,
-        text=text,
+        text="Cobrança"
     )
 
-    return send_pdf_digisac(payload)
+    pdf_response = send_pdf_digisac(payload)
+    build_transfer_to_group_without_bot(contact_number)
+    close_ticket_digisac(contact_id)
+    return pdf_response
 
 
 def build_form_agendamento(
@@ -601,6 +661,7 @@ def build_form_agendamento(
 ) -> dict:
     """Gera payload para envio do formulário de agendamento para Certificação Digital"""
     contact_id = _get_contact_id_by_number(contact_number)
+    build_transfer_to_group_without_bot(contact_number)
     text = (
         "*Bot*\n"
         "Segue abaixo link para agendamento de videoconferência "
@@ -615,7 +676,10 @@ def build_form_agendamento(
         user_id=DIGISAC_USER_ID,
     )
 
-    return send_message_digisac(payload)
+    message_response = send_message_digisac(payload)
+    build_transfer_to_group_without_bot(contact_number)
+    close_ticket_digisac(contact_id)
+    return message_response
 
 
 # --- Funções de envio/refatoradas ---
@@ -661,6 +725,19 @@ def send_pdf_digisac(payload: dict) -> dict:
         return _parse_response(response)
     except requests.RequestException as e:
         logger.error("[PDF] Erro: %s", e)
+        return {"error": str(e)}
+
+
+@retry_with_backoff(retries=3, backoff_in_seconds=2)
+def close_ticket_digisac(contact_id: str) -> dict:
+    """Encerra o ticket do contato no Digisac"""
+    url = f"{DIGISAC_BASE_API}/contacts/{contact_id}/ticket/close"
+    try:
+        response = requests.post(url, headers=get_auth_headers(), timeout=60)
+        response.raise_for_status()
+        return _parse_response(response)
+    except requests.RequestException as e:
+        logger.error("[CLOSE] Erro ao encerrar o ticket: %s", e)
         return {"error": str(e)}
 
 
