@@ -7,6 +7,7 @@ Módulo para gerenciamento de webhooks e processamento de dados de CNPJ para int
 import os
 import hmac
 import re
+import time
 import json
 import base64
 import logging
@@ -16,6 +17,7 @@ from typing import Optional, Dict
 import requests
 import unicodedata
 from flask import request, jsonify
+from app.services.renewal_services import check_pending_status
 from app.config import Config
 from app.utils import retry_with_backoff, standardize_phone_number
 
@@ -292,6 +294,21 @@ def get_crm_item(entity_type_id: int, spa_id: int) -> dict:
     except requests.exceptions.RequestException as e:
         logger.error(f"Erro ao atualizar card SPA: {str(e)}")
         return {"error": str(e)}
+    
+
+def get_deal_item(deal_id: int) -> dict:
+    url = "https://logic.bitrix24.com.br/rest/260/af4o31dew3vzuphs/crm.deal.get"
+    query = {
+        "id": deal_id
+    }
+
+    try:
+        response = requests.get(url, params=query, timeout=60)
+        response.raise_for_status()
+        return response.json()
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro ao atualizar card SPA: {str(e)}")
+        return {"error": str(e)}
 
 
 def update_deal_item(entity_type_id: int, deal_id: int, fields: Optional[dict]) -> dict:
@@ -450,6 +467,25 @@ def _get_contact_id_by_number(contact_number: str) -> str | None:
         return None
 
 
+def start_bitrix_workflow(
+    template_id: int, document_id: list, parameters: dict = None
+) -> dict:
+    """
+    Inicia um business process no Bitrix24 via REST.
+    """
+    url = (
+        "https://logic.bitrix24.com.br/rest/260/af4o31dew3vzuphs/bizproc.workflow.start"
+    )
+    payload = {
+        "TEMPLATE_ID": template_id,
+        "DOCUMENT_ID": document_id,
+        "PARAMETERS": parameters or {},
+    }
+    response = requests.post(url, json=payload, timeout=60)
+    response.raise_for_status()
+    return response.json()
+
+
 # --- Builders genéricos ---
 def build_transfer_payload(
     contact_id: str, department_id: str, comments: str, user_id: str = DIGISAC_USER_ID
@@ -497,9 +533,17 @@ NO_BOT_DEPT_ID = "d9fe4658-1ad6-43ba-a00e-cf0b998852c2"
 NO_BOT_TRANSFER_COMMENTS = "Transferência para o grupo sem bot via automação."
 
 
-def build_certification_transfer(contact_number: str) -> dict:
+def build_transfer_to_certification(contact_number: str) -> dict:
     """Gera payload para transferência de ticket ao departamento de Certificação Digital"""
+    from app.services.renewal_services import has_active_ticket
+    
     contact_id = _get_contact_id_by_number(contact_number)
+    
+    # Verificar se já existe ticket ativo
+    if has_active_ticket(contact_id):
+        logger.info(f"Ticket já ativo para contato {contact_id}")
+        return {"status": "ticket_exists"}
+    
     payload = build_transfer_payload(
         contact_id=contact_id,
         department_id=CERT_DEPT_ID,
@@ -507,14 +551,13 @@ def build_certification_transfer(contact_number: str) -> dict:
     )
     return transfer_ticket_digisac(payload, contact_id)
 
-
 def build_transfer_to_group_without_bot(contact_number: str) -> dict:
     """Gera payload para transferência de ticket para grupo sem bot no Digisac"""
     contact_id = _get_contact_id_by_number(contact_number)
     payload = build_transfer_payload(
         contact_id=contact_id,
         department_id=NO_BOT_DEPT_ID,
-        comments=NO_BOT_TRANSFER_COMMENTS
+        comments=NO_BOT_TRANSFER_COMMENTS,
     )
     return transfer_ticket_digisac(payload, contact_id)
 
@@ -565,7 +608,7 @@ def build_proposal_certification_pdf(
         contact_id=contact_id,
         pdf_content=pdf_content,
         filename=filename,
-        text="Proposta"
+        text="Proposta",
     )
     return payload
 
@@ -577,17 +620,63 @@ def send_proposal_file(
     filename: str = "Proposta_certificado_digital_-_Logic_Assessoria_Empresarial.pdf",
 ) -> dict:
     """Envia proposta de renovação via Digisac, buscando o PDF salvo como documento no CRM."""
+    # Verificar se proposta já foi enviada para este SPA
+    if check_pending_status(spa_id, "info_sent") or check_pending_status(spa_id, "sale_created") or check_pending_status(spa_id, "billing_generated"):
+        logger.info(f"Proposta já enviada para SPA {spa_id}")
+        return {"status": "already_sent"}    # Monta o DOCUMENT_ID para o smart process dinâmico
+    doc_id = [
+        "crm",
+        "Bitrix\\Crm\\Integration\\BizProc\\Document\\Dynamic",
+        f"DYNAMIC_137_{spa_id}",
+    ]
 
-    # Busca o card no CRM
-    crm = get_crm_item(entity_type_id=137, spa_id=spa_id)
-    doc_info = crm.get("result", {}).get("item", {}).get("UF_CRM_18_1752245366")
+    # 1. Mensagem inicial informando geração da proposta
+    contact_id = _get_contact_id_by_number(contact_number)
+    init_text = "*Bot*\n" "Sua proposta está sendo gerada e será enviada em instantes."
+    init_payload = build_message_payload(
+        contact_id=contact_id,
+        department_id=CERT_DEPT_ID,
+        text=init_text,
+        user_id=DIGISAC_USER_ID,
+    )
+    send_message_digisac(init_payload)
 
-    if not doc_info or not isinstance(doc_info, dict) or "urlMachine" not in doc_info:
-        return {
-            "error": "Arquivo da proposta não encontrado no campo UF_CRM_18_1752245366"
-        }
+    # 2. Inicia workflow para gerar documentação atualizada
+    logger.info("Iniciando workflow Bitrix para geração de proposta.")
+    start_bitrix_workflow(template_id=556, document_id=doc_id)
+    time.sleep(45)
 
-    # Baixa o PDF via urlMachine (com token de autenticação)
+    # 3. Busca o card no CRM e obtém URL do PDF, aguardando até estar disponível
+    max_retries = 6
+    retries = 0
+    while True:
+        crm = get_crm_item(entity_type_id=137, spa_id=spa_id)
+        doc_info = crm.get("result", {}).get("item", {}).get("UF_CRM_18_1752245366")
+        if doc_info and isinstance(doc_info, dict) and "urlMachine" in doc_info:
+            break
+        retries += 1
+        if retries >= max_retries:
+            error_text = (
+                "*Bot*\n"
+                "Não foi possível gerar a proposta no momento. Por favor, tente novamente mais tarde."
+            )
+            error_payload = build_message_payload(
+                contact_id=contact_id,
+                department_id=CERT_DEPT_ID,
+                text=error_text,
+                user_id=DIGISAC_USER_ID,
+            )
+            send_message_digisac(error_payload)
+            logger.error(
+                f"Limite de tentativas ({max_retries}) excedido ao buscar proposta."
+            )
+            return {"error": "Limite de tentativas excedido ao buscar proposta."}
+        logger.warning(
+            f"Proposta não disponível ainda (tentativa {retries}), aguardando 30s para nova verificação."
+        )
+        time.sleep(30)
+
+    # 4. Baixa o PDF via urlMachine
     try:
         response = requests.get(doc_info["urlMachine"], timeout=60)
         response.raise_for_status()
@@ -595,64 +684,103 @@ def send_proposal_file(
     except Exception as e:
         logger.exception("Erro ao baixar PDF do Bitrix")
         return {"error": f"Erro ao baixar PDF: {e}"}
-    # Envia mensagem de texto no Digisac
-    contact_id = _get_contact_id_by_number(contact_number)
-    text = (
-        "*Bot*\n"
-        "Olá! Segue abaixo a proposta comercial para renovação do "
-        f"certificado digital da empresa *{company_name}*.\n"
-        "Qualquer dúvida, estamos à disposição."
-    )
-    build_transfer_to_group_without_bot(contact_number)
-    message_payload = build_message_payload(
-        contact_id=contact_id,
-        department_id=CERT_DEPT_ID,
-        text=text,
-        user_id=DIGISAC_USER_ID
-    )
-    send_message_digisac(message_payload)
 
-    # Gera payload e envia o PDF via Digisac
-    payload = build_proposal_certification_pdf(
+    # 5. Envia o PDF via Digisac
+    pdf_payload = build_proposal_certification_pdf(
         contact_number=contact_number,
         pdf_content=pdf_bytes,
         filename=filename,
     )
+    pdf_response = send_pdf_digisac(pdf_payload)
 
-    pdf_response = send_pdf_digisac(payload)
-    build_transfer_to_group_without_bot(contact_number)
-    close_ticket_digisac(contact_id)
+    # 6. Mensagem final de entrega da proposta
+    final_text = (
+        "*Bot*\n"
+        "Olá! Segue a proposta comercial para renovação do "
+        f"certificado digital da empresa *{company_name}*.\n"
+        "Qualquer dúvida, estamos à disposição."
+    )
+    final_payload = build_message_payload(
+        contact_id=contact_id,
+        department_id=CERT_DEPT_ID,
+        text=final_text,
+        user_id=DIGISAC_USER_ID,
+    )
+    send_message_digisac(final_payload)
+
     return pdf_response
 
 
 def build_billing_certification_pdf(
-    contact_number: str, company_name: str, pdf_content: bytes, filename: str
+    contact_number: str, company_name: str, deal_id: int, filename: str
 ) -> dict:
-    """Gera payload para envio de PDF (boleto) da Certificação Digital"""
+    """
+    Gera payload para envio de PDF (boleto) da Certificação Digital,
+    aguardando o link no CRM e registrando no timeline em caso de erro.
+    """
+    # Verifica se o campo de URL está disponível no CRM
+    max_retries = 6
+    retries = 0
+    doc_url = None
+    while True:
+        deal = get_deal_item(deal_id=deal_id)
+        doc_info = deal.get("result", {}).get("item", {}).get("UF_CRM_1751478607")
+        if doc_info and isinstance(doc_info, dict) and "urlMachine" in doc_info:
+            doc_url = doc_info["urlMachine"]
+            break
+        retries += 1
+        if retries >= max_retries:
+            # Registra comentário no timeline do CRM em vez de enviar mensagem no Digisac
+            comment_fields = {
+                "ENTITY_TYPE": "DYNAMIC_137",  # tipo do smart process
+                "ENTITY_ID": deal_id,
+                "COMMENT": (
+                    "Não foi possível gerar a cobrança no momento após várias tentativas. "
+                    "Por favor, verifique o sistema e tente novamente mais tarde."
+                ),
+            }
+            add_comment_crm_timeline(fields=comment_fields)
+            logger.error(
+                f"Limite de tentativas ({max_retries}) excedido ao buscar cobrança."
+            )
+            return {"error": "Limite de tentativas excedido ao buscar cobrança."}
+        logger.warning(
+            f"Cobrança não disponível ainda (tentativa {retries}), aguardando 30s."
+        )
+        time.sleep(30)
+
+    # Baixa o PDF do boleto via URL do CRM
+    try:
+        response = requests.get(doc_url, timeout=60)
+        response.raise_for_status()
+        pdf_bytes = response.content
+    except Exception as e:
+        logger.exception("Erro ao baixar PDF do Bitrix")
+        return {"error": f"Erro ao baixar PDF: {e}"}
+
+    # 3. Envia mensagem de texto inicial com o boleto
     contact_id = _get_contact_id_by_number(contact_number)
     text = (
         "*Bot*\n"
         "Segue boleto para pagamento referente à emissão "
-        f"de certificado digital da empresa {company_name}"
+        f"de certificado digital da empresa *{company_name}*."
     )
     message_payload = build_message_payload(
         contact_id=contact_id,
         department_id=CERT_DEPT_ID,
         text=text,
-        user_id=DIGISAC_USER_ID
+        user_id=DIGISAC_USER_ID,
     )
-    build_transfer_to_group_without_bot(contact_number)
     send_message_digisac(message_payload)
+
+    # 4. Gera payload e envia o PDF via Digisac
     payload = build_pdf_payload(
         contact_id=contact_id,
-        pdf_content=pdf_content,
+        pdf_content=pdf_bytes,
         filename=filename,
-        text="Cobrança"
+        text="Cobrança",
     )
-
     pdf_response = send_pdf_digisac(payload)
-    build_transfer_to_group_without_bot(contact_number)
-    close_ticket_digisac(contact_id)
     return pdf_response
 
 
@@ -661,7 +789,6 @@ def build_form_agendamento(
 ) -> dict:
     """Gera payload para envio do formulário de agendamento para Certificação Digital"""
     contact_id = _get_contact_id_by_number(contact_number)
-    build_transfer_to_group_without_bot(contact_number)
     text = (
         "*Bot*\n"
         "Segue abaixo link para agendamento de videoconferência "
@@ -675,10 +802,7 @@ def build_form_agendamento(
         text=text,
         user_id=DIGISAC_USER_ID,
     )
-
     message_response = send_message_digisac(payload)
-    build_transfer_to_group_without_bot(contact_number)
-    close_ticket_digisac(contact_id)
     return message_response
 
 
@@ -777,10 +901,10 @@ def _build_certification_message_text(
     return (
         "*Bot*\n"
         f"Olá {contact_name}, o certificado da empresa *{company_name}* {validade_msg}\n\n"
-        "Digite *exatamente* uma das palavras abaixo (sem acento e em MAIÚSCULAS):\n\n"
-        "✅ Digite: *RENOVAR_CERTIFICADO* → Iniciar renovação e receber proposta para renovação\n"
-        "ℹ️ Digite: *INFO_CERTIFICADO* → Obter mais informações sobre o certificado digital\n"
-        "❌ Digite: *NAO_CERTIFICADO* → Não deseja renovar o certificado no momento"
+        "Digite *exatamente* uma das palavras abaixo:\n\n"
+        "✅ Digite: *RENOVAR* → Iniciar renovação e receber proposta para renovação\n"
+        "ℹ️ Digite: *INFO* → Obter mais informações sobre o certificado digital\n"
+        "❌ Digite: *RECUSAR* → Não deseja renovar o certificado no momento"
     )
 
 
@@ -798,10 +922,10 @@ def interpret_certification_response(text: str) -> str:
     """Interpreta o texto do usuário sanitizado para mapear ações específicas"""
     text_clean = sanitize_user_input(text)
 
-    if text_clean == "RENOVAR_CERTIFICADO":
+    if text_clean == "RENOVAR":
         return "renew"
-    if text_clean == "INFO_CERTIFICADO":
+    if text_clean == "INFO":
         return "info"
-    if text_clean == "NAO_CERTIFICADO":
+    if text_clean == "RECUSAR":
         return "refuse"
     return "unknown"

@@ -29,6 +29,7 @@ def init_db():
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 spa_id INTEGER NOT NULL,
                 digisac_contact_id TEXT,
+                digisac_ticket_id TEXT,
                 company_name TEXT NOT NULL,
                 contact_number TEXT NOT NULL,
                 deal_type TEXT NOT NULL,
@@ -37,6 +38,7 @@ def init_db():
                 status TEXT DEFAULT 'pending' CHECK(
                     status IN (
                         'pending',
+                        'info_sent',
                         'customer_retention',
                         'sale_created',
                         'billing_generated',
@@ -47,6 +49,24 @@ def init_db():
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 retry_count INTEGER NOT NULL DEFAULT 0
             );            
+            """
+        )
+        conn.commit()
+
+        conn.execute(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_spa_id_unique 
+            ON certif_pending_renewals (spa_id);
+            """
+        )
+        conn.commit()
+
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS processed_messages (
+                message_id TEXT PRIMARY KEY,
+                processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
             """
         )
         conn.commit()

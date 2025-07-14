@@ -25,13 +25,10 @@ from app.services.webhook_services import (
 from app.services.webhook_services import (
     interpret_certification_response,
     send_proposal_file,
-    build_certification_transfer,
+    build_transfer_to_certification,
     build_certification_message,
-    build_message_payload,
     build_form_agendamento,
     build_billing_certification_pdf,
-    CERT_DEPT_ID,
-    DIGISAC_USER_ID,
 )
 
 from app.services.conta_azul.conta_azul_services import (
@@ -43,7 +40,10 @@ from app.services.renewal_services import (
     add_pending,
     get_pending,
     update_pending,
-    complete_pending
+    check_pending_status,
+    is_message_processed,
+    mark_message_processed,
+    complete_pending,
 )
 
 webhook_bp = Blueprint("webhook", __name__)
@@ -99,7 +99,7 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
         "contactName",
         "contactNumber",
         "daysToExpire",
-        "dealType"
+        "dealType",
     ]
     missing = [p for p in required if not params.get(p)]
     if missing:
@@ -117,14 +117,42 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
     days_to_expire = int(params["daysToExpire"])
     deal_type = params["dealType"]
 
+    # Verificar se já existe pendência para este spa_id
+    existing = get_pending(spa_id=spa_id)
+    if existing and existing.get("digisac_ticket_id"):
+        logger.info(f"Ticket já existe para SPA {spa_id}")
+        return (
+            jsonify(
+                {
+                    "status": "exists",
+                    "message": "Ticket já existe para este negócio",
+                    "ticket_id": existing["digisac_ticket_id"],
+                }
+            ),
+            200,
+        )
+
     # Fluxo Certificação Digital
-    build_certification_transfer(contact_number)
-    time.sleep(1)
-    result = build_certification_message(
-        contact_number, contact_name, company_name, days_to_expire
-    )
-    # Obter contactId do Digisac
-    contact_id = _get_contact_id_by_number(contact_number)
+    transfer_result = build_transfer_to_certification(contact_number)
+
+    # Se já existe ticket ativo, usa o existente
+    if transfer_result.get("status") == "ticket_exists":
+        existing = get_pending(contact_number=contact_number)
+        if existing:
+            ticket_id = existing["digisac_ticket_id"]
+            contact_id = existing["digisac_contact_id"]
+        else:
+            return (
+                jsonify({"error": "Ticket existe mas não encontrado no sistema"}),
+                500,
+            )
+    else:
+        time.sleep(1)
+        result = build_certification_message(
+            contact_number, contact_name, company_name, days_to_expire
+        )
+        ticket_id = result["ticketId"]
+        contact_id = _get_contact_id_by_number(contact_number)
 
     # Adicionar pendência com contactId
     std_number = add_pending(
@@ -132,14 +160,18 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
         contact_number=contact_number,
         deal_type=deal_type,
         spa_id=spa_id,
-        digisac_contact_id=contact_id,  # Novo argumento
+        digisac_contact_id=contact_id,
+        digisac_ticket_id=ticket_id,
     )
 
     add_comment_crm_timeline(
         fields={
             "ENTITY_ID": spa_id,
             "ENTITY_TYPE": "DYNAMIC_137",
-            "COMMENT": f"Enviado notificação para renovação via digisac em {datetime.now().strftime("%Y-%m-%d %H:%M")}",
+            "COMMENT": (
+                "Enviado notificação para renovação via digisac "
+                f"em {datetime.now().strftime("%Y-%m-%d %H:%M")}"
+            ),
         },
     )
 
@@ -163,28 +195,51 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
 @webhook_bp.route("/digisac", methods=["POST"])
 def resposta_certificado_digisac():
     logger.info("/digisac recebido")
-    logger.debug(f"Headers: {dict(request.headers)}")
-    logger.debug(f"Args: {request.args.to_dict()}")
-    logger.debug(f"Form: {request.form.to_dict()}")
-    logger.debug(f"JSON: {request.get_json(silent=True)}")
-
     request_json = request.get_json(silent=True)
+
+    # 1. Captura do ID único da mensagem
+    msg = request_json.get("data", {}).get("message", {})
+    message_id = msg.get("id") or msg.get("messageId")
+    if message_id:
+        # 2. Verifica duplicidade
+        if is_message_processed(message_id):
+            logger.info(f"Mensagem {message_id} já processada, ignorando.")
+            return (
+                jsonify({"status": "duplicate", "message": "Webhook já processado"}),
+                200,
+            )
+        # 3. Marca para não processar de novo
+        mark_message_processed(message_id)
+
+    # 4. Continua com o fluxo original
     contact_id = request_json["data"]["contactId"]
-    user_message = request_json["data"]["message"]["text"]
+    user_message = msg.get("text", "")
 
     pending = get_pending(contact_id=contact_id)
     if not pending:
         return jsonify({"error": "Nenhuma solicitação pendente"}), 404
 
-    contact_number = pending["contact_number"]
-    company_name = pending["company_name"]
     response_type = interpret_certification_response(user_message)
 
     if response_type == "renew":
+        if check_pending_status(pending["spa_id"], "sale_created"):
+            logger.info(f"Renovação já processada para SPA {pending['spa_id']}")
+            return (
+                jsonify(
+                    {
+                        "status": "already_processed",
+                        "message": "Renovação já foi processada",
+                    }
+                ),
+                200,
+            )
         try:
+            send_proposal_file(
+                pending["contact_number"], pending["company_name"], pending["spa_id"]
+            )
             logger.info("Renovação solicitada, criando venda")
             result = handle_sale_creation_certif_digital(
-                contact_number, pending["deal_type"]
+                pending["contact_number"], pending["deal_type"]
             )
             sale = result["sale"]
             sale_id = sale.get("id") or sale.get("venda", {}).get("id")
@@ -196,8 +251,6 @@ def resposta_certificado_digisac():
                 spa_id=pending["spa_id"],
                 fields={"stageId": "DT137_36:UC_90X241"},
             )
-
-            send_proposal_file(contact_number, company_name, pending["spa_id"])
 
             return (
                 jsonify(
@@ -215,9 +268,23 @@ def resposta_certificado_digisac():
             return jsonify({"error": str(e)}), 500
 
     elif response_type == "info":
+        if check_pending_status(pending["spa_id"], "info_sent"):
+            logger.info(f"Informações já enviadas para SPA {pending['spa_id']}")
+            return (
+                jsonify(
+                    {
+                        "status": "already_sent",
+                        "message": "Informações já foram enviadas",
+                    }
+                ),
+                200,
+            )
         try:
             logger.info("Cliente solicitou mais informações, enviando proposta")
-            send_proposal_file(contact_number, company_name, pending["spa_id"])
+            send_proposal_file(
+                pending["contact_number"], pending["company_name"], pending["spa_id"]
+            )
+            update_pending(pending["spa_id"], "info_sent")
 
             return (
                 jsonify(
@@ -310,32 +377,25 @@ def cobranca_gerada():
 def envio_cobranca():
     logger.info("/envio-cobranca recebido — enviando boleto via Digisac")
     logger.debug(f"Headers: {dict(request.headers)}")
-    logger.debug(f"Args: {request.args.to_dict()}")
-    logger.debug(f"Form: {request.form.to_dict()}")
     logger.debug(f"JSON: {request.get_json(silent=True)}")
 
-    contact_number = request.args.get("contactNumber") or request.json.get(
-        "contactNumber"
-    )
-    deal_id = request.args.get("dealId") or request.json.get("dealId")
-    pdf_url = request.args.get("pdfUrl") or request.json.get("pdfUrl")
+    params = request.args or request.get_json(silent=True) or {}
+    spa_id = params.get("spaId")
+    deal_id = params.get("dealId")
 
-    if not contact_number or not pdf_url or pdf_url == "":
-        return jsonify({"error": "Parâmetros obrigatórios ausentes"}), 400
+    if not deal_id:
+        return jsonify({"error": "spaId ausente"}), 400
 
-    pending = get_pending(contact_number)
+    pending = get_pending(spa_id=spa_id)
     if not pending:
         return jsonify({"error": "Nenhuma solicitação pendente"}), 404
 
     try:
-        company_name = pending.get("company_name")
-        pdf_resp = requests.get(pdf_url, timeout=60)
-        pdf_resp.raise_for_status()
-        pdf_content = pdf_resp.content
-        filename = f"Cobrança_certificado_digital_-_{company_name}.pdf"
-
         build_billing_certification_pdf(
-            contact_number, company_name, pdf_content, filename
+            contact_number=pending["contact_number"],
+            company_name=pending["company_name"],
+            deal_id=deal_id,
+            filename=f"Cobrança_certificado_digital_-_{pending['company_name']}.pdf",
         )
 
         update_pending(spa_id=pending["spa_id"], status="billing_pdf_sent")
@@ -353,7 +413,6 @@ def envio_cobranca():
                 {
                     "status": "billing_sent",
                     "message": "Boleto enviado com sucesso via Digisac",
-                    "url": pdf_url,
                 }
             ),
             200,

@@ -461,7 +461,7 @@ def handle_sale_creation_certif_digital(contact_number: str, deal_type: str) -> 
     params = build_sale_certif_digital_params(deal_type)
 
     # apenas cria venda na primeira vez
-    if last_status in (None, "", "pending"):
+    if last_status in (None, "", "pending", "info_sent"):
         payload = build_sale_payload(
             client_id=client_uuid,
             service_id=params["id_service"],
