@@ -3,18 +3,17 @@ import os
 import sqlite3
 from contextlib import contextmanager
 
-# Caminho absoluto para o diretório do banco de dados
 DB_DIR = os.path.join(os.getcwd(), "app", "database")
 DB_PATH = os.path.join(DB_DIR, "integrations.db")
 
 
 @contextmanager
 def get_db_connection():
-    # Garante que o diretório existe
     os.makedirs(DB_DIR, exist_ok=True)
-
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    # habilita enforcement de FKs
+    conn.execute("PRAGMA foreign_keys = ON;")
     try:
         yield conn
     finally:
@@ -22,51 +21,82 @@ def get_db_connection():
 
 
 def init_db():
+    """
+    Inicializa o esquema de banco de dados para:
+      - certif_pending_renewals: armazena estágios do negócio
+      - message_events: rastreia mensagens e ações realizadas
+
+    A deduplicação de webhooks se dá pelo _unique_ message_id em message_events.
+    """
     with get_db_connection() as conn:
+        # 1) pendências de certificados (fluxo de negócios)
         conn.execute(
             """
-            CREATE TABLE IF NOT EXISTS certif_pending_renewals (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                spa_id INTEGER NOT NULL,
-                digisac_contact_id TEXT,
-                digisac_ticket_id TEXT,
-                company_name TEXT NOT NULL,
-                contact_number TEXT NOT NULL,
-                deal_type TEXT NOT NULL,
-                sale_id TEXT,
-                financial_event_id TEXT,
-                status TEXT DEFAULT 'pending' CHECK(
-                    status IN (
-                        'pending',
-                        'info_sent',
-                        'customer_retention',
-                        'sale_created',
-                        'billing_generated',
-                        'billing_pdf_sent',
-                        'scheduling_form_sent'
-                    )
-                ),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                retry_count INTEGER NOT NULL DEFAULT 0
-            );            
-            """
+        CREATE TABLE IF NOT EXISTS certif_pending_renewals (
+            id               INTEGER PRIMARY KEY AUTOINCREMENT,
+            spa_id           INTEGER NOT NULL UNIQUE,
+            company_name     TEXT    NOT NULL,
+            contact_number   TEXT    NOT NULL,
+            deal_type        TEXT    NOT NULL,
+            sale_id          TEXT,
+            financial_event_id TEXT,
+            status           TEXT    NOT NULL DEFAULT 'pending' CHECK (
+                status IN (
+                    'pending',
+                    'info_sent',
+                    'customer_retention',
+                    'sale_created',
+                    'billing_generated',
+                    'billing_pdf_sent',
+                    'scheduling_form_sent'
+                )
+            ),
+            created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            retry_count      INTEGER NOT NULL DEFAULT 0
+        );
+        """
         )
-        conn.commit()
 
+        # índice para lookup rápido por spa_id
         conn.execute(
             """
-            CREATE UNIQUE INDEX IF NOT EXISTS idx_spa_id_unique 
-            ON certif_pending_renewals (spa_id);
-            """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_certif_spa_id
+          ON certif_pending_renewals (spa_id);
+        """
         )
-        conn.commit()
 
+        # 2) eventos de mensagem para dedup + audit
         conn.execute(
             """
-            CREATE TABLE IF NOT EXISTS processed_messages (
-                message_id TEXT PRIMARY KEY,
-                processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-            """
+        CREATE TABLE IF NOT EXISTS message_events (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            spa_id       INTEGER NOT NULL,
+            message_id   TEXT    NOT NULL,
+            event_type   TEXT    NOT NULL,
+            payload_hash TEXT    NOT NULL,
+            created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (spa_id)
+              REFERENCES certif_pending_renewals(spa_id)
+              ON UPDATE CASCADE
+              ON DELETE CASCADE
+        );
+        """
         )
+
+        # impede duplicação de message_id
+        conn.execute(
+            """
+        CREATE UNIQUE INDEX IF NOT EXISTS ux_message_events_message_id
+         ON message_events (message_id);
+        """
+        )
+
+        # índice para acelerar consultas de histórico por spa_id
+        conn.execute(
+            """
+        CREATE INDEX IF NOT EXISTS idx_message_events_spa
+         ON message_events (spa_id);
+        """
+        )
+
         conn.commit()

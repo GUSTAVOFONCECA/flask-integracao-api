@@ -7,6 +7,7 @@ Módulo para gerenciamento de webhooks e processamento de dados de CNPJ para int
 import os
 import hmac
 import re
+import unicodedata
 import time
 import json
 import base64
@@ -15,9 +16,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 from typing import Optional, Dict
 import requests
-import unicodedata
 from flask import request, jsonify
-from app.services.renewal_services import check_pending_status
 from app.config import Config
 from app.utils import retry_with_backoff, standardize_phone_number
 
@@ -294,13 +293,11 @@ def get_crm_item(entity_type_id: int, spa_id: int) -> dict:
     except requests.exceptions.RequestException as e:
         logger.error(f"Erro ao atualizar card SPA: {str(e)}")
         return {"error": str(e)}
-    
+
 
 def get_deal_item(deal_id: int) -> dict:
     url = "https://logic.bitrix24.com.br/rest/260/af4o31dew3vzuphs/crm.deal.get"
-    query = {
-        "id": deal_id
-    }
+    query = {"id": deal_id}
 
     try:
         response = requests.get(url, params=query, timeout=60)
@@ -467,6 +464,26 @@ def _get_contact_id_by_number(contact_number: str) -> str | None:
         return None
 
 
+def _get_contact_number_by_id(contact_id: str) -> Optional[str]:
+    """Obtém o número de telefone de um contato pelo ID do Digisac"""
+    contacts_json_path = os.path.join(
+        os.getcwd(), "app", "database", "digisac", "digisac_contacts.json"
+    )
+
+    try:
+        with open(contacts_json_path, "r", encoding="utf-8") as f:
+            contacts = json.load(f)
+
+        for contact in contacts:
+            if contact.get("id") == contact_id:
+                return (contact.get("data") or {}).get("number")
+
+    except Exception as e:
+        logger.error(f"Erro ao buscar contato por ID: {str(e)}")
+
+    return None
+
+
 def start_bitrix_workflow(
     template_id: int, document_id: list, parameters: dict = None
 ) -> dict:
@@ -535,21 +552,15 @@ NO_BOT_TRANSFER_COMMENTS = "Transferência para o grupo sem bot via automação.
 
 def build_transfer_to_certification(contact_number: str) -> dict:
     """Gera payload para transferência de ticket ao departamento de Certificação Digital"""
-    from app.services.renewal_services import has_active_ticket
-    
     contact_id = _get_contact_id_by_number(contact_number)
-    
-    # Verificar se já existe ticket ativo
-    if has_active_ticket(contact_id):
-        logger.info(f"Ticket já ativo para contato {contact_id}")
-        return {"status": "ticket_exists"}
-    
+
     payload = build_transfer_payload(
         contact_id=contact_id,
         department_id=CERT_DEPT_ID,
         comments=CERT_TRANSFER_COMMENTS,
     )
     return transfer_ticket_digisac(payload, contact_id)
+
 
 def build_transfer_to_group_without_bot(contact_number: str) -> dict:
     """Gera payload para transferência de ticket para grupo sem bot no Digisac"""
@@ -620,10 +631,6 @@ def send_proposal_file(
     filename: str = "Proposta_certificado_digital_-_Logic_Assessoria_Empresarial.pdf",
 ) -> dict:
     """Envia proposta de renovação via Digisac, buscando o PDF salvo como documento no CRM."""
-    # Verificar se proposta já foi enviada para este SPA
-    if check_pending_status(spa_id, "info_sent") or check_pending_status(spa_id, "sale_created") or check_pending_status(spa_id, "billing_generated"):
-        logger.info(f"Proposta já enviada para SPA {spa_id}")
-        return {"status": "already_sent"}    # Monta o DOCUMENT_ID para o smart process dinâmico
     doc_id = [
         "crm",
         "Bitrix\\Crm\\Integration\\BizProc\\Document\\Dynamic",

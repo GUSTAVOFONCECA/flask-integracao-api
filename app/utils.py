@@ -4,10 +4,11 @@ import datetime
 import os
 import re
 import time
-import functools
 import random
 import logging
 import requests
+from functools import wraps
+from flask import request, jsonify
 from selenium.webdriver.common.by import By
 
 
@@ -32,7 +33,7 @@ def retry_with_backoff(
     """
 
     def decorator(func):
-        @functools.wraps(func)
+        @wraps(func)
         def wrapper(*args, **kwargs):
             attempt = 0
             while attempt <= retries:
@@ -63,6 +64,64 @@ def retry_with_backoff(
         return wrapper
 
     return decorator
+
+
+def respond_with_200_on_exception(f):
+    """
+    Decorador para rotas de webhook que garante uma resposta HTTP 200 OK
+    mesmo em caso de exceções ou deduplicação.
+
+    Captura exceções, registra o erro, e retorna um JSON com status de erro
+    mas com HTTP 200 para evitar reenvios do webhook.
+    Também garante 200 OK para eventos duplicados/ignorados.
+    """
+
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        try:
+            # Tenta executar a função da rota
+            response, status_code = f(*args, **kwargs)
+
+            # Se a resposta já for 200 OK, apenas a retorna.
+            # Se for outro status (ex: 403 por assinatura inválida),
+            # ainda assim, vamos retornar 200 e logar a falha de autenticação.
+            if status_code != 200:
+                logger.error(
+                    f"A rota {request.path} retornou status {status_code}. Forçando 200 OK."
+                )
+                # Modifica o status para 200, mas mantém o conteúdo da resposta original.
+                # Ou, se preferir uma mensagem mais genérica para erros não-200:
+                return (
+                    jsonify(
+                        {
+                            "status": "error",
+                            "message": f"Ocorreu um erro de processamento interno ou validação, mas o webhook foi recebido. Detalhes: {response.get('error', response.get('message', ''))}",
+                        }
+                    ),
+                    200,
+                )
+
+            return response, status_code
+
+        except Exception as e:
+            logger.exception(
+                f"Erro inesperado na rota de webhook {request.path}. Forçando resposta 200 OK."
+            )
+            # Em caso de qualquer exceção, retorna 200 OK para o sistema de origem
+            return (
+                jsonify(
+                    {
+                        "status": "error",
+                        "message": "Erro interno do servidor. O webhook foi recebido, mas o processamento falhou.",
+                        "error_details": str(
+                            e
+                        ),  # Opcional: incluir detalhes para debug (cuidado em produção)
+                    }
+                ),
+                200,
+            )
+
+    return decorated_function
 
 
 def save_page_diagnosis(driver, exception, filename_prefix="element_error"):
