@@ -18,7 +18,7 @@ from typing import Optional, Dict
 import requests
 from flask import request, jsonify
 from app.config import Config
-from app.utils import retry_with_backoff, standardize_phone_number
+from app.utils.utils import retry_with_backoff, standardize_phone_number
 
 
 logger = logging.getLogger(__name__)
@@ -722,51 +722,53 @@ def build_billing_certification_pdf(
     contact_number: str, company_name: str, deal_id: int, filename: str
 ) -> dict:
     """
-    Gera payload para envio de PDF (boleto) da Certificação Digital,
-    aguardando o link no CRM e registrando no timeline em caso de erro.
+    Gera e envia o PDF de cobrança, aguardando a URL no CRM.
+    A lógica foi simplificada para esperar uma URL direta do Conta Azul.
     """
-    # Verifica se o campo de URL está disponível no CRM
     max_retries = 6
     retries = 0
     doc_url = None
-    while True:
+
+    while retries < max_retries:
         deal = get_deal_item(deal_id=deal_id)
-        doc_info = deal.get("result", {}).get("item", {}).get("UF_CRM_1751478607")
-        if doc_info and isinstance(doc_info, dict) and "urlMachine" in doc_info:
-            doc_url = doc_info["urlMachine"]
-            break
-        retries += 1
-        if retries >= max_retries:
-            # Registra comentário no timeline do CRM em vez de enviar mensagem no Digisac
-            comment_fields = {
-                "ENTITY_TYPE": "DYNAMIC_137",  # tipo do smart process
-                "ENTITY_ID": deal_id,
-                "COMMENT": (
-                    "Não foi possível gerar a cobrança no momento após várias tentativas. "
-                    "Por favor, verifique o sistema e tente novamente mais tarde."
-                ),
-            }
-            add_comment_crm_timeline(fields=comment_fields)
-            logger.error(
-                f"Limite de tentativas ({max_retries}) excedido ao buscar cobrança."
+        # Espera-se que o campo contenha a URL como uma string direta.
+        doc_info_url = deal.get("result", {}).get("UF_CRM_1751478607")
+
+        # Validação simplificada: verifica se é uma string e se é do domínio esperado.
+        if isinstance(doc_info_url, str) and doc_info_url.startswith(
+            "https://public.contaazul.com"
+        ):
+            doc_url = doc_info_url
+            logger.info(
+                f"URL de cobrança do Conta Azul encontrada para o Deal ID: {deal_id}"
             )
-            return {"error": "Limite de tentativas excedido ao buscar cobrança."}
+            break  # Sai do loop, pois a URL foi encontrada e validada.
+
+        retries += 1
         logger.warning(
-            f"Cobrança não disponível ainda (tentativa {retries}), aguardando 30s."
+            f"URL de cobrança não encontrada para o Deal ID {deal_id} (tentativa {retries}/{max_retries}). Aguardando 30s."
         )
         time.sleep(30)
 
-    # Baixa o PDF do boleto via URL do CRM
+    # Se o loop terminar sem encontrar a URL, retorna um erro.
+    if not doc_url:
+        logger.error(
+            f"Limite de tentativas excedido. URL de cobrança não encontrada para o Deal ID: {deal_id}."
+        )
+        return {"error": "Limite de tentativas excedido ao buscar URL da cobrança."}
+
+    # O restante da função para baixar o PDF e enviar via Digisac continua igual.
     try:
         response = requests.get(doc_url, timeout=60)
         response.raise_for_status()
         pdf_bytes = response.content
-    except Exception as e:
-        logger.exception("Erro ao baixar PDF do Bitrix")
-        return {"error": f"Erro ao baixar PDF: {e}"}
+    except requests.exceptions.RequestException as e:
+        logger.error(f"Erro ao baixar o PDF da cobrança da URL: {doc_url}. Erro: {e}")
+        return {"error": f"Falha ao baixar o PDF da cobrança: {e}"}
 
-    # 3. Envia mensagem de texto inicial com o boleto
     contact_id = _get_contact_id_by_number(contact_number)
+
+    # Envia mensagem de texto inicial
     text = (
         "*Bot*\n"
         "Segue boleto para pagamento referente à emissão "
@@ -780,15 +782,14 @@ def build_billing_certification_pdf(
     )
     send_message_digisac(message_payload)
 
-    # 4. Gera payload e envia o PDF via Digisac
+    # Gera payload e envia o PDF via Digisac
     payload = build_pdf_payload(
         contact_id=contact_id,
         pdf_content=pdf_bytes,
         filename=filename,
         text="Cobrança",
     )
-    pdf_response = send_pdf_digisac(payload)
-    return pdf_response
+    return send_pdf_digisac(payload)
 
 
 def build_form_agendamento(

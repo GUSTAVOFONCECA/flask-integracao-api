@@ -13,7 +13,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import TimeoutException, NoSuchElementException
 from webdriver_manager.chrome import ChromeDriverManager
 from app.config import Config
-from app.utils import save_page_diagnosis
+from app.utils.utils import save_page_diagnosis
 
 logger = logging.getLogger(__name__)
 

@@ -13,7 +13,7 @@ from app.config import Config
 from app.services.conta_azul.conta_azul_auto_auth import automate_auth
 from app.services.renewal_services import get_pending, update_pending
 from app.services.webhook_services import build_billing_certification_pdf
-from app.utils import standardize_phone_number
+from app.utils.utils import standardize_phone_number
 
 
 logger = logging.getLogger(__name__)
