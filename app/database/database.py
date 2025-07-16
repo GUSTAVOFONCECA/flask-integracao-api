@@ -53,6 +53,7 @@ def init_db():
             ),
             created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_interaction TIMESTAMP,
+            is_processing    BOOLEAN DEFAULT 0,
             retry_count      INTEGER NOT NULL DEFAULT 0
         );
         """
@@ -113,11 +114,14 @@ def init_db():
         """
         )
 
-        # Adicionar índice para buscas por número
+        # Índices para otimização
         conn.execute(
-            """
-        CREATE INDEX IF NOT EXISTS idx_pending_messages_contact
-        ON pending_messages (contact_number);
-        """
+            "CREATE INDEX IF NOT EXISTS idx_pending_messages_contact"
+            "ON pending_messages (contact_number)"
         )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_pending_messages_unprocessed"
+            "ON pending_messages (contact_number, processed) WHERE processed = 0"
+        )
+
         conn.commit()

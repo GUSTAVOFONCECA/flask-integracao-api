@@ -212,6 +212,9 @@ def mark_message_processed(
 # renewal_services.py - Adicionar novas funções
 
 
+# renewal_services.py - Adicionar novas funções
+
+
 def is_contact_processing(contact_number: str) -> bool:
     """Verifica se o contato está em processamento ativo"""
     std_number = _standardize_phone(contact_number)
@@ -236,15 +239,16 @@ def set_processing_status(contact_number: str, status: bool):
         conn.commit()
 
 
-def add_pending_message(contact_number: str, payload: dict):
-    """Adiciona uma mensagem à fila de espera"""
+def add_pending_message(contact_number: str, payload: dict) -> int:
+    """Adiciona uma mensagem à fila de espera e retorna o ID"""
     std_number = _standardize_phone(contact_number)
     with get_db_connection() as conn:
-        conn.execute(
+        cur = conn.execute(
             "INSERT INTO pending_messages (contact_number, payload) " "VALUES (?, ?)",
             (std_number, json.dumps(payload)),
         )
         conn.commit()
+        return cur.lastrowid
 
 
 def get_next_pending_message(contact_number: str) -> Optional[dict]:
