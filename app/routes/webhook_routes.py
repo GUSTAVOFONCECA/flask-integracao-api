@@ -225,7 +225,9 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
     )
 
     # Atualiza o status da pendência APÓS a ação ser bem-sucedida.
-    update_pending(spa_id, event_type)  # Atualiza para 'initial_info_sent'
+    update_pending(
+        spa_id=spa_id, status=event_type, last_interaction=datetime.now()
+    )
     logger.info(
         f"Status da pendência para SPA ID {spa_id} atualizado para '{event_type}'."
     )
@@ -286,7 +288,7 @@ def resposta_certificado_digisac():
             200,
         )
 
-    pending = get_pending(contact_number=contact_number)
+    pending = get_pending(contact_number=contact_number, context_aware=True)
     if not pending:
         logger.warning(
             f"/digisac: Nenhuma solicitação de renovação ativa para o contato {contact_number}."
@@ -338,7 +340,12 @@ def resposta_certificado_digisac():
                 )
                 sale_id = result.get("sale", {}).get("id")
 
-                update_pending(spa_id, status="sale_created", sale_id=sale_id)
+                update_pending(
+                    spa_id=spa_id,
+                    status="sale_created",
+                    sale_id=sale_id,
+                    last_interaction=datetime.now(),
+                )
                 update_crm_item(
                     entity_type_id=137,
                     spa_id=spa_id,
@@ -362,7 +369,9 @@ def resposta_certificado_digisac():
                 send_proposal_file(
                     pending.get("contact_number"), pending.get("company_name"), spa_id
                 )
-                update_pending(spa_id, status="info_sent")
+                update_pending(
+                    spa_id=spa_id, status="info_sent", last_interaction=datetime.now()
+                )
                 action_performed = True
                 logger.info(
                     f"[SPA ID: {spa_id}] Proposta enviada. Status: 'info_sent'."
@@ -383,7 +392,11 @@ def resposta_certificado_digisac():
                     spa_id=spa_id,
                     fields={"stageId": "DT137_36:UC_AY5334"},
                 )
-                update_pending(spa_id, status="customer_retention")
+                update_pending(
+                    spa_id=spa_id,
+                    status="customer_retention",
+                    last_interaction=datetime.now(),
+                )
                 action_performed = True
                 logger.info(
                     f"[SPA ID: {spa_id}] Card movido para retenção. Status: 'customer_retention'."
@@ -439,6 +452,7 @@ def cobranca_gerada():
             spa_id=pending.get("spa_id"),
             status="billing_generated",
             financial_event_id=info["financial_event_id"],
+            last_interaction=datetime.now(),
         )
 
         update_deal_item(
@@ -493,7 +507,11 @@ def envio_cobranca():
             filename=f"Cobrança_certificado_digital_-_{pending.get('company_name', '')}.pdf",
         )
 
-        update_pending(spa_id=pending.get("spa_id"), status="billing_pdf_sent")
+        update_pending(
+            spa_id=pending.get("spa_id"),
+            status="billing_pdf_sent",
+            last_interaction=datetime.now(),
+        )
 
         update_deal_item(
             entity_type_id=18,
@@ -540,7 +558,11 @@ def envia_form_agendamento_digisac() -> dict:
         spa_id = request.args.get("idSPA")
 
         build_form_agendamento(contact_number, company_name, schedule_form_link)
-        update_pending(spa_id, "scheduling_form_sent")
+        update_pending(
+            spa_id=spa_id,
+            status="scheduling_form_sent",
+            last_interaction=datetime.now(),
+        )
 
         return (
             jsonify(

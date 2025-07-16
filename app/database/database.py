@@ -52,6 +52,7 @@ def init_db():
                 )
             ),
             created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_interaction TIMESTAMP,
             retry_count      INTEGER NOT NULL DEFAULT 0
         );
         """
@@ -99,4 +100,24 @@ def init_db():
         """
         )
 
+        # Tabela para armazenar as mensagens pendentes e seus estados de processamento
+        conn.execute(
+            """
+        CREATE TABLE IF NOT EXISTS pending_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            contact_number TEXT NOT NULL,
+            payload TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            processed BOOLEAN DEFAULT 0
+        );
+        """
+        )
+
+        # Adicionar índice para buscas por número
+        conn.execute(
+            """
+        CREATE INDEX IF NOT EXISTS idx_pending_messages_contact
+        ON pending_messages (contact_number);
+        """
+        )
         conn.commit()

@@ -3,6 +3,7 @@ import logging
 import sqlite3
 import hashlib
 import json
+from datetime import datetime
 from typing import Optional
 from app.database.database import get_db_connection
 from app.utils.utils import standardize_phone_number
@@ -62,6 +63,8 @@ def update_pending(spa_id: int, status: str, **kwargs) -> bool:
 
     update_fields = {"status": status}
     update_fields.update(kwargs)
+    # Atualiza o timestamp da última interação
+    update_fields["last_interaction"] = datetime.now()
 
     # Constrói a query dinamicamente para atualizar apenas os campos fornecidos
     set_clauses = [f"{field} = ?" for field in update_fields.keys()]
@@ -95,31 +98,53 @@ def complete_pending(contact_number: str) -> bool:
         return cur.rowcount > 0
 
 
-def get_pending(contact_number: str = None, spa_id: int = None) -> Optional[dict]:
+def get_pending(
+    contact_number: str = None, spa_id: int = None, context_aware: bool = False
+) -> Optional[dict]:
     """
-    Obtém uma pendência de renovação.
-    - Se spa_id for fornecido, a busca é direta e unívoca.
-    - Se contact_number for fornecido, retorna a pendência mais recente que não esteja
-      em um estado final (como 'customer_retention').
+    Obtém uma pendência de renovação com opção de busca contextual.
+
+    :param contact_number: Número do contato
+    :param spa_id: ID do SPA
+    :param context_aware: True para buscar a pendência mais antiga sem interação
+    :return: Dados da pendência ou None
     """
     if not any([contact_number, spa_id]):
         raise ValueError("É necessário fornecer contact_number ou spa_id.")
 
     with get_db_connection() as conn:
-        row = None
-
         if spa_id:
+            # Busca direta por SPA ID
             row = conn.execute(
                 "SELECT * FROM certif_pending_renewals WHERE spa_id = ?", (int(spa_id),)
             ).fetchone()
-        elif contact_number:
-            std_number = _standardize_phone(contact_number)
-            # Busca a pendência mais recente que ainda espera uma ação do cliente.
+            return dict(row) if row else None
+
+        std_number = _standardize_phone(contact_number)
+
+        if context_aware:
+            # Modo contexto: pendência mais antiga sem interação recente
             row = conn.execute(
                 """
-                SELECT * FROM certif_pending_renewals
+                SELECT * 
+                FROM certif_pending_renewals
                 WHERE contact_number = ?
-                AND status NOT IN ('customer_retention', 'scheduling_form_sent')
+                AND status NOT IN ('customer_retention', 'scheduling_form_sent', 'complete')
+                ORDER BY 
+                    CASE WHEN last_interaction IS NULL THEN 0 ELSE 1 END, 
+                    last_interaction ASC
+                LIMIT 1
+                """,
+                (std_number,),
+            ).fetchone()
+        else:
+            # Modo padrão: pendência mais recente
+            row = conn.execute(
+                """
+                SELECT * 
+                FROM certif_pending_renewals
+                WHERE contact_number = ?
+                AND status NOT IN ('customer_retention', 'scheduling_form_sent', 'complete')
                 ORDER BY created_at DESC
                 LIMIT 1
                 """,
@@ -182,3 +207,64 @@ def mark_message_processed(
                 f"Tentativa de inserir message_id duplicado: {message_id} para SPA ID {spa_id}"
             )
             return False
+
+
+# renewal_services.py - Adicionar novas funções
+
+
+def is_contact_processing(contact_number: str) -> bool:
+    """Verifica se o contato está em processamento ativo"""
+    std_number = _standardize_phone(contact_number)
+    with get_db_connection() as conn:
+        cur = conn.execute(
+            "SELECT 1 FROM certif_pending_renewals "
+            "WHERE contact_number = ? AND is_processing = 1",
+            (std_number,),
+        )
+        return cur.fetchone() is not None
+
+
+def set_processing_status(contact_number: str, status: bool):
+    """Atualiza o status de processamento do contato"""
+    std_number = _standardize_phone(contact_number)
+    with get_db_connection() as conn:
+        conn.execute(
+            "UPDATE certif_pending_renewals SET is_processing = ? "
+            "WHERE contact_number = ?",
+            (1 if status else 0, std_number),
+        )
+        conn.commit()
+
+
+def add_pending_message(contact_number: str, payload: dict):
+    """Adiciona uma mensagem à fila de espera"""
+    std_number = _standardize_phone(contact_number)
+    with get_db_connection() as conn:
+        conn.execute(
+            "INSERT INTO pending_messages (contact_number, payload) " "VALUES (?, ?)",
+            (std_number, json.dumps(payload)),
+        )
+        conn.commit()
+
+
+def get_next_pending_message(contact_number: str) -> Optional[dict]:
+    """Obtém a próxima mensagem pendente para o contato"""
+    std_number = _standardize_phone(contact_number)
+    with get_db_connection() as conn:
+        cur = conn.execute(
+            "SELECT id, payload FROM pending_messages "
+            "WHERE contact_number = ? AND processed = 0 "
+            "ORDER BY created_at ASC LIMIT 1",
+            (std_number,),
+        )
+        row = cur.fetchone()
+        return dict(row) if row else None
+
+
+def mark_message_as_processed(message_id: int):
+    """Marca uma mensagem pendente como processada"""
+    with get_db_connection() as conn:
+        conn.execute(
+            "UPDATE pending_messages SET processed = 1 WHERE id = ?", (message_id,)
+        )
+        conn.commit()

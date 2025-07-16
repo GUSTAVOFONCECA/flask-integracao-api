@@ -13,7 +13,6 @@ import threading
 import time
 from waitress import serve
 from app import create_app
-from app.tasks import start_workers
 from app.database.database import init_db
 from app.services.tunnel_service import start_localtunnel
 from app.config import Config, configure_logging
