@@ -11,6 +11,7 @@ import unicodedata
 import time
 import json
 import base64
+import urllib.parse
 import logging
 from datetime import datetime, timedelta
 from functools import wraps
@@ -815,6 +816,31 @@ def build_form_agendamento(
 
 
 # --- Funções de envio/refatoradas ---
+@retry_with_backoff(retries=3, backoff_in_seconds=2)
+def has_open_ticket_for_user(contact_number: str, token: str) -> bool:
+    contact_id = _get_contact_id_by_number(contact_number)
+    query = {
+        "where": {"isOpen": True},
+        "include": [
+            {
+                "model": "contact",
+                "required": True,
+                "where": {"visible": True, "id": contact_id},
+            }
+        ],
+    }
+
+    encoded_query = urllib.parse.quote(json.dumps(query))
+    url = f"{DIGISAC_BASE_API}/api/v1/tickets?query={encoded_query}"
+    headers = {"Authorization": token}
+
+    resp = requests.get(url, headers=get_auth_headers())
+    resp.raise_for_status()
+    data = resp.json()
+
+    return False if data["total"] == 0 else True
+
+
 @retry_with_backoff(retries=3, backoff_in_seconds=2)
 def transfer_ticket_digisac(payload: dict, contact_id: str) -> dict:
     """Transfere ticket no Digisac usando parâmetros genéricos"""

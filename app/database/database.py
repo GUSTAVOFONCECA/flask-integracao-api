@@ -57,7 +57,8 @@ def init_db():
                 created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_interaction TIMESTAMP,
                 retry_count      INTEGER NOT NULL DEFAULT 0,
-                is_processing    BOOLEAN DEFAULT 0
+                is_processing    BOOLEAN DEFAULT 0,
+                action_executed  BOOLEAN DEFAULT 0
             );
             """
         )

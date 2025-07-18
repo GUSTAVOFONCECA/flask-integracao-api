@@ -1,0 +1,62 @@
+curl -X POST https://logic-1997.loca.lt/webhooks/digisac \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event": "bot.command",
+    "data": {
+      "id": "evt-001",
+      "contactId": "829dca6d-200d-4df7-81c8-082cd3482105",
+      "message": {
+        "id": "curl-info-001",
+        "text": "info"
+      }
+    }
+  }'
+
+
+
+curl -X POST https://logic-1997.loca.lt/webhooks/digisac \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event": "bot.command",
+    "data": {
+      "id": "evt-002",
+      "contactId": "829dca6d-200d-4df7-81c8-082cd3482105",
+      "message": {
+        "id": "curl-info-002",
+        "text": "info"
+      }
+    }
+  }'
+
+
+curl -X POST https://logic-1997.loca.lt/webhooks/digisac \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event": "bot.command",
+    "data": {
+      "id": "evt-003",
+      "contactId": "829dca6d-200d-4df7-81c8-082cd3482105",
+      "message": {
+        "id": "curl-info-003",
+        "text": "info"
+      }
+    }
+  }'
+
+
+
+
+
+curl -X POST https://logic-1997.loca.lt/webhooks/digisac \
+  -H "Content-Type: application/json" \
+  -d '{
+    "event": "bot.command",
+    "data": {
+      "id": "evt-004",
+      "contactId": "829dca6d-200d-4df7-81c8-082cd3482105",
+      "message": {
+        "id": "curl-info-004",
+        "text": "info"
+      }
+    }
+  }'

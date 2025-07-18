@@ -1,0 +1,17 @@
+--DIGISAC
+melhorar a mensageria de aguardar processamento
+melhorar a mensageria de message_events que são inválidos, não enviar nada no caso
+melhorar a mensageria para informar qual PJ ou PF está sendo processada
+implementar função para interagir com cliente somente se não houver chamado em aberto
+
+
+--CONTA AZUL
+eu solicitei a venda para dois CNPJs, onde so emitiu uma venda para minha PF no conta azul
+
+--FLASK PARA AS INTEGRAÇÕES
+implementar o worker para verificação dos status dos tickets (abertos ou fechados)
+segregar e direcionar as funções as suas devidas competencias
+melhorar sistema de logs em modo desenvolvimento
+não armazenou no DB o sale_id
+verificar quais funções podem ser assícronas
+implementar um worker para refresh dos tokens

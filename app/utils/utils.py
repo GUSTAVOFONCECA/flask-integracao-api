@@ -7,6 +7,8 @@ import time
 import random
 import logging
 import requests
+import inspect
+import traceback
 from functools import wraps
 from flask import request, jsonify
 from selenium.webdriver.common.by import By
@@ -125,22 +127,41 @@ def respond_with_200_on_exception(f):
 
 
 def debug(func):
-    """Decorator para logar entrada, parâmetros e retorno das funções."""
-    from functools import wraps
-
+    """Decorator para logar entrada, parâmetros, retorno, caller e stack trace."""
     @wraps(func)
     def wrapper(*args, **kwargs):
-        logger.debug(f"--> {func.__name__} called with args={args}, kwargs={kwargs}")
+        # Descobre quem chamou esta função
+        stack = inspect.stack()
+        # stack[1] é o frame atual, stack[2] o chamador
+        caller_frame = stack[2] if len(stack) > 2 else None
+        caller_name = None
+        if caller_frame:
+            caller_name = caller_frame.function
+            caller_info = f"{caller_frame.filename}:{caller_frame.lineno}"
+        else:
+            caller_info = "desconhecido"
+
+        # Log de entrada
+        logger.debug(
+            f"--> {func.__name__} called by {caller_name} ({caller_info}) "
+            f"with args={args}, kwargs={kwargs}"
+        )
+
         try:
             result = func(*args, **kwargs)
-            logger.debug(f"<- {func.__name__} returned {result}")
+            # Log de saída
+            logger.debug(f"<- {func.__name__} returned {result!r}")
             return result
-        except Exception as e:
-            logger.exception(f"Exception in {func.__name__}: {e}")
+        except Exception:
+            # Log de stack trace completo
+            tb = traceback.format_exc()
+            logger.error(
+                f"Exception in {func.__name__} called by {caller_name}: \n{tb}"
+            )
+            # Re-raise para não esconder o erro
             raise
 
     return wrapper
-
 
 def save_page_diagnosis(driver, exception, filename_prefix="element_error"):
     """Salva diagnóstico completo da página quando ocorre falha com elementos"""

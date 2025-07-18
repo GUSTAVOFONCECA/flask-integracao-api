@@ -4,9 +4,12 @@
 from datetime import datetime
 import logging
 import json
-import sqlite3
 from flask import Blueprint, request, jsonify
-from app.services.conta_azul.conta_azul_services import extract_billing_info
+from app.services.conta_azul.conta_azul_services import (
+    extract_billing_info,
+    handle_sale_creation_certif_digital,
+
+)
 from app.services.webhook_services import (
     verify_webhook_signature,
     add_comment_crm_timeline,
@@ -16,13 +19,13 @@ from app.services.webhook_services import (
     build_certification_message,
     build_form_agendamento,
     build_billing_certification_pdf,
-    _get_contact_number_by_id,
     send_processing_notification,
     update_company_process_cnpj,
     get_cnpj_receita,
     post_destination_api,
     update_crm_item,
     update_deal_item,
+    _get_contact_number_by_id
 )
 from app.services.renewal_services import (
     add_pending,
@@ -35,7 +38,6 @@ from app.services.renewal_services import (
     add_pending_message,
     process_pending_messages,
     set_processing_status,
-    get_contact_number_by_spa_id,
 )
 from app.utils.utils import respond_with_200_on_exception
 
@@ -283,9 +285,15 @@ def _handle_renew_action(spa_id: int, pending: dict):
     # Enviar proposta
     send_proposal_file(contact_number, company_name, spa_id)
 
-    # Atualizar CRM
-    update_crm_item(137, spa_id, {"stageId": "DT137_36:UC_90X241"})
-    logger.info(f"Renovação iniciada para SPA ID {spa_id}")
+    # Criar venda
+    result = handle_sale_creation_certif_digital(pending['contact_number'], pending['deal_type'])
+    sale_id = result.get('sale', {}).get('id')
+
+    # Atualiza CRM e pendência
+    update_crm_item(137, spa_id, {'stageId': 'DT137_36:UC_90X241'})
+    
+    # Registra nova fase no DB
+    update_pending(spa_id=spa_id, status='sale_created', sale_id=sale_id, last_interaction=datetime.now())
 
 
 def _handle_info_action(spa_id: int, pending: dict):

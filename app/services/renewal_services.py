@@ -261,6 +261,14 @@ def get_contact_number_by_spa_id(spa_id: int) -> Optional[str]:
             (spa_id,),
         ).fetchone()
         return row["contact_number"] if row else None
+    
+
+@debug
+def _get_contact_number_by_digisac_id(contact_id: str) -> Optional[str]:
+    with get_db_connection() as conn:
+        row = conn.execute(
+            "SELECT "
+        )
 
 
 @debug
