@@ -124,6 +124,24 @@ def respond_with_200_on_exception(f):
     return decorated_function
 
 
+def debug(func):
+    """Decorator para logar entrada, parâmetros e retorno das funções."""
+    from functools import wraps
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        logger.debug(f"--> {func.__name__} called with args={args}, kwargs={kwargs}")
+        try:
+            result = func(*args, **kwargs)
+            logger.debug(f"<- {func.__name__} returned {result}")
+            return result
+        except Exception as e:
+            logger.exception(f"Exception in {func.__name__}: {e}")
+            raise
+
+    return wrapper
+
+
 def save_page_diagnosis(driver, exception, filename_prefix="element_error"):
     """Salva diagnóstico completo da página quando ocorre falha com elementos"""
     # Criar diretório de logs se não existir

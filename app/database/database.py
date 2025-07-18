@@ -29,99 +29,78 @@ def init_db():
     A deduplicação de webhooks se dá pelo _unique_ message_id em message_events.
     """
     with get_db_connection() as conn:
-        # 1) pendências de certificados (fluxo de negócios)
+    # database.py - Schema otimizado
+
+        # Tabela principal de pendências
         conn.execute(
             """
-        CREATE TABLE IF NOT EXISTS certif_pending_renewals (
-            id               INTEGER PRIMARY KEY AUTOINCREMENT,
-            spa_id           INTEGER NOT NULL UNIQUE,
-            company_name     TEXT    NOT NULL,
-            contact_number   TEXT    NOT NULL,
-            deal_type        TEXT    NOT NULL,
-            sale_id          TEXT,
-            financial_event_id TEXT,
-            status           TEXT    NOT NULL DEFAULT 'pending' CHECK (
-                status IN (
-                    'pending',
-                    'info_sent',
-                    'customer_retention',
-                    'sale_created',
-                    'billing_generated',
-                    'billing_pdf_sent',
-                    'scheduling_form_sent'
-                )
-            ),
-            created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            last_interaction TIMESTAMP,
-            is_processing    BOOLEAN DEFAULT 0,
-            retry_count      INTEGER NOT NULL DEFAULT 0
-        );
-        """
+            CREATE TABLE IF NOT EXISTS certif_pending_renewals (
+                id               INTEGER PRIMARY KEY AUTOINCREMENT,
+                spa_id           INTEGER NOT NULL UNIQUE,
+                company_name     TEXT    NOT NULL,
+                contact_name     TEXT    NOT NULL,
+                contact_number   TEXT    NOT NULL,
+                deal_type        TEXT    NOT NULL,
+                sale_id          TEXT,
+                financial_event_id TEXT,
+                status           TEXT    NOT NULL DEFAULT 'pending' CHECK (
+                    status IN (
+                        'pending',
+                        'info_sent',
+                        'customer_retention',
+                        'sale_created',
+                        'billing_generated',
+                        'billing_pdf_sent',
+                        'scheduling_form_sent'
+                    )
+                ),
+                created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                last_interaction TIMESTAMP,
+                retry_count      INTEGER NOT NULL DEFAULT 0,
+                is_processing    BOOLEAN DEFAULT 0
+            );
+            """
         )
 
-        # índice para lookup rápido por spa_id
+        # Tabela de eventos de mensagem (relacionada por spa_id)
         conn.execute(
             """
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_certif_spa_id
-          ON certif_pending_renewals (spa_id);
-        """
+            CREATE TABLE IF NOT EXISTS message_events (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                spa_id       INTEGER NOT NULL,
+                message_id   TEXT    NOT NULL,
+                event_type   TEXT    NOT NULL,
+                payload      TEXT    NOT NULL,  -- Armazena payload completo
+                created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (spa_id)
+                REFERENCES certif_pending_renewals(spa_id)
+                ON UPDATE CASCADE
+                ON DELETE CASCADE
+            );
+            """
         )
 
-        # 2) eventos de mensagem para dedup + audit
+        # Tabela de mensagens pendentes (relacionada por spa_id)
         conn.execute(
             """
-        CREATE TABLE IF NOT EXISTS message_events (
-            id           INTEGER PRIMARY KEY AUTOINCREMENT,
-            spa_id       INTEGER NOT NULL,
-            message_id   TEXT    NOT NULL,
-            event_type   TEXT    NOT NULL,
-            payload_hash TEXT    NOT NULL,
-            created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY (spa_id)
-              REFERENCES certif_pending_renewals(spa_id)
-              ON UPDATE CASCADE
-              ON DELETE CASCADE
-        );
-        """
-        )
-
-        # impede duplicação de message_id
-        conn.execute(
+            CREATE TABLE IF NOT EXISTS pending_messages (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                spa_id     INTEGER NOT NULL,
+                payload    TEXT    NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                processed  BOOLEAN DEFAULT 0,
+                FOREIGN KEY (spa_id)
+                REFERENCES certif_pending_renewals(spa_id)
+                ON UPDATE CASCADE
+                ON DELETE CASCADE
+            );
             """
-        CREATE UNIQUE INDEX IF NOT EXISTS ux_message_events_message_id
-         ON message_events (message_id);
-        """
         )
 
-        # índice para acelerar consultas de histórico por spa_id
-        conn.execute(
-            """
-        CREATE INDEX IF NOT EXISTS idx_message_events_spa
-         ON message_events (spa_id);
-        """
-        )
-
-        # Tabela para armazenar as mensagens pendentes e seus estados de processamento
-        conn.execute(
-            """
-        CREATE TABLE IF NOT EXISTS pending_messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            contact_number TEXT NOT NULL,
-            payload TEXT NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            processed BOOLEAN DEFAULT 0
-        );
-        """
-        )
-
-        # Índices para otimização
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_pending_messages_contact"
-            "ON pending_messages (contact_number)"
-        )
-        conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_pending_messages_unprocessed"
-            "ON pending_messages (contact_number, processed) WHERE processed = 0"
-        )
+        # Índices otimizados
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_pending_spa_id ON certif_pending_renewals (spa_id);")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_message_events_spa ON message_events (spa_id);")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_pending_messages_spa ON pending_messages (spa_id);")
+        conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS ux_message_events_id ON message_events (message_id);")
 
         conn.commit()

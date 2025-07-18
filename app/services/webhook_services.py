@@ -937,3 +937,30 @@ def interpret_certification_response(text: str) -> str:
     if text_clean == "RECUSAR":
         return "refuse"
     return "unknown"
+
+
+# webhook_services.py - Adicionar nova função
+
+
+def send_processing_notification(contact_number: str):
+    """Envia notificação para aguardar processamento"""
+    contact_id = _get_contact_id_by_number(contact_number)
+    if not contact_id:
+        logger.warning(f"Contato não encontrado: {contact_number}")
+        return None
+
+    text = (
+        "*Bot*\n"
+        "⏳ Estamos processando sua solicitação anterior!\n\n"
+        "• Aguarde até receber confirmação\n"
+        "• Não envie novos comandos agora\n"
+        "• Responderei assim que estiver pronto"
+    )
+
+    payload = build_message_payload(
+        contact_id=contact_id,
+        department_id=CERT_DEPT_ID,
+        text=text,
+        user_id=DIGISAC_USER_ID,
+    )
+    return send_message_digisac(payload)
