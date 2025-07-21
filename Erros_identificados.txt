@@ -7,6 +7,7 @@ implementar função para interagir com cliente somente se não houver chamado e
 
 --CONTA AZUL
 eu solicitei a venda para dois CNPJs, onde so emitiu uma venda para minha PF no conta azul
+o get tokens está processando a cada venda a gerar, deve ser solicitado apenas uma vez
 
 --FLASK PARA AS INTEGRAÇÕES
 implementar o worker para verificação dos status dos tickets (abertos ou fechados)

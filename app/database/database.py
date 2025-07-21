@@ -48,6 +48,7 @@ def init_db():
                         'pending',
                         'info_sent',
                         'customer_retention',
+                        'sale_creating',
                         'sale_created',
                         'billing_generated',
                         'billing_pdf_sent',

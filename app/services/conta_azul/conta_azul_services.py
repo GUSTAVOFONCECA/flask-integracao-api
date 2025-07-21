@@ -2,7 +2,6 @@
 import os
 import json
 import re
-import time
 from pathlib import Path
 import logging
 from datetime import datetime, timedelta
@@ -12,8 +11,7 @@ import requests
 from app.config import Config
 from app.services.conta_azul.conta_azul_auto_auth import automate_auth
 from app.services.renewal_services import get_pending, update_pending
-from app.services.webhook_services import build_billing_certification_pdf
-from app.utils.utils import standardize_phone_number
+from app.utils.utils import standardize_phone_number, debug
 
 
 logger = logging.getLogger(__name__)
@@ -216,6 +214,7 @@ def get_auth_headers() -> dict:
 
 
 ############################################################################### CONTA AZUL MATCH SERVICES
+@debug
 def find_person_uuid_by_phone(phone: str) -> str | None:
     # Padroniza o número para formato internacional completo
     std_number = standardize_phone_number(phone, debug=True)
@@ -255,6 +254,7 @@ def find_person_uuid_by_phone(phone: str) -> str | None:
 
 
 ############################################################################### CONTA AZUL SALE SERVICES
+@debug
 def build_sale_payload(
     client_id: str,
     service_id: str,
@@ -294,6 +294,7 @@ def build_sale_payload(
     }
 
 
+@debug
 def build_sale_certif_digital_params(deal_type: str) -> dict:
     base = {
         "id_service": None,
@@ -333,6 +334,7 @@ def build_sale_certif_digital_params(deal_type: str) -> dict:
     return base
 
 
+@debug
 def create_sale(sale_payload: dict) -> dict:
     url = f"{API_BASE_URL}/v1/venda"
     headers = get_auth_headers()
@@ -360,6 +362,7 @@ def create_sale(sale_payload: dict) -> dict:
         raise
 
 
+@debug
 def get_sale_details(sale_id: str) -> dict:
     """Obtém detalhes completos de uma venda pelo ID"""
     url = f"{API_BASE_URL}/v1/venda/{sale_id}"
@@ -378,6 +381,7 @@ def get_sale_details(sale_id: str) -> dict:
         raise
 
 
+@debug
 def get_fin_event_billings(fin_event_id: str) -> list:
     """Obtém as parcelas de um evento financeiro"""
     url = f"{API_BASE_URL}/v1/financeiro/eventos-financeiros/{fin_event_id}/parcelas"
@@ -396,6 +400,7 @@ def get_fin_event_billings(fin_event_id: str) -> list:
         raise
 
 
+@debug
 def generate_billing(parcel_id: str, due_date: datetime) -> dict:
     """Gera uma cobrança na Conta Azul"""
     url = f"{API_BASE_URL}/v1/financeiro/eventos-financeiros/contas-a-receber/gerar-cobranca"
@@ -425,6 +430,7 @@ def generate_billing(parcel_id: str, due_date: datetime) -> dict:
     return response.json()
 
 
+@debug
 def get_sale_pdf(sale_id: str) -> bytes:
     """Obtém PDF de uma venda da Conta Azul"""
     url = f"{API_BASE_URL}/v1/venda/{sale_id}/imprimir"
@@ -442,26 +448,26 @@ def get_sale_pdf(sale_id: str) -> bytes:
         raise
 
 
+@debug
 def handle_sale_creation_certif_digital(contact_number: str, deal_type: str) -> dict:
     """
-    1) Cria venda (sale_created)
-    2) Aguarda webhook externo para geração de cobrança manual
+    Cria venda digital e retorna os detalhes.
+    Assuma que status já é 'sale_creating' no DB.
     """
     pending = get_pending(contact_number)
     if not pending:
         raise ValueError(f"Nenhuma solicitação pendente para {contact_number}")
-
     spa_id = pending["spa_id"]
-    last_status = pending["status"]
 
+    # Busca UUID do cliente
     client_uuid = find_person_uuid_by_phone(contact_number)
     if not client_uuid:
         raise ValueError(f"Cliente com telefone {contact_number} não encontrado")
 
     params = build_sale_certif_digital_params(deal_type)
 
-    # apenas cria venda na primeira vez
-    if last_status in (None, "", "pending", "info_sent"):
+    # Se ainda não criou, manda payload
+    if not pending.get("sale_id"):
         payload = build_sale_payload(
             client_id=client_uuid,
             service_id=params["id_service"],
@@ -471,16 +477,14 @@ def handle_sale_creation_certif_digital(contact_number: str, deal_type: str) -> 
             item_description=params["item_description"],
         )
         sale = create_sale(payload)
-        sale_id = sale["id"]
-        update_pending(spa_id, status="sale_created", sale_id=sale_id)
         return {"sale": sale}
 
-    # se já tiver criado, retorna o registro existente
-    sale_id = pending.get("sale_id")
-    sale = get_sale_details(sale_id)
+    # Se já criou, retorna o registro existente
+    sale = get_sale_details(pending["sale_id"])
     return {"sale": sale}
 
 
+@debug
 def extract_billing_info(contact_number: str) -> dict:
     pending = get_pending(contact_number)
     if not pending:
@@ -512,10 +516,7 @@ def extract_billing_info(contact_number: str) -> dict:
     if not boleto_url:
         raise ValueError("URL do boleto não encontrada")
 
-    return {
-        "financial_event_id": evento_id,
-        "boleto_url": boleto_url
-    }
+    return {"financial_event_id": evento_id, "boleto_url": boleto_url}
 
 
 # Carrega tokens do arquivo ao inicializar

@@ -8,7 +8,6 @@ from flask import Blueprint, request, jsonify
 from app.services.conta_azul.conta_azul_services import (
     extract_billing_info,
     handle_sale_creation_certif_digital,
-
 )
 from app.services.webhook_services import (
     verify_webhook_signature,
@@ -25,7 +24,7 @@ from app.services.webhook_services import (
     post_destination_api,
     update_crm_item,
     update_deal_item,
-    _get_contact_number_by_id
+    _get_contact_number_by_id,
 )
 from app.services.renewal_services import (
     add_pending,
@@ -201,11 +200,16 @@ def resposta_certificado_digisac():
     pending = get_pending(contact_number=contact_number, context_aware=True)
     if not pending:
         all_pendings = get_all_pending_by_contact(contact_number)
-        return jsonify({
-            "status": "ignored",
-            "reason": "Sem pendência ativa",
-            "pendings": all_pendings,
-        }), 200
+        return (
+            jsonify(
+                {
+                    "status": "ignored",
+                    "reason": "Sem pendência ativa",
+                    "pendings": all_pendings,
+                }
+            ),
+            200,
+        )
 
     spa_id = pending["spa_id"]
 
@@ -242,6 +246,7 @@ def resposta_certificado_digisac():
 
     return jsonify({"status": "processed", "spa_id": spa_id}), 200
 
+
 def _process_digisac_message(spa_id: int, user_message: str):
     """Processa a mensagem do usuário e atualiza o estado do negócio"""
     # Obter dados atualizados da pendência
@@ -270,30 +275,53 @@ def _process_digisac_message(spa_id: int, user_message: str):
 
 
 def _handle_renew_action(spa_id: int, pending: dict):
-    """Trata solicitação de renovação"""
+    """Trata solicitação de renovação - fluxo revisado."""
     logger.info(f"Iniciando renovação para SPA ID {spa_id}")
     contact_number = pending["contact_number"]
     company_name = pending["company_name"]
 
-    # Atualizar estado (exemplo simplificado)
-    update_pending(
-        spa_id=spa_id,
-        status="sale_created",
-        last_interaction=datetime.now(),
-    )
+    # 1. Marca como em processamento para evitar duplicatas
+    set_processing_status(spa_id, True)
 
-    # Enviar proposta
+    try:
+        # 2. Atualiza status imediatamente no DB
+        update_pending(
+            spa_id=spa_id,
+            status="sale_creating",
+            last_interaction=datetime.now(),
+        )
+
+        # 3. Cria a venda (idempotente)
+        result = handle_sale_creation_certif_digital(
+            contact_number, pending["deal_type"]
+        )
+        sale_id = result["sale"]["id"]
+
+        # 4. Atualiza CRM com o novo stage e sale_id
+        update_crm_item(137, spa_id, {"stageId": "DT137_36:UC_90X241"})
+        update_pending(
+            spa_id=spa_id,
+            sale_id=sale_id,
+            status="sale_created",
+            last_interaction=datetime.now(),
+        )
+
+    except Exception as e:
+        logger.error(f"Erro criando venda para SPA {spa_id}: {e}")
+        # opcional: rollback de status ou incrementar retry_count
+        update_pending(
+            spa_id=spa_id,
+            status="pending",
+            retry_count=pending.get("retry_count", 0) + 1,
+            last_interaction=datetime.now(),
+        )
+        raise
+    finally:
+        set_processing_status(spa_id, False)
+
+    # 5. Só depois de tudo: envia a proposta via Digisac
     send_proposal_file(contact_number, company_name, spa_id)
-
-    # Criar venda
-    result = handle_sale_creation_certif_digital(pending['contact_number'], pending['deal_type'])
-    sale_id = result.get('sale', {}).get('id')
-
-    # Atualiza CRM e pendência
-    update_crm_item(137, spa_id, {'stageId': 'DT137_36:UC_90X241'})
-    
-    # Registra nova fase no DB
-    update_pending(spa_id=spa_id, status='sale_created', sale_id=sale_id, last_interaction=datetime.now())
+    logger.info(f"Proposta enviada para SPA {spa_id}")
 
 
 def _handle_info_action(spa_id: int, pending: dict):

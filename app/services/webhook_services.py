@@ -19,7 +19,11 @@ from typing import Optional, Dict
 import requests
 from flask import request, jsonify
 from app.config import Config
-from app.utils.utils import retry_with_backoff, standardize_phone_number
+from app.utils.utils import (
+    retry_with_backoff,
+    standardize_phone_number,
+    debug
+)
 
 
 logger = logging.getLogger(__name__)
@@ -261,7 +265,7 @@ def post_destination_api(processed_data: Dict, api_url: str) -> Dict:
         logger.error("Erro na requisição: %s", str(e))
         return {"error": str(e)}
 
-
+@debug
 def update_crm_item(entity_type_id: int, spa_id: int, fields: Optional[dict]) -> dict:
     url = "https://logic.bitrix24.com.br/rest/260/af4o31dew3vzuphs/crm.item.update"
     payload = {
@@ -278,7 +282,7 @@ def update_crm_item(entity_type_id: int, spa_id: int, fields: Optional[dict]) ->
         logger.error(f"Erro ao atualizar card SPA: {str(e)}")
         return {"error": str(e)}
 
-
+@debug
 def get_crm_item(entity_type_id: int, spa_id: int) -> dict:
     url = "https://logic.bitrix24.com.br/rest/260/af4o31dew3vzuphs/crm.item.get"
     query = {
@@ -295,7 +299,7 @@ def get_crm_item(entity_type_id: int, spa_id: int) -> dict:
         logger.error(f"Erro ao atualizar card SPA: {str(e)}")
         return {"error": str(e)}
 
-
+@debug
 def get_deal_item(deal_id: int) -> dict:
     url = "https://logic.bitrix24.com.br/rest/260/af4o31dew3vzuphs/crm.deal.get"
     query = {"id": deal_id}
@@ -308,7 +312,7 @@ def get_deal_item(deal_id: int) -> dict:
         logger.error(f"Erro ao atualizar card SPA: {str(e)}")
         return {"error": str(e)}
 
-
+@debug
 def update_deal_item(entity_type_id: int, deal_id: int, fields: Optional[dict]) -> dict:
     url = "https://logic.bitrix24.com.br/rest/260/af4o31dew3vzuphs/crm.deal.update"
     payload = {
@@ -326,7 +330,7 @@ def update_deal_item(entity_type_id: int, deal_id: int, fields: Optional[dict]) 
         logger.error(f"Erro ao atualizar card DEAL: {str(e)}")
         return {"error": str(e)}
 
-
+@debug
 def add_comment_crm_timeline(fields: Optional[dict]) -> dict:
     url = "https://logic.bitrix24.com.br/rest/260/af4o31dew3vzuphs/crm.timeline.comment.add"
     payload = {"fields": fields}
@@ -425,7 +429,7 @@ def refresh_auth_digisac(refresh_token: str) -> dict:
         logger.error("Erro no refresh: %s", str(e))
         return {"error": str(e)}
 
-
+@debug
 def _get_contact_id_by_number(contact_number: str) -> str | None:
     """Privado: retorna contact_id a partir do número, ou None se não existir"""
     std_number = standardize_phone_number(contact_number, debug=True)
@@ -464,7 +468,7 @@ def _get_contact_id_by_number(contact_number: str) -> str | None:
         logger.error(f"Erro ao buscar contactId: {str(e)}")
         return None
 
-
+@debug
 def _get_contact_number_by_id(contact_id: str) -> Optional[str]:
     """Obtém o número de telefone de um contato pelo ID do Digisac"""
     contacts_json_path = os.path.join(
@@ -484,7 +488,7 @@ def _get_contact_number_by_id(contact_id: str) -> Optional[str]:
 
     return None
 
-
+@debug
 def start_bitrix_workflow(
     template_id: int, document_id: list, parameters: dict = None
 ) -> dict:
@@ -505,6 +509,7 @@ def start_bitrix_workflow(
 
 
 # --- Builders genéricos ---
+@debug
 def build_transfer_payload(
     contact_id: str, department_id: str, comments: str, user_id: str = DIGISAC_USER_ID
 ) -> dict:
@@ -516,7 +521,7 @@ def build_transfer_payload(
         "contactId": contact_id,
     }
 
-
+@debug
 def build_message_payload(
     contact_id: str, department_id: str, text: str, user_id: str
 ) -> dict:
@@ -529,7 +534,7 @@ def build_message_payload(
         "origin": "bot",
     }
 
-
+@debug
 def build_pdf_payload(
     contact_id: str, pdf_content: bytes, filename: str, text: str
 ) -> dict:
@@ -550,7 +555,7 @@ CERT_TRANSFER_COMMENTS = "Chamado aberto via automação para renovação de cer
 NO_BOT_DEPT_ID = "d9fe4658-1ad6-43ba-a00e-cf0b998852c2"
 NO_BOT_TRANSFER_COMMENTS = "Transferência para o grupo sem bot via automação."
 
-
+@debug
 def build_transfer_to_certification(contact_number: str) -> dict:
     """Gera payload para transferência de ticket ao departamento de Certificação Digital"""
     contact_id = _get_contact_id_by_number(contact_number)
@@ -562,7 +567,7 @@ def build_transfer_to_certification(contact_number: str) -> dict:
     )
     return transfer_ticket_digisac(payload, contact_id)
 
-
+@debug
 def build_transfer_to_group_without_bot(contact_number: str) -> dict:
     """Gera payload para transferência de ticket para grupo sem bot no Digisac"""
     contact_id = _get_contact_id_by_number(contact_number)
@@ -574,27 +579,7 @@ def build_transfer_to_group_without_bot(contact_number: str) -> dict:
     return transfer_ticket_digisac(payload, contact_id)
 
 
-def _build_certification_message_text(
-    contact_name: str, company_name: str, days_to_expire: int
-) -> str:
-    """Mensagem de aviso com comandos case-sensitive e sem acento"""
-    days = abs(days_to_expire)
-    validade_msg = (
-        f"IRA EXPIRAR EM {days} DIAS."
-        if days_to_expire >= 0
-        else f"EXPIROU HA {days} DIAS."
-    )
-
-    return (
-        "*Bot*\n"
-        f"Olá {contact_name}, o certificado da empresa *{company_name}* {validade_msg}\n\n"
-        "Digite *exatamente* uma das palavras abaixo (sem acento e em MAIÚSCULAS):\n\n"
-        "✅ Digite: *RENOVAR_CERTIFICADO* → Receber proposta para renovação\n"
-        "ℹ️ Digite: *INFO_CERTIFICADO* → Obter mais informações sobre o certificado\n"
-        "❌ Digite: *NAO_CERTIFICADO* → Não deseja renovar neste momento"
-    )
-
-
+@debug
 def build_certification_message(
     contact_number: str, contact_name: str, company_name: str, days_to_expire: int
 ) -> dict:
@@ -610,7 +595,7 @@ def build_certification_message(
 
     return send_message_digisac(payload)
 
-
+@debug
 def build_proposal_certification_pdf(
     contact_number: str, pdf_content: bytes, filename: str
 ) -> dict:
@@ -624,7 +609,7 @@ def build_proposal_certification_pdf(
     )
     return payload
 
-
+@debug
 def send_proposal_file(
     contact_number: str,
     company_name: str,
@@ -718,7 +703,7 @@ def send_proposal_file(
 
     return pdf_response
 
-
+@debug
 def build_billing_certification_pdf(
     contact_number: str, company_name: str, deal_id: int, filename: str
 ) -> dict:
@@ -792,7 +777,7 @@ def build_billing_certification_pdf(
     )
     return send_pdf_digisac(payload)
 
-
+@debug
 def build_form_agendamento(
     contact_number: str, company_name: str, form_link: str
 ) -> dict:
@@ -816,6 +801,7 @@ def build_form_agendamento(
 
 
 # --- Funções de envio/refatoradas ---
+@debug
 @retry_with_backoff(retries=3, backoff_in_seconds=2)
 def has_open_ticket_for_user(contact_number: str, token: str) -> bool:
     contact_id = _get_contact_id_by_number(contact_number)
@@ -832,7 +818,6 @@ def has_open_ticket_for_user(contact_number: str, token: str) -> bool:
 
     encoded_query = urllib.parse.quote(json.dumps(query))
     url = f"{DIGISAC_BASE_API}/api/v1/tickets?query={encoded_query}"
-    headers = {"Authorization": token}
 
     resp = requests.get(url, headers=get_auth_headers())
     resp.raise_for_status()
@@ -840,7 +825,7 @@ def has_open_ticket_for_user(contact_number: str, token: str) -> bool:
 
     return False if data["total"] == 0 else True
 
-
+@debug
 @retry_with_backoff(retries=3, backoff_in_seconds=2)
 def transfer_ticket_digisac(payload: dict, contact_id: str) -> dict:
     """Transfere ticket no Digisac usando parâmetros genéricos"""
@@ -855,7 +840,7 @@ def transfer_ticket_digisac(payload: dict, contact_id: str) -> dict:
         logger.error("[TRANSFER] Erro de requisição: %s", e)
         return {"error": str(e)}
 
-
+@debug
 @retry_with_backoff(retries=3, backoff_in_seconds=2)
 def send_message_digisac(payload: dict) -> dict:
     """Envia mensagem automática via Digisac usando parâmetros genéricos"""
@@ -870,7 +855,7 @@ def send_message_digisac(payload: dict) -> dict:
         logger.error("[MSG] Erro: %s", e)
         return {"error": str(e)}
 
-
+@debug
 @retry_with_backoff(retries=3, backoff_in_seconds=2)
 def send_pdf_digisac(payload: dict) -> dict:
     """Envia PDF via Digisac usando parâmetros genéricos"""
@@ -885,7 +870,7 @@ def send_pdf_digisac(payload: dict) -> dict:
         logger.error("[PDF] Erro: %s", e)
         return {"error": str(e)}
 
-
+@debug
 @retry_with_backoff(retries=3, backoff_in_seconds=2)
 def close_ticket_digisac(contact_id: str) -> dict:
     """Encerra o ticket do contato no Digisac"""
@@ -898,7 +883,7 @@ def close_ticket_digisac(contact_id: str) -> dict:
         logger.error("[CLOSE] Erro ao encerrar o ticket: %s", e)
         return {"error": str(e)}
 
-
+@debug
 def _parse_response(response) -> dict:
     """Parseia resposta da API do Digisac, tratando JSON ou texto"""
     content_type = response.headers.get("Content-Type", "")
@@ -920,7 +905,7 @@ def _parse_response(response) -> dict:
         )
         return {"status_code": response.status_code, "text": response.text}
 
-
+@debug
 def _build_certification_message_text(
     contact_name: str, company_name: str, days_to_expire: int
 ) -> str:
@@ -941,7 +926,7 @@ def _build_certification_message_text(
         "❌ Digite: *RECUSAR* → Não deseja renovar o certificado no momento"
     )
 
-
+@debug
 def sanitize_user_input(user_input: str) -> str:
     return (
         unicodedata.normalize("NFKD", user_input)
@@ -951,7 +936,7 @@ def sanitize_user_input(user_input: str) -> str:
         .upper()
     )
 
-
+@debug
 def interpret_certification_response(text: str) -> str:
     """Interpreta o texto do usuário sanitizado para mapear ações específicas"""
     text_clean = sanitize_user_input(text)
@@ -967,7 +952,7 @@ def interpret_certification_response(text: str) -> str:
 
 # webhook_services.py - Adicionar nova função
 
-
+@debug
 def send_processing_notification(contact_number: str):
     """Envia notificação para aguardar processamento"""
     contact_id = _get_contact_id_by_number(contact_number)

@@ -126,42 +126,67 @@ def respond_with_200_on_exception(f):
     return decorated_function
 
 
+TRUNCATE_LIMIT = 300  # Limite de caracteres por valor logado
+
+
+def truncate(value, limit=TRUNCATE_LIMIT):
+    """Reduz o valor para fins de log, mantendo representação útil"""
+    try:
+        # Se for string ou bytes
+        if isinstance(value, (str, bytes)):
+            val = value.decode() if isinstance(value, bytes) else value
+            return val[:limit] + "...[truncated]" if len(val) > limit else val
+
+        # Se for dicionário ou lista, aplica truncamento recursivo
+        if isinstance(value, dict):
+            return {k: truncate(v, limit) for k, v in list(value.items())[:10]}
+        if isinstance(value, list):
+            return [truncate(v, limit) for v in value[:10]]
+
+        # Qualquer outro tipo, tenta representação direta
+        return (
+            str(value)[:limit] + "...[truncated]" if len(str(value)) > limit else value
+        )
+
+    except Exception:
+        return f"[Unloggable object: {type(value)}]"
+
+
 def debug(func):
-    """Decorator para logar entrada, parâmetros, retorno, caller e stack trace."""
+    """Decorator com log de entrada, retorno, caller, stack trace e truncamento."""
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         # Descobre quem chamou esta função
         stack = inspect.stack()
-        # stack[1] é o frame atual, stack[2] o chamador
         caller_frame = stack[2] if len(stack) > 2 else None
-        caller_name = None
-        if caller_frame:
-            caller_name = caller_frame.function
-            caller_info = f"{caller_frame.filename}:{caller_frame.lineno}"
-        else:
-            caller_info = "desconhecido"
+        caller_name = caller_frame.function if caller_frame else "desconhecido"
+        caller_info = (
+            f"{caller_frame.filename}:{caller_frame.lineno}" if caller_frame else "?"
+        )
+
+        # Truncar argumentos para o log
+        safe_args = [truncate(arg) for arg in args]
+        safe_kwargs = {k: truncate(v) for k, v in kwargs.items()}
 
         # Log de entrada
         logger.debug(
             f"--> {func.__name__} called by {caller_name} ({caller_info}) "
-            f"with args={args}, kwargs={kwargs}"
+            f"with args={safe_args}, kwargs={safe_kwargs}"
         )
 
         try:
             result = func(*args, **kwargs)
-            # Log de saída
-            logger.debug(f"<- {func.__name__} returned {result!r}")
+            safe_result = truncate(result)
+            logger.debug(f"<- {func.__name__} returned {safe_result!r}")
             return result
         except Exception:
-            # Log de stack trace completo
             tb = traceback.format_exc()
-            logger.error(
-                f"Exception in {func.__name__} called by {caller_name}: \n{tb}"
-            )
-            # Re-raise para não esconder o erro
+            logger.error(f"Exception in {func.__name__} called by {caller_name}:\n{tb}")
             raise
 
     return wrapper
+
 
 def save_page_diagnosis(driver, exception, filename_prefix="element_error"):
     """Salva diagnóstico completo da página quando ocorre falha com elementos"""
