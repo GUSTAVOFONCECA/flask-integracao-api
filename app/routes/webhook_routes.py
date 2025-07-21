@@ -25,6 +25,7 @@ from app.services.webhook_services import (
     update_crm_item,
     update_deal_item,
     _get_contact_number_by_id,
+    has_open_ticket_for_user
 )
 from app.services.renewal_services import (
     add_pending,
@@ -91,6 +92,7 @@ def valida_cnpj_receita_bitrix():
 @respond_with_200_on_exception
 def envia_comunicado_para_cliente_certif_digital_digisac():
     logger.info("/aviso-certificado recebido")
+
 
     # Validação de assinatura
     signature = request.form.get("auth[member_id]", "")

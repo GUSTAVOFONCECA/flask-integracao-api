@@ -803,7 +803,8 @@ def build_form_agendamento(
 # --- Funções de envio/refatoradas ---
 @debug
 @retry_with_backoff(retries=3, backoff_in_seconds=2)
-def has_open_ticket_for_user(contact_number: str, token: str) -> bool:
+def has_open_ticket_for_user(contact_number: str) -> bool:
+    """Verifica se há chamado aberto para o cliente"""
     contact_id = _get_contact_id_by_number(contact_number)
     query = {
         "where": {"isOpen": True},

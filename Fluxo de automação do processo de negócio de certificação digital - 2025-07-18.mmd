@@ -1,0 +1,22 @@
+flowchart TD
+  A[Start] --> B[Pendência criada em certif_pending_renewals]
+  B --> C{has_open_ticket_for_user?}
+  C -- Sim --> B
+  C -- Não --> D[Enviar comunicado de vencimento]
+  D --> E[Cliente interage com bot]
+  E --> F{Resposta do cliente}
+  F -- INFO --> G[Enviar proposta comercial]
+  G --> H[Fim do fluxo de INFO]
+  F -- RECUSAR --> I[Envia para retenção comercial]
+  I --> J{Retenção bem‑sucedida?}
+  J -- Sim --> K[Fim do fluxo RETENÇÃO]
+  J -- Não --> L[Marcar negócio como perdido]
+  L --> M[Fim do fluxo RECUSAR]
+  F -- RENOVAR --> N[Enviar proposta renovação]
+  N --> O[Cria venda no sistema financeiro]
+  O --> P[Financeiro emite cobrança]
+  P --> Q[Envia cobrança ao cliente]
+  Q --> R[Financeiro identifica baixa]
+  R --> S[Envia formulário de agendamento]
+  S --> T[Data acordada: videoconferência]
+  T --> U[Fim da renovação]

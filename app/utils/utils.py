@@ -6,10 +6,10 @@ import re
 import time
 import random
 import logging
-import requests
 import inspect
 import traceback
 from functools import wraps
+import requests
 from flask import request, jsonify
 from selenium.webdriver.common.by import By
 
@@ -154,7 +154,6 @@ def truncate(value, limit=TRUNCATE_LIMIT):
 
 def debug(func):
     """Decorator com log de entrada, retorno, caller, stack trace e truncamento."""
-
     @wraps(func)
     def wrapper(*args, **kwargs):
         # Descobre quem chamou esta função

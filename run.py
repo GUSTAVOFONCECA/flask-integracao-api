@@ -9,13 +9,14 @@ e trata encerramentos de forma graciosa.
 import sys
 import signal
 import atexit
-import threading
+from threading import Thread
 import time
 from waitress import serve
 from app import create_app
 from app.database.database import init_db
 from app.services.tunnel_service import start_localtunnel
 from app.config import Config, configure_logging
+from app.workers.ticket_flow_worker import run_ticket_flow_worker
 
 
 class AppManager:
@@ -111,10 +112,10 @@ def main() -> None:
         app_logger.info("Banco de dados inicializado")
 
         # Inicia workers
-        #start_workers()
+        Thread(target=run_ticket_flow_worker, daemon=True).start()
 
         # Iniciar Flask em thread
-        flask_thread = threading.Thread(target=manager.run_flask_server, daemon=True)
+        flask_thread = Thread(target=manager.run_flask_server, daemon=True)
         flask_thread.start()
 
         # Disparar o LocalTunnel em background

@@ -134,6 +134,7 @@ def is_contact_processing(spa_id: int) -> bool:
         return row and row["is_processing"] == 1
 
 
+@debug
 def set_processing_status(spa_id: int, status: bool):
     with get_db_connection() as conn:
         conn.execute(
@@ -190,6 +191,82 @@ def get_next_pending_message(spa_id: int) -> Optional[dict]:
             (spa_id,),
         ).fetchone()
         return dict(row) if row else None
+
+
+@debug
+def insert_ticket_flow_queue(spa_id: str, contact_number: str) -> None:
+    """Insere ticket na fila de espera se o contato estiver em atendimento"""
+    with get_db_connection() as conn:
+        conn.execute(
+            """
+            INSERT INTO ticket_flow_queue (spa_id, contact_number)
+            VALUES (?, ?)
+            ON CONFLICT(spa_id) DO UPDATE SET
+              contact_number = excluded.contact_number,
+              status = 'waiting',
+              last_checked = NULL
+            """,
+            (spa_id, contact_number),
+        )
+        conn.commit()
+
+
+@debug
+def start_ticket_queue(queue_id: str) -> None:
+    """Starta row na tabela ticket_flow_queue"""
+    with get_db_connection() as conn:
+        conn.execute(
+            """
+            UPDATE ticket_flow_queue 
+            SET status = 'started', last_checked = ?
+            WHERE id = ?
+            """,
+            (datetime.now(), queue_id),
+        )
+        conn.commit()
+
+
+@debug
+def update_last_checked_ticket_queue(queue_id: str) -> None:
+    """Update atributo last_checked da tabela ticket_flow_queue"""
+    with get_db_connection() as conn:
+        conn.execute(
+            """
+            UPDATE ticket_flow_queue 
+            SET last_checked = ? 
+            WHERE id = ?
+            """,
+            (datetime.now(), queue_id),
+        )
+        conn.commit()
+
+
+@debug
+def update_retry_count_ticket_queue(queue_id: str) -> None:
+    """Update atributo retry_count da tabela ticket_flow_queue"""
+    with get_db_connection() as conn:
+        conn.execute(
+            """
+            UPDATE ticket_flow_queue
+            SET last_checked = ?, retry_count = retry_count + 1
+            WHERE id = ?
+            """,
+            (datetime.now(), queue_id)
+        )
+        conn.commit()
+
+
+@debug
+def get_waiting_ticket_queue() -> Optional[dict]:
+    """Verifica os fluxos de certificação digital que estão em espera"""
+    with get_db_connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT id, spa_id, contact_number, retry_count 
+            FROM ticket_flow_queue WHERE status = 'waiting'
+            """
+        ).fetchall()
+        return [dict(row) for row in rows]
 
 
 # Funções de mensagens e notificações
@@ -261,14 +338,6 @@ def get_contact_number_by_spa_id(spa_id: int) -> Optional[str]:
             (spa_id,),
         ).fetchone()
         return row["contact_number"] if row else None
-    
-
-@debug
-def _get_contact_number_by_digisac_id(contact_id: str) -> Optional[str]:
-    with get_db_connection() as conn:
-        row = conn.execute(
-            "SELECT "
-        )
 
 
 @debug
