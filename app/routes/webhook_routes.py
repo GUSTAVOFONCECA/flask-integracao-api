@@ -25,7 +25,7 @@ from app.services.webhook_services import (
     update_crm_item,
     update_deal_item,
     _get_contact_number_by_id,
-    has_open_ticket_for_user
+    has_open_ticket_for_user,
 )
 from app.services.renewal_services import (
     add_pending,
@@ -39,7 +39,7 @@ from app.services.renewal_services import (
     process_pending_messages,
     set_processing_status,
 )
-from app.utils.utils import respond_with_200_on_exception
+from app.utils.utils import respond_with_200_on_exception, standardize_phone_number
 
 
 webhook_bp = Blueprint("webhook", __name__)
@@ -47,7 +47,7 @@ logger = logging.getLogger(__name__)
 
 # Estados válidos para negociações
 VALID_STATUSES = [
-    "pending",
+    "" "pending",
     "info_sent",
     "customer_retention",
     "sale_created",
@@ -92,7 +92,6 @@ def valida_cnpj_receita_bitrix():
 @respond_with_200_on_exception
 def envia_comunicado_para_cliente_certif_digital_digisac():
     logger.info("/aviso-certificado recebido")
-
 
     # Validação de assinatura
     signature = request.form.get("auth[member_id]", "")

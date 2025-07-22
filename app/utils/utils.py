@@ -12,6 +12,8 @@ from functools import wraps
 import requests
 from flask import request, jsonify
 from selenium.webdriver.common.by import By
+from sqlite3 import IntegrityError
+from app.services.
 
 
 logger = logging.getLogger(__name__)
@@ -187,6 +189,9 @@ def debug(func):
     return wrapper
 
 
+
+
+
 def save_page_diagnosis(driver, exception, filename_prefix="element_error"):
     """Salva diagnóstico completo da página quando ocorre falha com elementos"""
     # Criar diretório de logs se não existir
@@ -295,7 +300,8 @@ def save_page_diagnosis(driver, exception, filename_prefix="element_error"):
 
 def standardize_phone_number(phone: str, debug: bool = False) -> str | None:
     """
-    Padroniza números de telefone brasileiros para formato internacional completo (DDI + DDD + número)
+    Padroniza números de telefone brasileiros para formato
+    internacional completo (DDI + DDD + número)
 
     :param phone: Número de telefone em qualquer formato
     :param debug: Habilita logs de warning para números inválidos

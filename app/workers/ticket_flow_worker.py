@@ -35,6 +35,7 @@ def run_ticket_flow_worker() -> None:
                         contact_name=pending.get("contact_name"),
                         deal_type=pending.get("deal_type"),
                         spa_id=spa_id,
+                        status='pending'
                     )
                     # Atualiza status para started
                     start_ticket_queue(queue_id)

@@ -45,6 +45,7 @@ def init_db():
                 financial_event_id TEXT,
                 status           TEXT    NOT NULL DEFAULT 'pending' CHECK (
                     status IN (
+                        'queued',
                         'pending',
                         'info_sent',
                         'customer_retention',
@@ -104,7 +105,7 @@ def init_db():
             """
             CREATE TABLE IF NOT EXISTS ticket_flow_queue (
                 id              INTEGER PRIMARY KEY AUTOINCREMENT,
-                spa_id          INTEGER NOT NULL,
+                spa_id          INTEGER NOT NULL UNIQUE,
                 contact_number  TEXT    NOT NULL,
                 status          TEXT    NOT NULL DEFAULT 'waiting' CHECK (
                     status IN ('waiting', 'processing', 'started')

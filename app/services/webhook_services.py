@@ -13,16 +13,17 @@ import json
 import base64
 import urllib.parse
 import logging
+from sqlite3 import IntegrityError
 from datetime import datetime, timedelta
 from functools import wraps
-from typing import Optional, Dict
+from typing import Optional, Dict, Callable
 import requests
 from flask import request, jsonify
 from app.config import Config
-from app.utils.utils import (
-    retry_with_backoff,
-    standardize_phone_number,
-    debug
+from app.utils.utils import retry_with_backoff, standardize_phone_number, debug
+from app.services.renewal_services import (
+    get_active_spa_id,
+    insert_ticket_flow_queue,
 )
 
 
@@ -265,6 +266,7 @@ def post_destination_api(processed_data: Dict, api_url: str) -> Dict:
         logger.error("Erro na requisição: %s", str(e))
         return {"error": str(e)}
 
+
 @debug
 def update_crm_item(entity_type_id: int, spa_id: int, fields: Optional[dict]) -> dict:
     url = "https://logic.bitrix24.com.br/rest/260/af4o31dew3vzuphs/crm.item.update"
@@ -281,6 +283,7 @@ def update_crm_item(entity_type_id: int, spa_id: int, fields: Optional[dict]) ->
     except requests.exceptions.RequestException as e:
         logger.error(f"Erro ao atualizar card SPA: {str(e)}")
         return {"error": str(e)}
+
 
 @debug
 def get_crm_item(entity_type_id: int, spa_id: int) -> dict:
@@ -299,6 +302,7 @@ def get_crm_item(entity_type_id: int, spa_id: int) -> dict:
         logger.error(f"Erro ao atualizar card SPA: {str(e)}")
         return {"error": str(e)}
 
+
 @debug
 def get_deal_item(deal_id: int) -> dict:
     url = "https://logic.bitrix24.com.br/rest/260/af4o31dew3vzuphs/crm.deal.get"
@@ -311,6 +315,7 @@ def get_deal_item(deal_id: int) -> dict:
     except requests.exceptions.RequestException as e:
         logger.error(f"Erro ao atualizar card SPA: {str(e)}")
         return {"error": str(e)}
+
 
 @debug
 def update_deal_item(entity_type_id: int, deal_id: int, fields: Optional[dict]) -> dict:
@@ -329,6 +334,7 @@ def update_deal_item(entity_type_id: int, deal_id: int, fields: Optional[dict]) 
     except requests.exceptions.RequestException as e:
         logger.error(f"Erro ao atualizar card DEAL: {str(e)}")
         return {"error": str(e)}
+
 
 @debug
 def add_comment_crm_timeline(fields: Optional[dict]) -> dict:
@@ -429,6 +435,7 @@ def refresh_auth_digisac(refresh_token: str) -> dict:
         logger.error("Erro no refresh: %s", str(e))
         return {"error": str(e)}
 
+
 @debug
 def _get_contact_id_by_number(contact_number: str) -> str | None:
     """Privado: retorna contact_id a partir do número, ou None se não existir"""
@@ -468,6 +475,7 @@ def _get_contact_id_by_number(contact_number: str) -> str | None:
         logger.error(f"Erro ao buscar contactId: {str(e)}")
         return None
 
+
 @debug
 def _get_contact_number_by_id(contact_id: str) -> Optional[str]:
     """Obtém o número de telefone de um contato pelo ID do Digisac"""
@@ -487,6 +495,7 @@ def _get_contact_number_by_id(contact_id: str) -> Optional[str]:
         logger.error(f"Erro ao buscar contato por ID: {str(e)}")
 
     return None
+
 
 @debug
 def start_bitrix_workflow(
@@ -521,6 +530,7 @@ def build_transfer_payload(
         "contactId": contact_id,
     }
 
+
 @debug
 def build_message_payload(
     contact_id: str, department_id: str, text: str, user_id: str
@@ -533,6 +543,7 @@ def build_message_payload(
         "text": text,
         "origin": "bot",
     }
+
 
 @debug
 def build_pdf_payload(
@@ -555,6 +566,7 @@ CERT_TRANSFER_COMMENTS = "Chamado aberto via automação para renovação de cer
 NO_BOT_DEPT_ID = "d9fe4658-1ad6-43ba-a00e-cf0b998852c2"
 NO_BOT_TRANSFER_COMMENTS = "Transferência para o grupo sem bot via automação."
 
+
 @debug
 def build_transfer_to_certification(contact_number: str) -> dict:
     """Gera payload para transferência de ticket ao departamento de Certificação Digital"""
@@ -566,6 +578,7 @@ def build_transfer_to_certification(contact_number: str) -> dict:
         comments=CERT_TRANSFER_COMMENTS,
     )
     return transfer_ticket_digisac(payload, contact_id)
+
 
 @debug
 def build_transfer_to_group_without_bot(contact_number: str) -> dict:
@@ -595,6 +608,7 @@ def build_certification_message(
 
     return send_message_digisac(payload)
 
+
 @debug
 def build_proposal_certification_pdf(
     contact_number: str, pdf_content: bytes, filename: str
@@ -608,6 +622,7 @@ def build_proposal_certification_pdf(
         text="Proposta",
     )
     return payload
+
 
 @debug
 def send_proposal_file(
@@ -703,6 +718,7 @@ def send_proposal_file(
 
     return pdf_response
 
+
 @debug
 def build_billing_certification_pdf(
     contact_number: str, company_name: str, deal_id: int, filename: str
@@ -777,6 +793,7 @@ def build_billing_certification_pdf(
     )
     return send_pdf_digisac(payload)
 
+
 @debug
 def build_form_agendamento(
     contact_number: str, company_name: str, form_link: str
@@ -818,13 +835,14 @@ def has_open_ticket_for_user(contact_number: str) -> bool:
     }
 
     encoded_query = urllib.parse.quote(json.dumps(query))
-    url = f"{DIGISAC_BASE_API}/api/v1/tickets?query={encoded_query}"
+    url = f"{DIGISAC_BASE_API}/tickets?query={encoded_query}"
 
     resp = requests.get(url, headers=get_auth_headers())
     resp.raise_for_status()
     data = resp.json()
 
     return False if data["total"] == 0 else True
+
 
 @debug
 @retry_with_backoff(retries=3, backoff_in_seconds=2)
@@ -841,6 +859,7 @@ def transfer_ticket_digisac(payload: dict, contact_id: str) -> dict:
         logger.error("[TRANSFER] Erro de requisição: %s", e)
         return {"error": str(e)}
 
+
 @debug
 @retry_with_backoff(retries=3, backoff_in_seconds=2)
 def send_message_digisac(payload: dict) -> dict:
@@ -855,6 +874,7 @@ def send_message_digisac(payload: dict) -> dict:
     except requests.RequestException as e:
         logger.error("[MSG] Erro: %s", e)
         return {"error": str(e)}
+
 
 @debug
 @retry_with_backoff(retries=3, backoff_in_seconds=2)
@@ -871,6 +891,7 @@ def send_pdf_digisac(payload: dict) -> dict:
         logger.error("[PDF] Erro: %s", e)
         return {"error": str(e)}
 
+
 @debug
 @retry_with_backoff(retries=3, backoff_in_seconds=2)
 def close_ticket_digisac(contact_id: str) -> dict:
@@ -883,6 +904,7 @@ def close_ticket_digisac(contact_id: str) -> dict:
     except requests.RequestException as e:
         logger.error("[CLOSE] Erro ao encerrar o ticket: %s", e)
         return {"error": str(e)}
+
 
 @debug
 def _parse_response(response) -> dict:
@@ -906,6 +928,7 @@ def _parse_response(response) -> dict:
         )
         return {"status_code": response.status_code, "text": response.text}
 
+
 @debug
 def _build_certification_message_text(
     contact_name: str, company_name: str, days_to_expire: int
@@ -927,6 +950,7 @@ def _build_certification_message_text(
         "❌ Digite: *RECUSAR* → Não deseja renovar o certificado no momento"
     )
 
+
 @debug
 def sanitize_user_input(user_input: str) -> str:
     return (
@@ -936,6 +960,7 @@ def sanitize_user_input(user_input: str) -> str:
         .strip()
         .upper()
     )
+
 
 @debug
 def interpret_certification_response(text: str) -> str:
@@ -952,6 +977,7 @@ def interpret_certification_response(text: str) -> str:
 
 
 # webhook_services.py - Adicionar nova função
+
 
 @debug
 def send_processing_notification(contact_number: str):
@@ -976,3 +1002,41 @@ def send_processing_notification(contact_number: str):
         user_id=DIGISAC_USER_ID,
     )
     return send_message_digisac(payload)
+
+
+def queue_if_open_ticket(func: Callable):
+    """
+    Se o cliente ainda estiver em atendimento, enfileira o SPA na ticket_flow_queue
+    e interrompe a execução do builder (retorna None).
+    """
+
+    @wraps
+    @debug
+    def wrapper(*args, **kwargs):
+        # Extrai contato
+        contact_number = kwargs.get("contact_number") or (args[0] if args else None)
+        if not contact_number:
+            return func(*args, **kwargs)
+
+        std_number = standardize_phone_number(contact_number)
+
+        # Verifica se existe pendência para o contato
+        pending = get_active_spa_id(contact_number=std_number)
+        if not pending:
+            return func(*args, **kwargs)
+
+        spa_id = pending.get("spa_id")
+
+        # Se ainda estiver em atendimento, enfileira e aborta
+        if has_open_ticket_for_user(std_number):
+            logger.info("SPA %s em atendimento. Queueing %s", spa_id, func.__name__)
+            try:
+                insert_ticket_flow_queue(spa_id, std_number)
+            except IntegrityError:
+                logger.debug("ticket_flow_queue: SPA %s já enfileirado", spa_id)
+            return None
+
+        # Caso contrário, executa o builder
+        return func(*args, **kwargs)
+
+    return wrapper

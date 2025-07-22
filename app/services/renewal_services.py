@@ -32,6 +32,7 @@ def add_pending(
     contact_name: str,
     deal_type: str,
     spa_id: int,
+    status: str
 ) -> str:
     std_number = _standardize_phone(contact_number)
     try:
@@ -39,15 +40,16 @@ def add_pending(
             conn.execute(
                 """
                 INSERT INTO certif_pending_renewals (
-                    company_name, contact_number, contact_name, deal_type, spa_id
-                ) VALUES (?, ?, ?, ?, ?)
+                    company_name, contact_number, contact_name, deal_type, spa_id, status
+                ) VALUES (?, ?, ?, ?, ?, ?)
                 ON CONFLICT(spa_id) DO UPDATE SET
                     company_name = excluded.company_name,
                     contact_number = excluded.contact_number,
                     contact_name = excluded.contact_name,
-                    deal_type = excluded.deal_type
+                    deal_type = excluded.deal_type,
+                    status = excluded.status
                 """,
-                (company_name, std_number, contact_name, deal_type, spa_id),
+                (company_name, std_number, contact_name, deal_type, spa_id, status),
             )
             conn.commit()
         return std_number
@@ -196,19 +198,23 @@ def get_next_pending_message(spa_id: int) -> Optional[dict]:
 @debug
 def insert_ticket_flow_queue(spa_id: str, contact_number: str) -> None:
     """Insere ticket na fila de espera se o contato estiver em atendimento"""
-    with get_db_connection() as conn:
-        conn.execute(
-            """
-            INSERT INTO ticket_flow_queue (spa_id, contact_number)
-            VALUES (?, ?)
-            ON CONFLICT(spa_id) DO UPDATE SET
-              contact_number = excluded.contact_number,
-              status = 'waiting',
-              last_checked = NULL
-            """,
-            (spa_id, contact_number),
-        )
-        conn.commit()
+    try:
+        with get_db_connection() as conn:
+            conn.execute(
+                """
+                INSERT INTO ticket_flow_queue (spa_id, contact_number)
+                VALUES (?, ?)
+                ON CONFLICT(spa_id) DO UPDATE SET
+                contact_number = excluded.contact_number,
+                status = 'waiting',
+                last_checked = NULL
+                """,
+                (spa_id, contact_number),
+            )
+            conn.commit()
+    except sqlite3.OperationalError as e:
+        logger.error("Erro ao enfileirar SPA %s: %s", spa_id, e)
+        raise
 
 
 @debug
@@ -269,7 +275,6 @@ def get_waiting_ticket_queue() -> Optional[dict]:
         return [dict(row) for row in rows]
 
 
-# Funções de mensagens e notificações
 @debug
 def mark_message_processed(
     spa_id: int, message_id: str, event_type: str, payload: dict

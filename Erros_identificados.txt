@@ -21,6 +21,7 @@ verificar quais funções podem ser assícronas;
 implementar um worker para refresh dos tokens;
 desacoplar o init do DB e workers dentro do __init__ do app e retirar do app.run;
 worker de ticket aberto fazer um check em renewal para não ficar rodando desnecessariamente;
+considerar se é viável e necessário um departamento de atendimento de bots (e.g. CD BOT)
 
 
 
