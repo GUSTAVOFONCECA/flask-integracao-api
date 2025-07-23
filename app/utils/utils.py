@@ -12,8 +12,6 @@ from functools import wraps
 import requests
 from flask import request, jsonify
 from selenium.webdriver.common.by import By
-from sqlite3 import IntegrityError
-from app.services.
 
 
 logger = logging.getLogger(__name__)

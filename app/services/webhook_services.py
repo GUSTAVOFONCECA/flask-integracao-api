@@ -13,22 +13,98 @@ import json
 import base64
 import urllib.parse
 import logging
-from sqlite3 import IntegrityError
 from datetime import datetime, timedelta
 from functools import wraps
-from typing import Optional, Dict, Callable
+from typing import Optional, Dict
 import requests
 from flask import request, jsonify
 from app.config import Config
 from app.utils.utils import retry_with_backoff, standardize_phone_number, debug
 from app.services.renewal_services import (
-    get_active_spa_id,
+    get_pending,
+    add_pending,
     insert_ticket_flow_queue,
 )
 
 
 logger = logging.getLogger(__name__)
 
+
+class QueueingException(Exception):
+    """
+    Exceção usada para interromper o fluxo normal quando uma chamada
+    é enfileirada em ticket_flow_queue, em vez de ser executada imediatamente.
+    """
+
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
+def queue_if_open_ticket_route(add_pending_if_missing=False):
+    def decorator(view_func):
+        @wraps(view_func)
+        def wrapper(*args, **kwargs):
+            payload_dict = {
+                "args": request.args.to_dict(),
+                "form": request.form.to_dict()
+            }
+            spa_id = payload_dict.get("args").get("idSPA")
+            contact_number = payload_dict.get("args").get("contactNumber")
+            company_name = payload_dict.get("args").get("companyName")
+            contact_name = payload_dict.get("args").get("contactName")
+            deal_type = payload_dict.get("args").get("dealType")
+
+            if not spa_id or not contact_number:
+                logger.warning("SPA ID ou contactNumber ausente em rota protegida.")
+                return view_func(*args, **kwargs)
+
+            try:
+                spa_id = int(spa_id)
+            except ValueError:
+                logger.error("ID de SPA inválido")
+                return view_func(*args, **kwargs)
+
+            std_number = standardize_phone_number(contact_number)
+
+            if add_pending_if_missing:
+                pending = get_pending(spa_id=spa_id)
+                if not pending:
+                    add_pending(
+                        company_name=company_name,
+                        contact_number=std_number,
+                        contact_name=contact_name,
+                        deal_type=deal_type,
+                        spa_id=spa_id,
+                        status="pending",
+                    )
+                    logger.info(f"Pendência criada via decorator para SPA {spa_id}")
+
+            if has_open_ticket_for_user_in_cert_dept(std_number):
+                logger.info(
+                    f"SPA {spa_id} está com ticket aberto. Enfileirando rota: {view_func.__name__}"
+                )
+                insert_ticket_flow_queue(
+                    spa_id=spa_id,
+                    contact_number=std_number,
+                    func_name=view_func.__name__,
+                    func_args=json.dumps(payload_dict, ensure_ascii=False),
+                )
+                return (
+                    jsonify(
+                        {
+                            "status": "queued",
+                            "spa_id": spa_id,
+                            "message": f"Fluxo enfileirado para {view_func.__name__} enquanto o ticket estiver aberto.",
+                        }
+                    ),
+                    200,
+                )
+
+            return view_func(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 def validate_api_key(f):
     """Decorador para validação de chave API nas requisições.
@@ -820,7 +896,7 @@ def build_form_agendamento(
 # --- Funções de envio/refatoradas ---
 @debug
 @retry_with_backoff(retries=3, backoff_in_seconds=2)
-def has_open_ticket_for_user(contact_number: str) -> bool:
+def fetch_open_ticket_for_user(contact_number: str) -> bool:
     """Verifica se há chamado aberto para o cliente"""
     contact_id = _get_contact_id_by_number(contact_number)
     query = {
@@ -841,7 +917,21 @@ def has_open_ticket_for_user(contact_number: str) -> bool:
     resp.raise_for_status()
     data = resp.json()
 
-    return False if data["total"] == 0 else True
+    items = data.get("data", []) or []
+    return items[0] if items else None
+
+
+def has_open_ticket_for_user_in_cert_dept(contact_number: str) -> bool:
+    """
+    Retorna True se existir um ticket aberto EM OUTRO departamento
+    (i.e. distinto do CERT_DEPT_ID);
+    se o único aberto for no CERT_DEPT_ID, retorna False.
+    """
+    ticket = fetch_open_ticket_for_user(contact_number)
+    if not ticket:
+        return False
+    # Se o ticket estiver NO SEU departamento, deixamos passar:
+    return ticket.get("departmentId") != CERT_DEPT_ID
 
 
 @debug
@@ -1002,41 +1092,3 @@ def send_processing_notification(contact_number: str):
         user_id=DIGISAC_USER_ID,
     )
     return send_message_digisac(payload)
-
-
-def queue_if_open_ticket(func: Callable):
-    """
-    Se o cliente ainda estiver em atendimento, enfileira o SPA na ticket_flow_queue
-    e interrompe a execução do builder (retorna None).
-    """
-
-    @wraps
-    @debug
-    def wrapper(*args, **kwargs):
-        # Extrai contato
-        contact_number = kwargs.get("contact_number") or (args[0] if args else None)
-        if not contact_number:
-            return func(*args, **kwargs)
-
-        std_number = standardize_phone_number(contact_number)
-
-        # Verifica se existe pendência para o contato
-        pending = get_active_spa_id(contact_number=std_number)
-        if not pending:
-            return func(*args, **kwargs)
-
-        spa_id = pending.get("spa_id")
-
-        # Se ainda estiver em atendimento, enfileira e aborta
-        if has_open_ticket_for_user(std_number):
-            logger.info("SPA %s em atendimento. Queueing %s", spa_id, func.__name__)
-            try:
-                insert_ticket_flow_queue(spa_id, std_number)
-            except IntegrityError:
-                logger.debug("ticket_flow_queue: SPA %s já enfileirado", spa_id)
-            return None
-
-        # Caso contrário, executa o builder
-        return func(*args, **kwargs)
-
-    return wrapper

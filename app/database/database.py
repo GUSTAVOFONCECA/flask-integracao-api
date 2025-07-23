@@ -43,7 +43,7 @@ def init_db():
                 deal_type        TEXT    NOT NULL,
                 sale_id          TEXT,
                 financial_event_id TEXT,
-                status           TEXT    NOT NULL DEFAULT 'pending' CHECK (
+                status           TEXT    NOT NULL CHECK (
                     status IN (
                         'queued',
                         'pending',
@@ -105,10 +105,12 @@ def init_db():
             """
             CREATE TABLE IF NOT EXISTS ticket_flow_queue (
                 id              INTEGER PRIMARY KEY AUTOINCREMENT,
-                spa_id          INTEGER NOT NULL UNIQUE,
+                spa_id          INTEGER NOT NULL,
                 contact_number  TEXT    NOT NULL,
+                func_name       TEXT    NOT NULL,
+                func_args       TEXT    NOT NULL,
                 status          TEXT    NOT NULL DEFAULT 'waiting' CHECK (
-                    status IN ('waiting', 'processing', 'started')
+                    status IN ('waiting', 'checking', 'started')
                 ),
                 created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_checked    TIMESTAMP,

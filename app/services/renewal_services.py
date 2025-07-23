@@ -32,7 +32,7 @@ def add_pending(
     contact_name: str,
     deal_type: str,
     spa_id: int,
-    status: str
+    status: str,
 ) -> str:
     std_number = _standardize_phone(contact_number)
     try:
@@ -196,20 +196,55 @@ def get_next_pending_message(spa_id: int) -> Optional[dict]:
 
 
 @debug
-def insert_ticket_flow_queue(spa_id: str, contact_number: str) -> None:
-    """Insere ticket na fila de espera se o contato estiver em atendimento"""
+def is_ticket_flow_queued(
+    spa_id: int,
+    contact_number: str,
+    func_name: str,
+    func_args: str,
+    statuses: tuple = ('waiting',)
+) -> bool:
+    """Retorna True se já houver um ticket com os mesmos parâmetros e status em `statuses`."""
+    with get_db_connection() as conn:
+        row = conn.execute(
+            f"""
+            SELECT 1 FROM ticket_flow_queue
+            WHERE spa_id = ?
+              AND contact_number = ?
+              AND func_name = ?
+              AND func_args = ?
+              AND status IN ({','.join('?' for _ in statuses)})
+            LIMIT 1
+            """,
+            (spa_id, contact_number, func_name, func_args, *statuses)
+        ).fetchone()
+        return row is not None
+
+
+@debug
+def insert_ticket_flow_queue(
+    spa_id: str,
+    contact_number: str,
+    func_name: str,
+    func_args: str
+) -> None:
+    """Insere ticket na fila de espera se não houver um igual já pendente."""
     try:
+        # padroniza números, strings, etc, se preciso
+        if is_ticket_flow_queued(spa_id, contact_number, func_name, func_args):
+            logger.info(
+                "Ticket já enfileirado para SPA %s, função %s. Ignorando inserção.",
+                spa_id, func_name
+            )
+            return
+
         with get_db_connection() as conn:
             conn.execute(
                 """
-                INSERT INTO ticket_flow_queue (spa_id, contact_number)
-                VALUES (?, ?)
-                ON CONFLICT(spa_id) DO UPDATE SET
-                contact_number = excluded.contact_number,
-                status = 'waiting',
-                last_checked = NULL
+                INSERT INTO ticket_flow_queue
+                  (spa_id, contact_number, func_name, func_args)
+                VALUES (?, ?, ?, ?)
                 """,
-                (spa_id, contact_number),
+                (spa_id, contact_number, func_name, func_args),
             )
             conn.commit()
     except sqlite3.OperationalError as e:
@@ -218,18 +253,65 @@ def insert_ticket_flow_queue(spa_id: str, contact_number: str) -> None:
 
 
 @debug
-def start_ticket_queue(queue_id: str) -> None:
-    """Starta row na tabela ticket_flow_queue"""
+def start_ticket_queue(queue_id: int) -> None:
+    """
+    Tenta avançar o ticket para 'started' (concluído), mas apenas se
+    não houver mais ticket aberto para este contato no departamento.
+    Caso contrário, mantém o ticket aguardando e atualiza last_checked.
+    """
+    # import local, só quando a função é invocada
+    from app.services.renewal_services import has_open_ticket_for_user_in_cert_dept
     with get_db_connection() as conn:
+        # 1) Busca os dados principais do ticket
+        row = conn.execute(
+            """
+            SELECT contact_number
+              FROM ticket_flow_queue
+             WHERE id = ?
+            """,
+            (queue_id,)
+        ).fetchone()
+
+        if not row:
+            logger.error("start_ticket_queue: ticket %s não encontrado", queue_id)
+            return
+
+        contact_number = row["contact_number"]
+        std_number = standardize_phone_number(contact_number)
+
+        # 2) Verifica se o cliente ainda tem ticket aberto
+        if has_open_ticket_for_user_in_cert_dept(std_number):
+            # Se ainda estiver aberto, só atualiza o último check e retorna
+            conn.execute(
+                """
+                UPDATE ticket_flow_queue
+                   SET last_checked = CURRENT_TIMESTAMP
+                 WHERE id = ?
+                """,
+                (queue_id,)
+            )
+            conn.commit()
+            logger.info(
+                "start_ticket_queue: ticket %s mantido na fila pois ainda existe ticket aberto",
+                queue_id
+            )
+            return
+
+        # 3) Se não houver mais ticket aberto, marca como started
         conn.execute(
             """
-            UPDATE ticket_flow_queue 
-            SET status = 'started', last_checked = ?
-            WHERE id = ?
+            UPDATE ticket_flow_queue
+               SET status = 'started',
+                   last_checked = CURRENT_TIMESTAMP
+             WHERE id = ?
             """,
-            (datetime.now(), queue_id),
+            (queue_id,)
         )
         conn.commit()
+        logger.info(
+            "start_ticket_queue: ticket %s marcado como 'started' (fluxo concluído)",
+            queue_id
+        )
 
 
 @debug
@@ -257,7 +339,7 @@ def update_retry_count_ticket_queue(queue_id: str) -> None:
             SET last_checked = ?, retry_count = retry_count + 1
             WHERE id = ?
             """,
-            (datetime.now(), queue_id)
+            (datetime.now(), queue_id),
         )
         conn.commit()
 
@@ -268,8 +350,9 @@ def get_waiting_ticket_queue() -> Optional[dict]:
     with get_db_connection() as conn:
         rows = conn.execute(
             """
-            SELECT id, spa_id, contact_number, retry_count 
-            FROM ticket_flow_queue WHERE status = 'waiting'
+            SELECT id, spa_id, contact_number, func_name, func_args, retry_count
+            FROM ticket_flow_queue 
+            WHERE status = 'waiting'
             """
         ).fetchall()
         return [dict(row) for row in rows]

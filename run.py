@@ -59,6 +59,11 @@ class AppManager:
         sys.exit(0)
 
 
+def start_worker_with_app_context(app):
+    with app.app_context():
+        run_ticket_flow_worker()
+
+
 def main() -> None:
     """
     Função principal de inicialização da aplicação.
@@ -112,7 +117,7 @@ def main() -> None:
         app_logger.info("Banco de dados inicializado")
 
         # Inicia workers
-        Thread(target=run_ticket_flow_worker, daemon=True).start()
+        Thread(target=start_worker_with_app_context, args=(flask_app,), daemon=True).start()
 
         # Iniciar Flask em thread
         flask_thread = Thread(target=manager.run_flask_server, daemon=True)

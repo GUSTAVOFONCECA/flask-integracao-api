@@ -25,10 +25,9 @@ from app.services.webhook_services import (
     update_crm_item,
     update_deal_item,
     _get_contact_number_by_id,
-    has_open_ticket_for_user,
+    queue_if_open_ticket_route,
 )
 from app.services.renewal_services import (
-    add_pending,
     get_pending,
     update_pending,
     mark_message_processed,
@@ -39,7 +38,10 @@ from app.services.renewal_services import (
     process_pending_messages,
     set_processing_status,
 )
-from app.utils.utils import respond_with_200_on_exception, standardize_phone_number
+from app.utils.utils import (
+    respond_with_200_on_exception,
+    standardize_phone_number
+)
 
 
 webhook_bp = Blueprint("webhook", __name__)
@@ -47,7 +49,7 @@ logger = logging.getLogger(__name__)
 
 # Estados válidos para negociações
 VALID_STATUSES = [
-    "" "pending",
+    "pending",
     "info_sent",
     "customer_retention",
     "sale_created",
@@ -90,6 +92,7 @@ def valida_cnpj_receita_bitrix():
 
 @webhook_bp.route("/aviso-certificado", methods=["POST"])
 @respond_with_200_on_exception
+@queue_if_open_ticket_route(add_pending_if_missing=True)
 def envia_comunicado_para_cliente_certif_digital_digisac():
     logger.info("/aviso-certificado recebido")
 
@@ -141,19 +144,7 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
         logger.info(f"Duplicado: {webhook_id} para SPA {spa_id}")
         return jsonify({"status": "ignored", "message": "Evento já processado"}), 200
 
-    # Registrar pendência
-    try:
-        std_number = add_pending(
-            company_name=company_name,
-            contact_number=contact_number,
-            contact_name=contact_name,
-            deal_type=deal_type,
-            spa_id=spa_id,
-        )
-        logger.info(f"Pendência registrada para SPA {spa_id}")
-    except Exception as e:
-        logger.error(f"Falha ao registrar pendência SPA {spa_id}: {e}")
-        return jsonify({"error": "Falha ao registrar pendência"}), 500
+    std_number = standardize_phone_number(contact_number)
 
     # Notificações
     try:
@@ -185,6 +176,7 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
 
 @webhook_bp.route("/digisac", methods=["POST"])
 @respond_with_200_on_exception
+@queue_if_open_ticket_route()
 def resposta_certificado_digisac():
     payload = request.get_json(silent=True) or {}
     data = payload.get("data", {}) or {}
@@ -370,6 +362,7 @@ def _send_invalid_response_notification(contact_number: str):
 
 @webhook_bp.route("/cobranca-gerada", methods=["POST"])
 @respond_with_200_on_exception
+@queue_if_open_ticket_route()
 def cobranca_gerada():
     logger.info("/cobranca-gerada recebido — salvando dados de cobrança")
     logger.debug(f"Headers: {dict(request.headers)}")
@@ -424,6 +417,7 @@ def cobranca_gerada():
 
 @webhook_bp.route("/envio-cobranca", methods=["POST"])
 @respond_with_200_on_exception
+@queue_if_open_ticket_route()
 def envio_cobranca():
     logger.info("/envio-cobranca recebido — enviando boleto via Digisac")
     logger.debug(f"Headers: {dict(request.headers)}")
@@ -481,6 +475,7 @@ def envio_cobranca():
 
 @webhook_bp.route("/agendamento-certificado", methods=["POST"])
 @respond_with_200_on_exception
+@queue_if_open_ticket_route()
 def envia_form_agendamento_digisac() -> dict:
     """Função para envio de formulário para agendamento ao cliente"""
     logger.info(
