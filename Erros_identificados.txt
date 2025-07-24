@@ -2,6 +2,7 @@
 melhorar a mensageria de aguardar processamento;
 melhorar a mensageria de message_events que são inválidos, não enviar nada no caso;
 melhorar a mensageria para informar qual PJ ou PF está sendo processada;
+verificar a questão da variável de ambiente DIGISAC_USER_ID, pois posteriormente podem ser usados vários usuários, portanto uma lista;
 
 
 ---CONTA AZUL
@@ -23,20 +24,8 @@ worker de ticket aberto fazer um check em renewal para não ficar rodando desnec
 worker de ticket aberto a cada verificação está inserindo no DB, colocar controle sobre;
 considerar se é viável e necessário um departamento de atendimento de bots (e.g. CD BOT);
 no envio da notificação para renovação, criar um novo status em certif_pending_renewals como notification_sent para armazenar o estado;
-fazer o update em ticket_flow_queue para started desacoplando --(Nenhum módulo “vai e volta” entre si:
-
-renewal_services.py continua só com lógica de Bitrix, DB de pendências, etc.
-
-ticket_flow_service.py sabe lidar com a tabela de fila + chamar has_open_ticket, mas não importa nada que importe fila.
-
-Seu worker importa apenas de ticket_flow_service.py (e de renewal_services para o retry) — não há laço.
-
-O start_ticket_queue só vai marcar um item como started depois que de fato não houver mais ticket aberto, e jamais fica num “loop” de chamar a rota de novo, porque:
-
-Se o ticket ainda estiver aberto, ele não muda o status, só atualiza last_checked.
-
-Depois que o Bitrix fechar o ticket, na próxima iteração — quando has_open_ticket_for_user_in_cert_dept for False — aí sim ele faz o UPDATE status='started'.);
-
+ajustar a mensagem de comando inválido para hooks repetidos, para não disparar mensagem de comando inválido;
+por enquanto retirar a mensagem de comando inválido;
 
 
 

@@ -260,14 +260,14 @@ def start_ticket_queue(queue_id: int) -> None:
     Caso contrário, mantém o ticket aguardando e atualiza last_checked.
     """
     # import local, só quando a função é invocada
-    from app.services.renewal_services import has_open_ticket_for_user_in_cert_dept
+    from app.services.webhook_services import has_open_ticket_for_user_in_cert_dept
     with get_db_connection() as conn:
         # 1) Busca os dados principais do ticket
         row = conn.execute(
             """
             SELECT contact_number
-              FROM ticket_flow_queue
-             WHERE id = ?
+            FROM ticket_flow_queue
+            WHERE id = ?
             """,
             (queue_id,)
         ).fetchone()
@@ -285,8 +285,8 @@ def start_ticket_queue(queue_id: int) -> None:
             conn.execute(
                 """
                 UPDATE ticket_flow_queue
-                   SET last_checked = CURRENT_TIMESTAMP
-                 WHERE id = ?
+                SET last_checked = CURRENT_TIMESTAMP
+                WHERE id = ?
                 """,
                 (queue_id,)
             )
@@ -301,9 +301,9 @@ def start_ticket_queue(queue_id: int) -> None:
         conn.execute(
             """
             UPDATE ticket_flow_queue
-               SET status = 'started',
+            SET status = 'started',
                    last_checked = CURRENT_TIMESTAMP
-             WHERE id = ?
+            WHERE id = ?
             """,
             (queue_id,)
         )

@@ -644,7 +644,7 @@ NO_BOT_TRANSFER_COMMENTS = "Transferência para o grupo sem bot via automação.
 
 
 @debug
-def build_transfer_to_certification(contact_number: str) -> dict:
+def build_transfer_to_certification(contact_number: str, to_queue: bool) -> dict:
     """Gera payload para transferência de ticket ao departamento de Certificação Digital"""
     contact_id = _get_contact_id_by_number(contact_number)
 
@@ -670,11 +670,11 @@ def build_transfer_to_group_without_bot(contact_number: str) -> dict:
 
 @debug
 def build_certification_message(
-    contact_number: str, contact_name: str, company_name: str, days_to_expire: int
+    contact_number: str, contact_name: str, company_name: str, days_to_expire: int, deal_type: str
 ) -> dict:
     """Gera payload de mensagem para Certificação Digital"""
     contact_id = _get_contact_id_by_number(contact_number)
-    text = _build_certification_message_text(contact_name, company_name, days_to_expire)
+    text = _build_certification_message_text(contact_name, company_name, days_to_expire, deal_type)
     payload = build_message_payload(
         contact_id=contact_id,
         department_id=CERT_DEPT_ID,
@@ -716,7 +716,10 @@ def send_proposal_file(
 
     # 1. Mensagem inicial informando geração da proposta
     contact_id = _get_contact_id_by_number(contact_number)
-    init_text = "*Bot*\n" "Sua proposta está sendo gerada e será enviada em instantes."
+    init_text = (
+        "*Bot*\n"
+        "Sua proposta está sendo gerada e será enviada em instantes."
+    )
     init_payload = build_message_payload(
         contact_id=contact_id,
         department_id=CERT_DEPT_ID,
@@ -1021,24 +1024,38 @@ def _parse_response(response) -> dict:
 
 @debug
 def _build_certification_message_text(
-    contact_name: str, company_name: str, days_to_expire: int
+    contact_name: str, company_name: str, days_to_expire: int, deal_type: str
 ) -> str:
-    """Gera texto da mensagem de aviso de vencimento do certificado com comandos claros e específicos"""
+    """
+    Gera texto da mensagem de aviso de vencimento do
+    certificado com comandos claros e específicos
+    """
     days = abs(days_to_expire)
     validade_msg = (
-        f"IRA EXPIRAR EM {days} DIAS."
+        f"*IRÁ EXPIRAR EM {days} DIAS.*"
         if days_to_expire >= 0
-        else f"EXPIROU HA {days} DIAS."
+        else f"*EXPIROU HÁ {days} DIAS.*"
     )
-
-    return (
+    pf_msg = (
         "*Bot*\n"
-        f"Olá {contact_name}, o certificado da empresa *{company_name}* {validade_msg}\n\n"
-        "Digite *exatamente* uma das palavras abaixo:\n\n"
-        "✅ Digite: *RENOVAR* → Iniciar renovação e receber proposta para renovação\n"
-        "ℹ️ Digite: *INFO* → Obter mais informações sobre o certificado digital\n"
+        f"Olá {contact_name}, o certificado da empresa *{company_name}* {validade_msg}\n"
+        f"O valor para emissão é de *R$ 185,00.*\n\n"
+        "Escolha uma das opções abaixo, digitando *exatamente* a palavra:\n\n"
+        "✅ Digite: *RENOVAR* → Iniciar o processo de emissão\n"
+        "ℹ️ Digite: *INFO* → Falar com um atendente para mais informações\n"
         "❌ Digite: *RECUSAR* → Não deseja renovar o certificado no momento"
     )
+    pj_msg = (
+        "*Bot*\n"
+        f"Olá {contact_name}, o certificado de Pessoa Fisica *{company_name}* {validade_msg}\n"
+        f"O valor para emissão é de *R$ 130,00.*\n\n"
+        "Escolha uma das opções abaixo, digitando *exatamente* a palavra:\n\n"
+        "✅ Digite: *RENOVAR* → Iniciar o processo de emissão\n"
+        "ℹ️ Digite: *INFO* → Falar com um atendente para mais informações\n"
+        "❌ Digite: *RECUSAR* → Não deseja renovar o certificado no momento"
+    )
+
+    return pj_msg if deal_type == "Pessoa jurídica" else pf_msg
 
 
 @debug
@@ -1064,9 +1081,6 @@ def interpret_certification_response(text: str) -> str:
     if text_clean == "RECUSAR":
         return "refuse"
     return "unknown"
-
-
-# webhook_services.py - Adicionar nova função
 
 
 @debug

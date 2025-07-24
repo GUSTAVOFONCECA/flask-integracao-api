@@ -37,6 +37,8 @@ from app.services.renewal_services import (
     add_pending_message,
     process_pending_messages,
     set_processing_status,
+    has_recent_notification,
+    mark_notification_event
 )
 from app.utils.utils import (
     respond_with_200_on_exception,
@@ -150,7 +152,7 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
     try:
         build_transfer_to_certification(std_number)
         build_certification_message(
-            std_number, contact_name, company_name, days_to_expire
+            std_number, contact_name, company_name, days_to_expire, deal_type
         )
         add_comment_crm_timeline(
             {
@@ -178,18 +180,19 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
 @respond_with_200_on_exception
 @queue_if_open_ticket_route()
 def resposta_certificado_digisac():
+    logger.info("/digisac recebido")
     payload = request.get_json(silent=True) or {}
     data = payload.get("data", {}) or {}
     message = data.get("message", {}) or {}
     message_id = message.get("id")
     contact_id = data.get("contactId")
 
-    # 1) Traduz contato para número
+    # Traduz contato para número
     contact_number = _get_contact_number_by_id(contact_id)
     if not contact_number:
         return jsonify({"status": "ignored", "reason": "Contato não encontrado"}), 200
 
-    # 2) Seleciona a próxima SPA elegível
+    # Seleciona a próxima SPA elegível
     pending = get_pending(contact_number=contact_number, context_aware=True)
     if not pending:
         all_pendings = get_all_pending_by_contact(contact_number)
@@ -206,7 +209,7 @@ def resposta_certificado_digisac():
 
     spa_id = pending["spa_id"]
 
-    # 3) Deduplicação de evento
+    # Deduplicação de evento
     if is_message_processed_or_queued(spa_id, message_id):
         logger.info(f"Mensagem {message_id} duplicada para SPA {spa_id}")
         return jsonify({"status": "duplicate"}), 200
@@ -218,19 +221,25 @@ def resposta_certificado_digisac():
         payload=json.dumps(payload),
     )
 
-    # 4) Se já estiver processando, enfileira e notifica
+    # Se já estiver processando, enfileira e notifica (se for primeira vez)
     if not try_lock_processing(spa_id):
-        # adiciona na fila
         add_pending_message(spa_id, payload)
-        # envia notificação de processamento usando SPA específico
+        """
+        // Fluxo de mensagens de comando inválido não completo melhorar posteriormente
         try:
             processing_contact = pending.get("contact_number")
-            send_processing_notification(processing_contact)
+
+            if not has_recent_notification(spa_id, "processing_notification", minutes=5):
+                send_processing_notification(processing_contact)
+                mark_notification_event(spa_id, "processing_notification")
+
         except Exception:
             logger.exception("Falha ao enviar notificação de processamento")
+        """
+
         return jsonify({"status": "queued"}), 200
 
-    # 5) Lock obtido → processa, libera e esvazia fila
+    # Lock obtido → processa, libera e esvazia fila
     try:
         _process_digisac_message(spa_id, message.get("text", ""))
     finally:
@@ -264,7 +273,8 @@ def _process_digisac_message(spa_id: int, user_message: str):
         _handle_refuse_action(spa_id)
     else:
         logger.info(f"Ação {action} não aplicável no estado {current_status}")
-        _send_invalid_response_notification(contact_number)
+        # //Melhorar o handle de comando inválidos
+        #_send_invalid_response_notification(contact_number)
 
 
 def _handle_renew_action(spa_id: int, pending: dict):
@@ -312,9 +322,9 @@ def _handle_renew_action(spa_id: int, pending: dict):
     finally:
         set_processing_status(spa_id, False)
 
-    # 5. Só depois de tudo: envia a proposta via Digisac
-    send_proposal_file(contact_number, company_name, spa_id)
-    logger.info(f"Proposta enviada para SPA {spa_id}")
+    # Só depois de tudo: envia a proposta via Digisac
+    # send_proposal_file(contact_number, company_name, spa_id)
+    # logger.info(f"Proposta enviada para SPA {spa_id}")
 
 
 def _handle_info_action(spa_id: int, pending: dict):
@@ -331,8 +341,10 @@ def _handle_info_action(spa_id: int, pending: dict):
     )
     logger.info(f"Informações enviadas para SPA ID {spa_id}")
 
+    build_transfer_to_certification()
+
     # Enviar proposta
-    send_proposal_file(contact_number, company_name, spa_id)
+    # send_proposal_file(contact_number, company_name, spa_id)
 
 
 def _handle_refuse_action(spa_id: int):
