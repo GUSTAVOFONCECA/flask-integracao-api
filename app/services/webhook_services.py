@@ -46,7 +46,7 @@ def queue_if_open_ticket_route(add_pending_if_missing=False):
         def wrapper(*args, **kwargs):
             payload_dict = {
                 "args": request.args.to_dict(),
-                "form": request.form.to_dict()
+                "form": request.form.to_dict(),
             }
             spa_id = payload_dict.get("args").get("idSPA")
             contact_number = payload_dict.get("args").get("contactNumber")
@@ -105,6 +105,7 @@ def queue_if_open_ticket_route(add_pending_if_missing=False):
         return wrapper
 
     return decorator
+
 
 def validate_api_key(f):
     """Decorador para validação de chave API nas requisições.
@@ -596,15 +597,22 @@ def start_bitrix_workflow(
 # --- Builders genéricos ---
 @debug
 def build_transfer_payload(
-    contact_id: str, department_id: str, comments: str, user_id: str = DIGISAC_USER_ID
+    contact_id: str, department_id: str, comments: str, user_id: str = None
 ) -> dict:
     """Gera payload para transferência de ticket no Digisac"""
-    return {
+    queue_payload = {
+        "departmentId": department_id,
+        "comments": comments,
+        "contactId": contact_id,
+    }
+    payload = {
         "departmentId": department_id,
         "userId": user_id,
         "comments": comments,
         "contactId": contact_id,
     }
+
+    return queue_payload if user_id is None else payload
 
 
 @debug
@@ -644,7 +652,7 @@ NO_BOT_TRANSFER_COMMENTS = "Transferência para o grupo sem bot via automação.
 
 
 @debug
-def build_transfer_to_certification(contact_number: str, to_queue: bool) -> dict:
+def build_transfer_to_certification(contact_number: str) -> dict:
     """Gera payload para transferência de ticket ao departamento de Certificação Digital"""
     contact_id = _get_contact_id_by_number(contact_number)
 
@@ -670,11 +678,17 @@ def build_transfer_to_group_without_bot(contact_number: str) -> dict:
 
 @debug
 def build_certification_message(
-    contact_number: str, contact_name: str, company_name: str, days_to_expire: int, deal_type: str
+    contact_number: str,
+    contact_name: str,
+    company_name: str,
+    days_to_expire: int,
+    deal_type: str,
 ) -> dict:
     """Gera payload de mensagem para Certificação Digital"""
     contact_id = _get_contact_id_by_number(contact_number)
-    text = _build_certification_message_text(contact_name, company_name, days_to_expire, deal_type)
+    text = _build_certification_message_text(
+        contact_name, company_name, days_to_expire, deal_type
+    )
     payload = build_message_payload(
         contact_id=contact_id,
         department_id=CERT_DEPT_ID,
@@ -701,6 +715,28 @@ def build_proposal_certification_pdf(
 
 
 @debug
+def build_send_billing_message(
+    contact_number: str,
+    company_name: str
+) -> dict:
+    """Gera payload e envia mensagem de aviso sobre envio de cobrança após registro de remessa no banco"""
+    contact_id = _get_contact_id_by_number(contact_number)
+    text = (
+        "*Bot*\n"
+        "A cobrança referente a emissão de certificado digital "
+        f"para {company_name} está sendo gerada.\n"
+        "A mesma será enviada no *próximo dia útil*, após registro da cobrança no banco."
+    )
+    payload = build_message_payload(
+        contact_id=contact_id,
+        department_id=CERT_DEPT_ID,
+        text=text,
+        user_id=DIGISAC_USER_ID
+    )
+
+    return send_message_digisac(payload)
+
+@debug
 def send_proposal_file(
     contact_number: str,
     company_name: str,
@@ -714,7 +750,7 @@ def send_proposal_file(
         f"DYNAMIC_137_{spa_id}",
     ]
 
-    # 1. Mensagem inicial informando geração da proposta
+    # Mensagem inicial informando geração da proposta
     contact_id = _get_contact_id_by_number(contact_number)
     init_text = (
         "*Bot*\n"
@@ -728,12 +764,12 @@ def send_proposal_file(
     )
     send_message_digisac(init_payload)
 
-    # 2. Inicia workflow para gerar documentação atualizada
+    # Inicia workflow para gerar documentação atualizada
     logger.info("Iniciando workflow Bitrix para geração de proposta.")
     start_bitrix_workflow(template_id=556, document_id=doc_id)
     time.sleep(45)
 
-    # 3. Busca o card no CRM e obtém URL do PDF, aguardando até estar disponível
+    # Busca o card no CRM e obtém URL do PDF, aguardando até estar disponível
     max_retries = 6
     retries = 0
     while True:
@@ -745,7 +781,8 @@ def send_proposal_file(
         if retries >= max_retries:
             error_text = (
                 "*Bot*\n"
-                "Não foi possível gerar a proposta no momento. Por favor, tente novamente mais tarde."
+                "Não foi possível gerar a proposta no momento. "
+                "Por favor, tente novamente mais tarde."
             )
             error_payload = build_message_payload(
                 contact_id=contact_id,
@@ -763,7 +800,7 @@ def send_proposal_file(
         )
         time.sleep(30)
 
-    # 4. Baixa o PDF via urlMachine
+    # Baixa o PDF via urlMachine
     try:
         response = requests.get(doc_info["urlMachine"], timeout=60)
         response.raise_for_status()
@@ -772,7 +809,7 @@ def send_proposal_file(
         logger.exception("Erro ao baixar PDF do Bitrix")
         return {"error": f"Erro ao baixar PDF: {e}"}
 
-    # 5. Envia o PDF via Digisac
+    # Envia o PDF via Digisac
     pdf_payload = build_proposal_certification_pdf(
         contact_number=contact_number,
         pdf_content=pdf_bytes,
@@ -780,7 +817,7 @@ def send_proposal_file(
     )
     pdf_response = send_pdf_digisac(pdf_payload)
 
-    # 6. Mensagem final de entrega da proposta
+    # Mensagem final de entrega da proposta
     final_text = (
         "*Bot*\n"
         "Olá! Segue a proposta comercial para renovação do "
@@ -987,8 +1024,9 @@ def send_pdf_digisac(payload: dict) -> dict:
 
 @debug
 @retry_with_backoff(retries=3, backoff_in_seconds=2)
-def close_ticket_digisac(contact_id: str) -> dict:
+def close_ticket_digisac(contact_number: str) -> dict:
     """Encerra o ticket do contato no Digisac"""
+    contact_id = _get_contact_id_by_number(contact_number)
     url = f"{DIGISAC_BASE_API}/contacts/{contact_id}/ticket/close"
     try:
         response = requests.post(url, headers=get_auth_headers(), timeout=60)
@@ -1036,6 +1074,7 @@ def _build_certification_message_text(
         if days_to_expire >= 0
         else f"*EXPIROU HÁ {days} DIAS.*"
     )
+
     pf_msg = (
         "*Bot*\n"
         f"Olá {contact_name}, o certificado da empresa *{company_name}* {validade_msg}\n"
@@ -1045,6 +1084,7 @@ def _build_certification_message_text(
         "ℹ️ Digite: *INFO* → Falar com um atendente para mais informações\n"
         "❌ Digite: *RECUSAR* → Não deseja renovar o certificado no momento"
     )
+
     pj_msg = (
         "*Bot*\n"
         f"Olá {contact_name}, o certificado de Pessoa Fisica *{company_name}* {validade_msg}\n"

@@ -13,7 +13,7 @@ from app.services.webhook_services import (
     verify_webhook_signature,
     add_comment_crm_timeline,
     interpret_certification_response,
-    send_proposal_file,
+    build_send_billing_message,
     build_transfer_to_certification,
     build_certification_message,
     build_form_agendamento,
@@ -26,6 +26,7 @@ from app.services.webhook_services import (
     update_deal_item,
     _get_contact_number_by_id,
     queue_if_open_ticket_route,
+    close_ticket_digisac,
 )
 from app.services.renewal_services import (
     get_pending,
@@ -37,13 +38,8 @@ from app.services.renewal_services import (
     add_pending_message,
     process_pending_messages,
     set_processing_status,
-    has_recent_notification,
-    mark_notification_event
 )
-from app.utils.utils import (
-    respond_with_200_on_exception,
-    standardize_phone_number
-)
+from app.utils.utils import respond_with_200_on_exception, standardize_phone_number
 
 
 webhook_bp = Blueprint("webhook", __name__)
@@ -274,7 +270,7 @@ def _process_digisac_message(spa_id: int, user_message: str):
     else:
         logger.info(f"Ação {action} não aplicável no estado {current_status}")
         # //Melhorar o handle de comando inválidos
-        #_send_invalid_response_notification(contact_number)
+        # _send_invalid_response_notification(contact_number)
 
 
 def _handle_renew_action(spa_id: int, pending: dict):
@@ -283,24 +279,28 @@ def _handle_renew_action(spa_id: int, pending: dict):
     contact_number = pending["contact_number"]
     company_name = pending["company_name"]
 
-    # 1. Marca como em processamento para evitar duplicatas
+    # Marca como em processamento para evitar duplicatas
     set_processing_status(spa_id, True)
 
     try:
-        # 2. Atualiza status imediatamente no DB
+        # Atualiza status imediatamente no DB
         update_pending(
             spa_id=spa_id,
             status="sale_creating",
             last_interaction=datetime.now(),
         )
 
-        # 3. Cria a venda (idempotente)
+        build_send_billing_message(
+            contact_number=contact_number, company_name=company_name
+        )
+
+        # Cria a venda (idempotente)
         result = handle_sale_creation_certif_digital(
             contact_number, pending["deal_type"]
         )
         sale_id = result["sale"]["id"]
 
-        # 4. Atualiza CRM com o novo stage e sale_id
+        # Atualiza CRM com o novo stage e sale_id
         update_crm_item(137, spa_id, {"stageId": "DT137_36:UC_90X241"})
         update_pending(
             spa_id=spa_id,
@@ -321,7 +321,7 @@ def _handle_renew_action(spa_id: int, pending: dict):
         raise
     finally:
         set_processing_status(spa_id, False)
-
+        close_ticket_digisac(contact_number)
     # Só depois de tudo: envia a proposta via Digisac
     # send_proposal_file(contact_number, company_name, spa_id)
     # logger.info(f"Proposta enviada para SPA {spa_id}")
@@ -341,7 +341,7 @@ def _handle_info_action(spa_id: int, pending: dict):
     )
     logger.info(f"Informações enviadas para SPA ID {spa_id}")
 
-    build_transfer_to_certification()
+    build_transfer_to_certification(contact_number=contact_number)
 
     # Enviar proposta
     # send_proposal_file(contact_number, company_name, spa_id)
@@ -411,6 +411,8 @@ def cobranca_gerada():
             },
         )
 
+        close_ticket_digisac(contact_number)
+
         return (
             jsonify(
                 {
@@ -470,6 +472,8 @@ def envio_cobranca():
             },
         )
 
+        close_ticket_digisac(pending.get("contact_number"))
+
         return (
             jsonify(
                 {
@@ -513,6 +517,7 @@ def envia_form_agendamento_digisac() -> dict:
             status="scheduling_form_sent",
             last_interaction=datetime.now(),
         )
+        close_ticket_digisac(contact_number)
 
         return (
             jsonify(
