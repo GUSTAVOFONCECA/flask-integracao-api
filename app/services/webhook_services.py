@@ -79,6 +79,7 @@ def queue_if_open_ticket_route(add_pending_if_missing=False):
                     )
                     logger.info(f"Pendência criada via decorator para SPA {spa_id}")
 
+
             if has_open_ticket_for_user_in_cert_dept(std_number):
                 logger.info(
                     f"SPA {spa_id} está com ticket aberto. Enfileirando rota: {view_func.__name__}"
@@ -652,16 +653,23 @@ NO_BOT_TRANSFER_COMMENTS = "Transferência para o grupo sem bot via automação.
 
 
 @debug
-def build_transfer_to_certification(contact_number: str) -> dict:
+def build_transfer_to_certification(contact_number: str, to_queue: bool = False) -> dict:
     """Gera payload para transferência de ticket ao departamento de Certificação Digital"""
     contact_id = _get_contact_id_by_number(contact_number)
+
+    queue_payload = build_transfer_payload(
+        user_id=DIGISAC_USER_ID,
+        contact_id=contact_id,
+        department_id=CERT_DEPT_ID,
+        comments=CERT_TRANSFER_COMMENTS,
+    )
 
     payload = build_transfer_payload(
         contact_id=contact_id,
         department_id=CERT_DEPT_ID,
         comments=CERT_TRANSFER_COMMENTS,
     )
-    return transfer_ticket_digisac(payload, contact_id)
+    return transfer_ticket_digisac(payload, contact_id) if to_queue is False else transfer_ticket_digisac(queue_payload, contact_id)
 
 
 @debug

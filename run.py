@@ -16,7 +16,6 @@ from app import create_app
 from app.database.database import init_db
 from app.services.tunnel_service import start_localtunnel
 from app.config import Config, configure_logging
-from app.workers.ticket_flow_worker import run_ticket_flow_worker
 
 
 class AppManager:
@@ -29,6 +28,7 @@ class AppManager:
 
     def __init__(self):
         self.flask_app = create_app()
+        self.worker_threads = []  # Lista de armazenamento das threads dos workers
 
     def run_flask_server(self):
         """
@@ -58,10 +58,29 @@ class AppManager:
         self.flask_app.logger.info("Encerrando aplicação...")
         sys.exit(0)
 
+    def start_workers(self):
+        """Inicia todos os workers da aplicação em threads separadas"""
+        workers = [self.start_ticket_flow_worker, self.start_session_worker]
 
-def start_worker_with_app_context(app):
-    with app.app_context():
-        run_ticket_flow_worker()
+        for worker in workers:
+            thread = Thread(target=worker, daemon=True)
+            thread.start()
+            self.worker_threads.append(thread)
+            self.flask_app.logger.info(f"🧵 Thread do {worker.__name__} iniciada")
+
+    def start_ticket_flow_worker(self):
+        """Inicia o worker de fluxo de tickets com contexto (app)"""
+        with self.flask_app.app_context():
+            from app.workers.ticket_flow_worker import run_ticket_flow_worker
+
+            run_ticket_flow_worker()
+
+    def start_session_worker(self):
+        """Inicia o worker de sessões com contexto (app)"""
+        with self.flask_app.app_context():
+            from app.workers.session_worker import run_session_worker
+
+            run_session_worker()
 
 
 def main() -> None:
@@ -116,12 +135,13 @@ def main() -> None:
         init_db()
         app_logger.info("Banco de dados inicializado")
 
-        # Inicia workers
-        Thread(target=start_worker_with_app_context, args=(flask_app,), daemon=True).start()
+        # Inicia todos os workers
+        manager.start_workers()
 
         # Iniciar Flask em thread
         flask_thread = Thread(target=manager.run_flask_server, daemon=True)
         flask_thread.start()
+        manager.worker_threads.append(flask_thread)
 
         # Disparar o LocalTunnel em background
         start_localtunnel()

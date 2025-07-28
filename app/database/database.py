@@ -123,6 +123,20 @@ def init_db():
             """
         )
 
+        # Tabela de sessão por contato
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS contact_sessions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                contact_number TEXT NOT NULL,
+                expected_commands INTEGER NOT NULL,
+                received_commands INTEGER NOT NULL DEFAULT 0,
+                created_at DATETIME NOT NULL,
+                status TEXT NOT NULL DEFAULT 'active'
+            );
+            """
+        )
+
         # Índices otimizados
         conn.execute(
             "CREATE UNIQUE INDEX IF NOT EXISTS ux_pending_spa_id "
@@ -139,6 +153,10 @@ def init_db():
         )
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_ticket_flow_spa ON ticket_flow_queue (spa_id);"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_contact_sessions_status_created_at ON "
+            "contact_sessions(status, created_at);"
         )
 
         conn.commit()

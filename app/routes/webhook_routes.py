@@ -38,6 +38,7 @@ from app.services.renewal_services import (
     add_pending_message,
     process_pending_messages,
     set_processing_status,
+    get_or_create_session
 )
 from app.utils.utils import respond_with_200_on_exception, standardize_phone_number
 
@@ -216,6 +217,8 @@ def resposta_certificado_digisac():
         event_type="digisac_incoming",
         payload=json.dumps(payload),
     )
+    # Cria/atualiza sessão ANTES de processar a mensagem
+    get_or_create_session(contact_number)
 
     # Se já estiver processando, enfileira e notifica (se for primeira vez)
     if not try_lock_processing(spa_id):
@@ -254,11 +257,14 @@ def _process_digisac_message(spa_id: int, user_message: str):
         return
 
     current_status = pending["status"]
-    contact_number = pending["contact_number"]
 
     # Interpretar a resposta do usuário
     action = interpret_certification_response(user_message)
     logger.info(f"Ação detectada: {action} (Estado atual: {current_status})")
+    if action in ["renew", "info", "refuse"]:
+        from app.services.renewal_services import record_command, try_finalize_session
+        record_command(pending["contact_number"])
+        try_finalize_session(pending["contact_number"])
 
     # Executar ações com base na intenção
     if action == "renew" and current_status in ["pending", "info_sent"]:
@@ -269,7 +275,7 @@ def _process_digisac_message(spa_id: int, user_message: str):
         _handle_refuse_action(spa_id)
     else:
         logger.info(f"Ação {action} não aplicável no estado {current_status}")
-        # //Melhorar o handle de comando inválidos
+        # //Melhorar o handle de comandos inválidos
         # _send_invalid_response_notification(contact_number)
 
 
@@ -321,7 +327,6 @@ def _handle_renew_action(spa_id: int, pending: dict):
         raise
     finally:
         set_processing_status(spa_id, False)
-        close_ticket_digisac(contact_number)
     # Só depois de tudo: envia a proposta via Digisac
     # send_proposal_file(contact_number, company_name, spa_id)
     # logger.info(f"Proposta enviada para SPA {spa_id}")
@@ -331,7 +336,6 @@ def _handle_info_action(spa_id: int, pending: dict):
     """Trata solicitação de informações"""
     logger.info(f"Enviando informações para SPA ID {spa_id}")
     contact_number = pending["contact_number"]
-    company_name = pending["company_name"]
 
     # Atualizar estado
     update_pending(

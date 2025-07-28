@@ -177,7 +177,7 @@ def debug(func):
         try:
             result = func(*args, **kwargs)
             safe_result = truncate(result)
-            logger.debug(f"<- {func.__name__} returned {safe_result!r}")
+            logger.debug(f"<-- {func.__name__} returned {safe_result!r}")
             return result
         except Exception:
             tb = traceback.format_exc()

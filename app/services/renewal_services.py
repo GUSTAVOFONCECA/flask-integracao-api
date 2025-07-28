@@ -11,17 +11,7 @@ from app.utils.utils import standardize_phone_number, debug
 
 logger = logging.getLogger(__name__)
 
-
-def _standardize_phone(phone: str) -> str:
-    if not phone:
-        return ""
-    try:
-        std_phone = standardize_phone_number(phone)
-        if std_phone and len(std_phone) == 12:
-            return std_phone[:4] + "9" + std_phone[4:]
-        return std_phone
-    except Exception:
-        return phone
+SESSION_TIMEOUT_MINUTES = 30
 
 
 # Funções principais
@@ -34,7 +24,7 @@ def add_pending(
     spa_id: int,
     status: str,
 ) -> str:
-    std_number = _standardize_phone(contact_number)
+    std_number = standardize_phone_number(contact_number)
     try:
         with get_db_connection() as conn:
             conn.execute(
@@ -102,7 +92,7 @@ def get_pending(
             ).fetchone()
             return dict(row) if row else None
 
-        std_number = _standardize_phone(contact_number)
+        std_number = standardize_phone_number(contact_number)
         query = """
             SELECT * FROM certif_pending_renewals
             WHERE contact_number = ?
@@ -201,7 +191,7 @@ def is_ticket_flow_queued(
     contact_number: str,
     func_name: str,
     func_args: str,
-    statuses: tuple = ('waiting',)
+    statuses: tuple = ("waiting",),
 ) -> bool:
     """Retorna True se já houver um ticket com os mesmos parâmetros e status em `statuses`."""
     with get_db_connection() as conn:
@@ -215,17 +205,14 @@ def is_ticket_flow_queued(
               AND status IN ({','.join('?' for _ in statuses)})
             LIMIT 1
             """,
-            (spa_id, contact_number, func_name, func_args, *statuses)
+            (spa_id, contact_number, func_name, func_args, *statuses),
         ).fetchone()
         return row is not None
 
 
 @debug
 def insert_ticket_flow_queue(
-    spa_id: str,
-    contact_number: str,
-    func_name: str,
-    func_args: str
+    spa_id: str, contact_number: str, func_name: str, func_args: str
 ) -> None:
     """Insere ticket na fila de espera se não houver um igual já pendente."""
     try:
@@ -233,7 +220,8 @@ def insert_ticket_flow_queue(
         if is_ticket_flow_queued(spa_id, contact_number, func_name, func_args):
             logger.info(
                 "Ticket já enfileirado para SPA %s, função %s. Ignorando inserção.",
-                spa_id, func_name
+                spa_id,
+                func_name,
             )
             return
 
@@ -261,6 +249,7 @@ def start_ticket_queue(queue_id: int) -> None:
     """
     # import local, só quando a função é invocada
     from app.services.webhook_services import has_open_ticket_for_user_in_cert_dept
+
     with get_db_connection() as conn:
         # 1) Busca os dados principais do ticket
         row = conn.execute(
@@ -269,7 +258,7 @@ def start_ticket_queue(queue_id: int) -> None:
             FROM ticket_flow_queue
             WHERE id = ?
             """,
-            (queue_id,)
+            (queue_id,),
         ).fetchone()
 
         if not row:
@@ -288,12 +277,12 @@ def start_ticket_queue(queue_id: int) -> None:
                 SET last_checked = CURRENT_TIMESTAMP
                 WHERE id = ?
                 """,
-                (queue_id,)
+                (queue_id,),
             )
             conn.commit()
             logger.info(
                 "start_ticket_queue: ticket %s mantido na fila pois ainda existe ticket aberto",
-                queue_id
+                queue_id,
             )
             return
 
@@ -305,12 +294,12 @@ def start_ticket_queue(queue_id: int) -> None:
                    last_checked = CURRENT_TIMESTAMP
             WHERE id = ?
             """,
-            (queue_id,)
+            (queue_id,),
         )
         conn.commit()
         logger.info(
             "start_ticket_queue: ticket %s marcado como 'started' (fluxo concluído)",
-            queue_id
+            queue_id,
         )
 
 
@@ -443,7 +432,7 @@ def mark_notification_event(spa_id: int, notification_type: str):
 @debug
 def get_active_spa_id(contact_number: str) -> Optional[int]:
     """Obtém o SPA_ID ativo para um número"""
-    std_number = _standardize_phone(contact_number)
+    std_number = standardize_phone_number(contact_number)
     with get_db_connection() as conn:
         row = conn.execute(
             "SELECT spa_id FROM certif_pending_renewals "
@@ -456,7 +445,7 @@ def get_active_spa_id(contact_number: str) -> Optional[int]:
 
 @debug
 def get_all_pending_by_contact(contact_number: str) -> list[dict]:
-    std_number = _standardize_phone(contact_number)
+    std_number = standardize_phone_number(contact_number)
     with get_db_connection() as conn:
         rows = conn.execute(
             "SELECT * FROM certif_pending_renewals "
@@ -482,3 +471,125 @@ def try_lock_processing(spa_id: int) -> bool:
             conn.commit()
             return True
     return False
+
+
+@debug
+def get_expected_commands(contact_number: str) -> int:
+    """
+    Conta quantos spa_ids pendentes existem para o contato.
+    Retorna o número de comandos de renovação esperados.
+    """
+    std_number = standardize_phone_number(contact_number)
+    with get_db_connection() as conn:
+        cur = conn.execute(
+            "SELECT COUNT(*) as cnt FROM certif_pending_renewals "
+            "WHERE contact_number = ? AND status = 'pending'",
+            (std_number,),
+        )
+        return cur.fetchone()["cnt"]
+
+
+@debug
+def get_or_create_session(contact_number: str) -> dict:
+    std_number = standardize_phone_number(contact_number)
+    # Primeiro tenta get
+    now = datetime.now()
+    with get_db_connection() as conn:
+        row = conn.execute(
+            "SELECT * FROM contact_sessions "
+            "WHERE contact_number = ? AND status = 'active'",
+            (std_number,),
+        ).fetchone()
+        if row:
+            return dict(row)
+
+        # Cria nova session
+        expected = get_expected_commands(std_number)
+        conn.execute(
+            "INSERT INTO contact_sessions "
+            "(contact_number, expected_commands, created_at) VALUES (?, ?, ?)",
+            (std_number, expected, now),
+        )
+        conn.commit()
+        sess_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+
+        return {
+            "id": sess_id,
+            "contact_number": std_number,
+            "expected_commands": expected,
+            "received_commands": 0,
+            "created_at": now,
+            "status": "active",
+        }
+
+
+@debug
+def record_command(contact_number: str):
+    """Registra um comando de renovação recebido"""
+    std_number = standardize_phone_number(contact_number)
+    with get_db_connection() as conn:
+        conn.execute(
+            "UPDATE contact_sessions "
+            "SET received_commands = received_commands + 1 "
+            "WHERE contact_number = ? AND status = 'active'",
+            (std_number,),
+        )
+        conn.commit()
+
+
+@debug
+def check_expired_contact_sessions():
+    now = datetime.now()
+    cutoff = now - timedelta(minutes=SESSION_TIMEOUT_MINUTES)
+
+    with get_db_connection() as conn:
+        rows = conn.execute(
+            """
+            SELECT contact_number FROM contact_sessions
+            WHERE status = 'active' AND created_at <= ?
+            """,
+            (cutoff,),
+        ).fetchall()
+
+        return [dict(row) for row in rows]
+
+
+@debug
+def try_finalize_session(contact_number: str):
+    """
+    Tenta finalizar a sessão e encerrar o ticket se:
+    - Todos comandos esperados foram recebidos OU
+    - A sessão expirou
+    """
+    from app.services.webhook_services import close_ticket_digisac
+
+    with get_db_connection() as conn:
+        # Obtém sessão ativa
+        session = conn.execute(
+            "SELECT * FROM contact_sessions "
+            "WHERE contact_number = ? AND status = 'active'",
+            (contact_number,),
+        ).fetchone()
+
+        if not session:
+            return
+
+        session = dict(session)
+        now = datetime.now()
+        elapsed = now - datetime.strptime(session["created_at"], "%Y-%m-%d %H:%M:%S.%f")
+
+        # Verifica condições de encerramento
+        if session["received_commands"] >= session[
+            "expected_commands"
+        ] or elapsed >= timedelta(minutes=SESSION_TIMEOUT_MINUTES):
+
+            # Encerra o ticket
+            close_ticket_digisac(contact_number)
+
+            # Atualiza status da sessão
+            conn.execute(
+                "UPDATE contact_sessions SET status = 'completed' WHERE id = ?",
+                (session["id"],),
+            )
+            conn.commit()
+            logger.info(f"Sessão finalizada para {contact_number}")
