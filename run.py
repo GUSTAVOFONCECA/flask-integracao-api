@@ -60,7 +60,11 @@ class AppManager:
 
     def start_workers(self):
         """Inicia todos os workers da aplicação em threads separadas"""
-        workers = [self.start_ticket_flow_worker, self.start_session_worker]
+        workers = [
+            self.start_ticket_flow_worker,
+            self.start_session_worker,
+            self.start_token_refresh_worker,
+        ]
 
         for worker in workers:
             thread = Thread(target=worker, daemon=True)
@@ -81,6 +85,13 @@ class AppManager:
             from app.workers.session_worker import run_session_worker
 
             run_session_worker()
+
+    def start_token_refresh_worker(self):
+        """Inicia o worker de renovação de tokens de autorização do COonta Azul"""
+        with self.flask_app.app_context():
+            from app.workers.token_refresh_worker import run_token_refresh
+
+            run_token_refresh()
 
 
 def main() -> None:

@@ -35,7 +35,7 @@ conta_azul_tokens: Dict[str, Optional[Union[str, datetime]]] = {
 }
 
 
-############################################################################### CONTA AZUL AUTH SERVICES
+########################################################################### CONTA AZUL AUTH SERVICES
 def auto_authenticate():
     """Obtém tokens através da automação Selenium"""
     # Obter código de autorização via Selenium
@@ -167,23 +167,47 @@ def load_tokens_from_file():
 
 
 def is_authenticated() -> bool:
-    """Verifica se temos um token de acesso válido."""
-    if not conta_azul_tokens["access_token"]:
+    """
+    Verifica se temos um token de acesso válido e tenta renová-lo se expirado.
+
+    Retorna:
+        True se o token estiver válido ou foi renovado com sucesso.
+        False se não houver token ou falha ao renovar.
+    """
+    access_token = conta_azul_tokens.get("access_token")
+    if not access_token:
         return False
 
-    expires_at = conta_azul_tokens["expires_at"]
-    # Verify that expires_at is a datetime object and not None
-    if expires_at and isinstance(expires_at, datetime):
-        if datetime.now() >= expires_at:
-            try:
-                token_data = refresh_tokens()
-                set_tokens(token_data)
-                return True
-            except requests.exceptions.RequestException as e:
-                logger.error("Falha ao renovar token: %s", e)
-                return False
+    delay = get_token_expiry_delay()
+    if delay is None:
+        return False
+
+    if delay <= 0:
+        try:
+            token_data = refresh_tokens()
+            set_tokens(token_data)
+            return True
+        except requests.exceptions.RequestException as e:
+            logger.error("❌ Falha ao renovar token: %s", e)
+            return False
 
     return True
+
+
+def get_token_expiry_delay() -> Optional[float]:
+    """
+    Retorna o tempo restante (em segundos) até a expiração do token.
+
+    Returns:
+        Optional[float]: Tempo restante em segundos (>= 0),
+        ou None se a data de expiração for inválida.
+    """
+    expires_at = conta_azul_tokens.get("expires_at")
+    if not isinstance(expires_at, datetime):
+        return None
+
+    delay = (expires_at - datetime.now()).total_seconds()
+    return max(delay, 0)
 
 
 def get_auth_headers() -> dict:
@@ -213,7 +237,7 @@ def get_auth_headers() -> dict:
     }
 
 
-############################################################################### CONTA AZUL MATCH SERVICES
+########################################################################## CONTA AZUL MATCH SERVICES
 @debug
 def find_person_uuid_by_phone(phone: str) -> str | None:
     # Padroniza o número para formato internacional completo
@@ -253,7 +277,30 @@ def find_person_uuid_by_phone(phone: str) -> str | None:
     return None
 
 
-############################################################################### CONTA AZUL SALE SERVICES
+@debug
+def find_person_uuid_by_document(document: str) -> str | None:
+    """
+    Encontra o UUID da pessoa no Conta Azul com base no CPF ou CNPJ informado.
+    """
+    # Remove qualquer máscara (pontos, traços, barras)
+    digits = re.sub(r"\D", "", document)
+    if not digits:
+        logger.warning(f"Documento inválido: {document}")
+        return None
+
+    with open(Path("app/database/conta_azul/person.json"), "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    for person in data.get("itens", []):
+        person_doc = re.sub(r"\D", "", person.get("documento", ""))
+        if person_doc == digits:
+            return person["uuid"]
+
+    logger.warning(f"Cliente não encontrado para documento: {document}")
+    return None
+
+
+########################################################################### CONTA AZUL SALE SERVICES
 @debug
 def build_sale_payload(
     client_id: str,
@@ -402,7 +449,10 @@ def get_fin_event_billings(fin_event_id: str) -> list:
 
 @debug
 def generate_billing(parcel_id: str, due_date: datetime) -> dict:
-    """Gera uma cobrança na Conta Azul"""
+    """
+    Gera uma cobrança na Conta Azul
+    Função só pode ser utilizada se a conta for uma conta Conta Azul PJ
+    """
     url = f"{API_BASE_URL}/v1/financeiro/eventos-financeiros/contas-a-receber/gerar-cobranca"
     headers = get_auth_headers()
 
@@ -449,7 +499,7 @@ def get_sale_pdf(sale_id: str) -> bytes:
 
 
 @debug
-def handle_sale_creation_certif_digital(contact_number: str, deal_type: str) -> dict:
+def handle_sale_creation_certif_digital(contact_number: str, document: str, deal_type: str) -> dict:
     """
     Cria venda digital e retorna os detalhes.
     Assuma que status já é 'sale_creating' no DB.
@@ -457,10 +507,9 @@ def handle_sale_creation_certif_digital(contact_number: str, deal_type: str) -> 
     pending = get_pending(contact_number)
     if not pending:
         raise ValueError(f"Nenhuma solicitação pendente para {contact_number}")
-    spa_id = pending["spa_id"]
 
     # Busca UUID do cliente
-    client_uuid = find_person_uuid_by_phone(contact_number)
+    client_uuid = find_person_uuid_by_document(document)
     if not client_uuid:
         raise ValueError(f"Cliente com telefone {contact_number} não encontrado")
 

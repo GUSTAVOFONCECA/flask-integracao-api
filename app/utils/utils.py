@@ -97,7 +97,10 @@ def respond_with_200_on_exception(f):
                     jsonify(
                         {
                             "status": "error",
-                            "message": f"Ocorreu um erro de processamento interno ou validação, mas o webhook foi recebido. Detalhes: {response.get('error', response.get('message', ''))}",
+                            "message": (
+                                "Ocorreu um erro de processamento interno ou validação, mas o webhook foi recebido. "
+                                f"Detalhes: {response.get('error', response.get('message', ''))}"
+                            ),
                         }
                     ),
                     200,
@@ -114,7 +117,10 @@ def respond_with_200_on_exception(f):
                 jsonify(
                     {
                         "status": "error",
-                        "message": "Erro interno do servidor. O webhook foi recebido, mas o processamento falhou.",
+                        "message": (
+                            "Erro interno do servidor. "
+                            "O webhook foi recebido, mas o processamento falhou."
+                        ),
                         "error_details": str(
                             e
                         ),  # Opcional: incluir detalhes para debug (cuidado em produção)
@@ -154,6 +160,7 @@ def truncate(value, limit=TRUNCATE_LIMIT):
 
 def debug(func):
     """Decorator com log de entrada, retorno, caller, stack trace e truncamento."""
+
     @wraps(func)
     def wrapper(*args, **kwargs):
         # Descobre quem chamou esta função
@@ -185,9 +192,6 @@ def debug(func):
             raise
 
     return wrapper
-
-
-
 
 
 def save_page_diagnosis(driver, exception, filename_prefix="element_error"):
@@ -299,11 +303,11 @@ def save_page_diagnosis(driver, exception, filename_prefix="element_error"):
 def standardize_phone_number(phone: str, debug: bool = False) -> str | None:
     """
     Padroniza números de telefone brasileiros para formato
-    internacional completo (DDI + DDD + número)
+    internacional completo (DDI + DDD + número), sempre com 12 dígitos.
 
     :param phone: Número de telefone em qualquer formato
     :param debug: Habilita logs de warning para números inválidos
-    :return: Número padronizado (ex: 5562993159124) ou None se inválido
+    :return: Número padronizado (ex: 556293159124) ou None se inválido
     """
     if not phone or not isinstance(phone, str):
         return None
@@ -312,7 +316,7 @@ def standardize_phone_number(phone: str, debug: bool = False) -> str | None:
     digits = re.sub(r"\D", "", phone)
     n = len(digits)
 
-    # Verificação de comprimento válido
+    # Verificação de comprimento mínimo
     if n < 10 or n > 13:
         if debug:
             logger.warning(
@@ -320,18 +324,36 @@ def standardize_phone_number(phone: str, debug: bool = False) -> str | None:
             )
         return None
 
-    # Números com DDI (55) já completo
-    if digits.startswith("55") and n in (12, 13):
-        return digits
+    # Se já começa com 55 (DDI do Brasil)
+    if digits.startswith("55"):
+        # Se tem 13 dígitos: DDI (2) + DDD (2) + 9 + número (8)
+        if n == 13:
+            # Remove o 9 após o DDD
+            ddi = digits[:2]
+            ddd = digits[2:4]
+            ninth_removed = digits[5:]  # pula o nono dígito
+            return ddi + ddd + ninth_removed
+        elif n == 12:
+            return digits
+        else:
+            if debug:
+                logger.warning(f"Formato com DDI inválido: {phone} (len={n})")
+            return None
 
-    # Números sem DDI mas com DDD (10 ou 11 dígitos)
-    if n in (10, 11):
+    # Se tem 11 dígitos: DDD (2) + 9 + número (8)
+    if n == 11:
+        ddd = digits[:2]
+        ninth_removed = digits[3:]  # pula o nono dígito
+        return "55" + ddd + ninth_removed
+
+    # Se tem 10 dígitos: DDD (2) + número (8)
+    if n == 10:
         return "55" + digits
 
-    # Tratamento especial para números de 9 dígitos (sem DDD/DDI)
+    # Se tem 9 dígitos apenas (número local sem DDD)
     if n == 9:
-        # Assume DDI 55 e DDD padrão 62 (Goiás)
-        return "5562" + digits
+        # Assume DDD padrão 62 (Goiás) e remove o nono dígito
+        return "5562" + digits[1:]
 
     if debug:
         logger.warning(f"Formato não suportado: {phone} (len={n})")

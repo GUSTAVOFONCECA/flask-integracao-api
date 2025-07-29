@@ -51,6 +51,7 @@ def queue_if_open_ticket_route(add_pending_if_missing=False):
             spa_id = payload_dict.get("args").get("idSPA")
             contact_number = payload_dict.get("args").get("contactNumber")
             company_name = payload_dict.get("args").get("companyName")
+            document = payload_dict.get("args").get("document")
             contact_name = payload_dict.get("args").get("contactName")
             deal_type = payload_dict.get("args").get("dealType")
 
@@ -71,6 +72,7 @@ def queue_if_open_ticket_route(add_pending_if_missing=False):
                 if not pending:
                     add_pending(
                         company_name=company_name,
+                        document=document,
                         contact_number=std_number,
                         contact_name=contact_name,
                         deal_type=deal_type,
@@ -78,7 +80,6 @@ def queue_if_open_ticket_route(add_pending_if_missing=False):
                         status="pending",
                     )
                     logger.info(f"Pendência criada via decorator para SPA {spa_id}")
-
 
             if has_open_ticket_for_user_in_cert_dept(std_number):
                 logger.info(
@@ -653,7 +654,9 @@ NO_BOT_TRANSFER_COMMENTS = "Transferência para o grupo sem bot via automação.
 
 
 @debug
-def build_transfer_to_certification(contact_number: str, to_queue: bool = False) -> dict:
+def build_transfer_to_certification(
+    contact_number: str, to_queue: bool = False
+) -> dict:
     """Gera payload para transferência de ticket ao departamento de Certificação Digital"""
     contact_id = _get_contact_id_by_number(contact_number)
 
@@ -669,7 +672,11 @@ def build_transfer_to_certification(contact_number: str, to_queue: bool = False)
         department_id=CERT_DEPT_ID,
         comments=CERT_TRANSFER_COMMENTS,
     )
-    return transfer_ticket_digisac(payload, contact_id) if to_queue is False else transfer_ticket_digisac(queue_payload, contact_id)
+    return (
+        transfer_ticket_digisac(payload, contact_id)
+        if to_queue is False
+        else transfer_ticket_digisac(queue_payload, contact_id)
+    )
 
 
 @debug
@@ -723,26 +730,24 @@ def build_proposal_certification_pdf(
 
 
 @debug
-def build_send_billing_message(
-    contact_number: str,
-    company_name: str
-) -> dict:
+def build_send_billing_message(contact_number: str, company_name: str) -> dict:
     """Gera payload e envia mensagem de aviso sobre envio de cobrança após registro de remessa no banco"""
     contact_id = _get_contact_id_by_number(contact_number)
     text = (
         "*Bot*\n"
         "A cobrança referente a emissão de certificado digital "
-        f"para {company_name} está sendo gerada.\n"
+        f"para *{company_name}* está sendo gerada.\n"
         "A mesma será enviada no *próximo dia útil*, após registro da cobrança no banco."
     )
     payload = build_message_payload(
         contact_id=contact_id,
         department_id=CERT_DEPT_ID,
         text=text,
-        user_id=DIGISAC_USER_ID
+        user_id=DIGISAC_USER_ID,
     )
 
     return send_message_digisac(payload)
+
 
 @debug
 def send_proposal_file(
@@ -760,10 +765,7 @@ def send_proposal_file(
 
     # Mensagem inicial informando geração da proposta
     contact_id = _get_contact_id_by_number(contact_number)
-    init_text = (
-        "*Bot*\n"
-        "Sua proposta está sendo gerada e será enviada em instantes."
-    )
+    init_text = "*Bot*\n" "Sua proposta está sendo gerada e será enviada em instantes."
     init_payload = build_message_payload(
         contact_id=contact_id,
         department_id=CERT_DEPT_ID,

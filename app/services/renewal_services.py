@@ -18,6 +18,7 @@ SESSION_TIMEOUT_MINUTES = 30
 @debug
 def add_pending(
     company_name: str,
+    document: str,
     contact_number: str,
     contact_name: str,
     deal_type: str,
@@ -30,16 +31,25 @@ def add_pending(
             conn.execute(
                 """
                 INSERT INTO certif_pending_renewals (
-                    company_name, contact_number, contact_name, deal_type, spa_id, status
+                    company_name, document, contact_number, contact_name, deal_type, spa_id, status
                 ) VALUES (?, ?, ?, ?, ?, ?)
                 ON CONFLICT(spa_id) DO UPDATE SET
                     company_name = excluded.company_name,
+                    document = excluded.document,
                     contact_number = excluded.contact_number,
                     contact_name = excluded.contact_name,
                     deal_type = excluded.deal_type,
                     status = excluded.status
                 """,
-                (company_name, std_number, contact_name, deal_type, spa_id, status),
+                (
+                    company_name,
+                    document,
+                    std_number,
+                    contact_name,
+                    deal_type,
+                    spa_id,
+                    status,
+                ),
             )
             conn.commit()
         return std_number

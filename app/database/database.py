@@ -38,6 +38,7 @@ def init_db():
                 id               INTEGER PRIMARY KEY AUTOINCREMENT,
                 spa_id           INTEGER NOT NULL UNIQUE,
                 company_name     TEXT    NOT NULL,
+                document         TEXT    NOT NULL,
                 contact_name     TEXT    NOT NULL,
                 contact_number   TEXT    NOT NULL,
                 deal_type        TEXT    NOT NULL,

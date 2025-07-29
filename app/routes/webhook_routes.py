@@ -105,6 +105,7 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
     args = request.args
     contact_number = args.get("contactNumber")
     company_name = args.get("companyName")
+    document = args.get("document")
     contact_name = args.get("contactName")
     days_to_expire_str = args.get("daysToExpire")
     spa_id_str = args.get("idSPA")
@@ -114,6 +115,7 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
     required = {
         "contactNumber": contact_number,
         "companyName": company_name,
+        "document": document,
         "contactName": contact_name,
         "daysToExpire": days_to_expire_str,
         "idSPA": spa_id_str,
@@ -302,7 +304,7 @@ def _handle_renew_action(spa_id: int, pending: dict):
 
         # Cria a venda (idempotente)
         result = handle_sale_creation_certif_digital(
-            contact_number, pending["deal_type"]
+            contact_number, pending["document"], pending["deal_type"]
         )
         sale_id = result["sale"]["id"]
 
@@ -345,7 +347,7 @@ def _handle_info_action(spa_id: int, pending: dict):
     )
     logger.info(f"Informações enviadas para SPA ID {spa_id}")
 
-    build_transfer_to_certification(contact_number=contact_number)
+    build_transfer_to_certification(contact_number=contact_number, to_queue=True)
 
     # Enviar proposta
     # send_proposal_file(contact_number, company_name, spa_id)
