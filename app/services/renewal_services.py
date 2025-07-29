@@ -32,7 +32,7 @@ def add_pending(
                 """
                 INSERT INTO certif_pending_renewals (
                     company_name, document, contact_number, contact_name, deal_type, spa_id, status
-                ) VALUES (?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(spa_id) DO UPDATE SET
                     company_name = excluded.company_name,
                     document = excluded.document,
