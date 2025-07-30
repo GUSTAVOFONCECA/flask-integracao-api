@@ -19,7 +19,7 @@ from app.utils.utils import debug
 
 logger = logging.getLogger(__name__)
 
-CHECK_INTERVAL = 15  # segundos
+WORKER_INTERVAL_SECONDS = 60  # segundos
 
 
 # Map nome (str no DB)->função
@@ -68,8 +68,12 @@ def process_queue_item(row: dict):
 
 @debug
 def run_ticket_flow_worker():
+    logger.info(
+        "🔁 Iniciando loop do ticket flow worker (intervalo de %ss).",
+        WORKER_INTERVAL_SECONDS,
+    )
     while True:
         rows = get_waiting_ticket_queue()
         for row in rows:
             process_queue_item(row)
-        time.sleep(CHECK_INTERVAL)
+        time.sleep(WORKER_INTERVAL_SECONDS)

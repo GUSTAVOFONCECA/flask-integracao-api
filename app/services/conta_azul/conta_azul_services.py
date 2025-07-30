@@ -24,6 +24,7 @@ API_BASE_URL = "https://api-v2.contaazul.com"
 TOKEN_FILE_PATH = os.path.join(
     os.getcwd(), "app", "database", "conta_azul", "conta_azul_tokens.json"
 )
+REFRESH_MARGIN_SECONDS = 300  # margem de segurança de 5 minutos
 
 
 # Armazenamento de tokens (em memória - para produção use persistência)
@@ -143,6 +144,32 @@ def set_tokens(token_data: dict):
     logger.debug("Conta azul tokens:\n%s", conta_azul_tokens)
     save_tokens_to_file()
 
+
+@debug
+def refresh_tokens_safe() -> dict:
+    """
+    Verifica se o token está prestes a expirar e decide entre renovar ou reautenticar.
+    Retorna os tokens atualizados.
+    """
+    delay = get_token_expiry_delay()
+    logger.info(f"⏱️ Tempo restante do token: {delay:.0f} segundos")
+
+    if delay is None or delay < 0:
+        logger.warning("⚠️ Token expirado — tentando auto_authenticate")
+        return auto_authenticate()
+
+    if delay <= REFRESH_MARGIN_SECONDS:
+        try:
+            logger.info("🔁 Token prestes a expirar — renovando com refresh_token")
+            token_data = refresh_tokens()
+            set_tokens(token_data)
+            return token_data
+        except Exception as e:
+            logger.error(f"❌ Erro ao renovar token — tentando auto_authenticate: {e}")
+            return auto_authenticate()
+
+    logger.info("✅ Token ainda válido — nenhuma ação necessária")
+    return conta_azul_tokens
 
 def save_tokens_to_file():
     data = conta_azul_tokens.copy()
@@ -278,27 +305,34 @@ def find_person_uuid_by_phone(phone: str) -> str | None:
 
 
 @debug
-def find_person_uuid_by_document(document: str) -> str | None:
+def find_person_uuid_by_document(document: Optional[str]) -> Optional[str]:
     """
     Encontra o UUID da pessoa no Conta Azul com base no CPF ou CNPJ informado.
     """
+    if not isinstance(document, str):
+        logger.warning(f"Documento inválido (não é string): {document}")
+        return None
+
     # Remove qualquer máscara (pontos, traços, barras)
     digits = re.sub(r"\D", "", document)
     if not digits:
-        logger.warning(f"Documento inválido: {document}")
+        logger.warning(f"Documento inválido ou vazio após limpeza: {document}")
         return None
 
     with open(Path("app/database/conta_azul/person.json"), "r", encoding="utf-8") as f:
         data = json.load(f)
 
     for person in data.get("itens", []):
-        person_doc = re.sub(r"\D", "", person.get("documento", ""))
+        raw_doc = person.get("documento")
+        if not isinstance(raw_doc, str):
+            continue  # ignora documentos nulos ou inválidos
+
+        person_doc = re.sub(r"\D", "", raw_doc)
         if person_doc == digits:
-            return person["uuid"]
+            return person.get("uuid")
 
     logger.warning(f"Cliente não encontrado para documento: {document}")
     return None
-
 
 ########################################################################### CONTA AZUL SALE SERVICES
 @debug

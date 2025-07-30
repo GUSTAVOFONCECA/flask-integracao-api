@@ -657,24 +657,27 @@ NO_BOT_TRANSFER_COMMENTS = "Transferência para o grupo sem bot via automação.
 def build_transfer_to_certification(
     contact_number: str, to_queue: bool = False
 ) -> dict:
-    """Gera payload para transferência de ticket ao departamento de Certificação Digital"""
+    """Gera payload para transferência ao departamento ou usuário de Certificação Digital"""
     contact_id = _get_contact_id_by_number(contact_number)
 
-    queue_payload = build_transfer_payload(
+    # Payload com user_id = envia direto ao usuário
+    user_payload = build_transfer_payload(
         user_id=DIGISAC_USER_ID,
         contact_id=contact_id,
         department_id=CERT_DEPT_ID,
         comments=CERT_TRANSFER_COMMENTS,
     )
 
-    payload = build_transfer_payload(
+    # Payload apenas com o department_id = envia para a fila
+    queue_payload = build_transfer_payload(
         contact_id=contact_id,
         department_id=CERT_DEPT_ID,
         comments=CERT_TRANSFER_COMMENTS,
     )
+
     return (
-        transfer_ticket_digisac(payload, contact_id)
-        if to_queue is False
+        transfer_ticket_digisac(user_payload, contact_id)
+        if not to_queue
         else transfer_ticket_digisac(queue_payload, contact_id)
     )
 
@@ -1088,7 +1091,9 @@ def _build_certification_message_text(
     pf_msg = (
         "*Bot*\n"
         f"Olá {contact_name}, o certificado da empresa *{company_name}* {validade_msg}\n"
-        f"O valor para emissão é de *R$ 185,00.*\n\n"
+        "O valor para emissão do certificado é de *R$ 185,00.*\n"
+        "O valor da taxa de boleto é de *R$ 1,99.*\n"
+        "*Total da cobrança: R$ 186,99*\n\n"
         "Escolha uma das opções abaixo, digitando *exatamente* a palavra:\n\n"
         "✅ Digite: *RENOVAR* → Iniciar o processo de emissão\n"
         "ℹ️ Digite: *INFO* → Falar com um atendente para mais informações\n"
@@ -1098,7 +1103,9 @@ def _build_certification_message_text(
     pj_msg = (
         "*Bot*\n"
         f"Olá {contact_name}, o certificado de Pessoa Fisica *{company_name}* {validade_msg}\n"
-        f"O valor para emissão é de *R$ 130,00.*\n\n"
+        "O valor para emissão do certificado é de *R$ 130,00.*\n"
+        "O valor da taxa de boleto é de *R$ 1,99.*\n"
+        "*Total da cobrança: R$ 131,99*\n\n"
         "Escolha uma das opções abaixo, digitando *exatamente* a palavra:\n\n"
         "✅ Digite: *RENOVAR* → Iniciar o processo de emissão\n"
         "ℹ️ Digite: *INFO* → Falar com um atendente para mais informações\n"

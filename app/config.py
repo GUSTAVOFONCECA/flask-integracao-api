@@ -54,8 +54,12 @@ class Config:
     )
     CONTA_AZUL_EMAIL: str = os.getenv("CONTA_AZUL_EMAIL", "")
     CONTA_AZUL_PASSWORD: str = os.getenv("CONTA_AZUL_PASSWORD", "")
-    CONTA_AZUL_CONTA_BANCARIA_UUID: str = os.getenv("CONTA_AZUL_CONTA_BANCARIA_UUID", "")
-    CHROMEDRIVER_PATH: str = os.path.join(os.getcwd(), "chromedriver-win64", "chromedriver.exe")
+    CONTA_AZUL_CONTA_BANCARIA_UUID: str = os.getenv(
+        "CONTA_AZUL_CONTA_BANCARIA_UUID", ""
+    )
+    CHROMEDRIVER_PATH: str = os.path.join(
+        os.getcwd(), "chromedriver-win64", "chromedriver.exe"
+    )
     TUNNEL_PUBLIC_IP: str = None
 
     @classmethod
@@ -178,8 +182,8 @@ def configure_logging(app: Any) -> None:
 
         # >>> 3) StreamHandler para console <<<
         console_handler = logging.StreamHandler()
-        lvl = logging.DEBUG if Config.ENV == "development" else logging.INFO
-        console_handler.setLevel(lvl)
+        # Mesmo em ambiente de desenvolvimento, evita imprimir DEBUG no terminal
+        console_handler.setLevel(logging.INFO)  # Ignora logs DEBUG no terminal
         console_handler.setFormatter(ColorFormatter())
 
         # >>> 4) Root logger <<<
