@@ -1,86 +1,96 @@
 # app/__init__.py
-
 """
-Inicializa o app
+Flask application factory using dependency injection and SOLID principles.
 """
 
 from flask import Flask
-from app.config import Config, configure_logging
-from app.routes import api_routes, webhook_routes, conta_azul_routes
-from app.cli.sync_commands import sync_cli
+
+from .core.interfaces import IFlaskAppFactory, IConfigProvider, ILogger
+from .core.container import container
+from .routes import api_routes, webhook_routes, conta_azul_routes
+from .cli.sync_commands import sync_cli
+
+
+class FlaskAppFactory(IFlaskAppFactory):
+    """
+    Flask application factory implementing IFlaskAppFactory.
+    Follows Single Responsibility Principle - only creates Flask apps.
+    """
+
+    def __init__(self, config: IConfigProvider, logger: ILogger):
+        self.config = config
+        self.logger = logger
+
+    def create_app(self) -> Flask:
+        """Create and configure Flask application"""
+        app = Flask(__name__)
+
+        # Configure Flask
+        self._configure_flask(app)
+
+        # Setup logging
+        if hasattr(self.logger, "configure"):
+            self.logger.configure(app)
+
+        # Register blueprints
+        self._register_blueprints(app)
+
+        # Register CLI commands
+        self._register_cli_commands(app)
+
+        # Validate configuration
+        self._validate_configuration(app)
+
+        return app
+
+    def _configure_flask(self, app: Flask) -> None:
+        """Configure Flask application settings"""
+        # Convert config to dict for Flask
+        config_dict = {
+            "SECRET_KEY": self.config.get("SECRET_KEY"),
+            "ENV": self.config.get("ENV"),
+            "DEBUG": self.config.is_development(),
+        }
+
+        for key, value in config_dict.items():
+            app.config[key] = value
+
+    def _register_blueprints(self, app: Flask) -> None:
+        """Register all application blueprints"""
+        blueprints = [
+            (api_routes.api_bp, "/api"),
+            (webhook_routes.webhook_bp, "/webhooks"),
+            (conta_azul_routes.conta_azul_bp, "/conta-azul"),
+        ]
+
+        for blueprint, url_prefix in blueprints:
+            app.register_blueprint(blueprint, url_prefix=url_prefix)
+
+    def _register_cli_commands(self, app: Flask) -> None:
+        """Register CLI commands"""
+        app.cli.add_command(sync_cli)
+
+    def _validate_configuration(self, app: Flask) -> None:
+        """Validate configuration after app creation"""
+        try:
+            self.config.validate()
+            self.logger.info("✅ Configuration validation successful")
+        except EnvironmentError as e:
+            self.logger.critical(f"❌ Configuration validation failed: {e}")
+            raise
 
 
 def create_app() -> Flask:
-    """Fábrica de aplicação Flask para inicialização e configuração do sistema.
-
-    Responsável por:
-    - Criar e configurar a instância do Flask
-    - Registrar blueprints de rotas
-    - Configurar sistema de logging
-    - Validar variáveis de ambiente
-
-    :return: Instância do aplicativo Flask configurado
-    :rtype: Flask
-    :raises EnvironmentError: Se variáveis de ambiente obrigatórias estiverem faltando
-
-    .. rubric:: Exemplo de Uso
-
-    .. code-block:: python
-
-        from app import create_app
-        app = create_app()
-
-        if __name__ == '__main__':
-            app.run()
-
-    .. rubric:: Fluxo de Inicialização
-
-    1. Cria instância do Flask
-    2. Carrega configurações da classe Config
-    3. Configura sistema de logging
-    4. Registra endpoints (API e Webhooks)
-    5. Valida configurações essenciais
     """
-    app = Flask(__name__)
+    Main application factory function.
+    Uses dependency injection container to resolve dependencies.
+    """
+    # Get dependencies from container
+    config = container.resolve(IConfigProvider)
+    logger = container.resolve(ILogger)
 
-    # Configuração básica do aplicativo
-    _configure_app(app)
+    # Create factory
+    factory = FlaskAppFactory(config, logger)
 
-    # Configuração avançada
-    _register_blueprints(app)
-    _perform_post_configuration(app)
-    _configure_cli_commands(app)
-
-    return app
-
-
-def _configure_app(app: Flask) -> None:
-    """Configurações iniciais do aplicativo Flask."""
-    app.config.from_object(Config)
-    configure_logging(app)
-
-
-def _configure_cli_commands(app: Flask) -> None:
-    """Configura comandos CLI no Flask para sincronização de databases."""
-    app.cli.add_command(sync_cli)
-
-
-def _register_blueprints(app: Flask) -> None:
-    """Registra todos os blueprints de rotas."""
-    blueprints = [
-        (api_routes.api_bp, "/api"),
-        (webhook_routes.webhook_bp, "/webhooks"),
-        (conta_azul_routes.conta_azul_bp, "/conta-azul"),
-    ]
-
-    for blueprint, url_prefix in blueprints:
-        app.register_blueprint(blueprint, url_prefix=url_prefix)
-
-
-def _perform_post_configuration(app: Flask) -> None:
-    """Validações e configurações pós-inicialização."""
-    try:
-        Config.validate()
-    except EnvironmentError as e:
-        app.logger.critical("Falha na validação de configuração: %s", str(e))
-        raise
+    # Create and return app
+    return factory.create_app()

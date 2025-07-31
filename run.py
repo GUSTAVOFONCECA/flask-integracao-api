@@ -1,175 +1,198 @@
-# app/run.py
-
+# run.py
 """
-Main entry point for the aplicação.
-Este script inicializa a aplicação Flask, configura o logging, dispara o LocalTunnel
-e trata encerramentos de forma graciosa.
+Main application entry point using SOLID principles and dependency injection.
 """
 
 import sys
-import signal
-import atexit
 from threading import Thread
-import time
-from waitress import serve
-from app import create_app
+
+from app.config import Config
+from app.core.interfaces import (
+    IConfigProvider, ILogger, IFlaskAppFactory, 
+    ITunnelService, IHealthChecker
+)
+from app.core.container import container
+from app.core.logging_service import FlaskLogger
+from app.core.lifecycle import ApplicationLifecycle
+from app.core.health_checker import HealthChecker
+from app.services.tunnel_service import TunnelService
+from app.workers.ticket_flow_worker import TicketFlowWorker
+from app.workers.session_worker import SessionWorker
+from app.workers.token_refresh_worker import TokenRefreshWorker
 from app.database.database import init_db
-from app.services.tunnel_service import start_localtunnel
-from app.config import Config, configure_logging
+from app import create_app
 
 
-class AppManager:
+class ApplicationBootstrapper:
     """
-    Gerenciador principal da aplicação Flask e serviços associados.
-
-    :ivar flask_app: Instância da aplicação Flask
-    :vartype flask_app: flask.Flask
+    Application bootstrapper following Single Responsibility Principle.
+    Only responsible for dependency registration and app initialization.
     """
-
+    
     def __init__(self):
-        self.flask_app = create_app()
-        self.worker_threads = []  # Lista de armazenamento das threads dos workers
+        self.lifecycle = ApplicationLifecycle()
+    
+    def bootstrap(self) -> ApplicationLifecycle:
+        """Bootstrap the application with all dependencies"""
+        
+        # 1. Register core dependencies
+        self._register_core_dependencies()
+        
+        # 2. Initialize database
+        self._initialize_database()
+        
+        # 3. Create Flask app
+        flask_app = create_app()
+        
+        # 4. Register application services
+        self._register_application_services(flask_app)
+        
+        # 5. Register workers
+        self._register_workers(flask_app)
+        
+        # 6. Register Flask server
+        self._register_flask_server(flask_app)
+        
+        return self.lifecycle
+    
+    def _register_core_dependencies(self) -> None:
+        """Register core infrastructure dependencies"""
+        # Configuration
+        config = Config()
+        container.register_instance(IConfigProvider, config)
+        
+        # Logging
+        logger = FlaskLogger(config)
+        container.register_instance(ILogger, logger)
+    
+    def _initialize_database(self) -> None:
+        """Initialize database"""
+        init_db()
+        logger = container.resolve(ILogger)
+        logger.info("✅ Database initialized")
+    
+    def _register_application_services(self, flask_app) -> None:
+        """Register application-level services"""
+        config = container.resolve(IConfigProvider)
+        
+        # Health checker
+        health_checker = HealthChecker(flask_app, config)
+        container.register_instance(IHealthChecker, health_checker)
+        self.lifecycle.register_service(health_checker)
+        
+        # Tunnel service
+        tunnel_service = TunnelService(config)
+        container.register_instance(ITunnelService, tunnel_service)
+        self.lifecycle.register_service(tunnel_service)
+    
+    def _register_workers(self, flask_app) -> None:
+        """Register background workers"""
+        # Create workers with Flask app context
+        workers = [
+            TicketFlowWorker(flask_app),
+            SessionWorker(flask_app),
+            TokenRefreshWorker(flask_app)
+        ]
+        
+        for worker in workers:
+            self.lifecycle.register_worker(worker)
+    
+    def _register_flask_server(self, flask_app) -> None:
+        """Register Flask server as a service"""
+        config = container.resolve(IConfigProvider)
+        flask_server = FlaskServerService(flask_app, config)
+        self.lifecycle.register_service(flask_server)
 
-    def run_flask_server(self):
-        """
-        Inicia o servidor Flask/Waitress conforme o ambiente configurado.
 
-        - Em 'production' usa Waitress.
-        - Em 'development' usa o servidor embutido do Flask.
-        """
-        if Config.ENV == "production":
-            self.flask_app.logger.info("Iniciando servidor em modo produção")
-            serve(self.flask_app, host="0.0.0.0", port=Config.TUNNEL_PORT)
+class FlaskServerService:
+    """
+    Flask server wrapped as a service for lifecycle management.
+    """
+    
+    def __init__(self, app, config):
+        self.app = app
+        self.config = config
+        self.server_thread = None
+    
+    def initialize(self) -> None:
+        """Initialize Flask server"""
+        logger = container.resolve(ILogger)
+        
+        # Perform health check
+        health_checker = container.resolve(IHealthChecker)
+        if not health_checker.check_api_health():
+            raise RuntimeError("API health check failed")
+        
+        logger.info("✅ Pre-startup health checks passed")
+    
+    def start_server(self) -> None:
+        """Start Flask server"""
+        logger = container.resolve(ILogger)
+        
+        if self.config.is_production():
+            logger.info("🚀 Starting server in production mode")
+            from waitress import serve
+            serve(self.app, host="0.0.0.0", port=self.config.get('TUNNEL_PORT'))
         else:
-            self.flask_app.logger.info("Iniciando servidor em modo desenvolvimento")
-            self.flask_app.run(
+            logger.info("🚀 Starting server in development mode")
+            self.app.run(
                 host="0.0.0.0",
-                port=Config.TUNNEL_PORT,
+                port=self.config.get('TUNNEL_PORT'),
                 debug=True,
                 use_reloader=False,
             )
-
-    def graceful_shutdown(self):
-        """
-        Executa o desligamento seguro da aplicação:
-        1. Loga mensagem de encerramento.
-        2. Sai do processo com código 0.
-        """
-        self.flask_app.logger.info("Encerrando aplicação...")
-        sys.exit(0)
-
-    def start_workers(self):
-        """Inicia todos os workers da aplicação em threads separadas"""
-        workers = [
-            self.start_ticket_flow_worker,
-            self.start_session_worker,
-            self.start_token_refresh_worker,
-        ]
-
-        for worker in workers:
-            thread = Thread(target=worker, daemon=True)
-            thread.start()
-            self.worker_threads.append(thread)
-            self.flask_app.logger.info(f"🧵 Thread do {worker.__name__} iniciada")
-
-    def start_ticket_flow_worker(self):
-        """Inicia o worker de fluxo de tickets com contexto (app)"""
-        with self.flask_app.app_context():
-            from app.workers.ticket_flow_worker import run_ticket_flow_worker
-
-            run_ticket_flow_worker()
-
-    def start_session_worker(self):
-        """Inicia o worker de sessões com contexto (app)"""
-        with self.flask_app.app_context():
-            from app.workers.session_worker import run_session_worker
-
-            run_session_worker()
-
-    def start_token_refresh_worker(self):
-        """Inicia o worker de renovação de tokens de autorização do COonta Azul"""
-        with self.flask_app.app_context():
-            from app.workers.token_refresh_worker import run_token_refresh
-
-            run_token_refresh()
+    
+    def cleanup(self) -> None:
+        """Cleanup server resources"""
+        pass
 
 
 def main() -> None:
-    """
-    Função principal de inicialização da aplicação.
-
-    Fluxo de execução:
-    1. Configura logging (arquivo + console).
-    2. Define Config.ENV como 'development' para ajustar níveis de log.
-    3. Valida variáveis de ambiente obrigatórias.
-    4. Testa health check da API.
-    5. Inicia Flask em thread.
-    6. Dispara LocalTunnel em background.
-    7. Loop de monitoramento.
-    """
-    manager = AppManager()
-
+    """Main entry point"""
     try:
-        # Configure logging
-        configure_logging(manager.flask_app)  # Movido para cá
-
-        app_logger = manager.flask_app.logger
-
-        # Validação agora é feita dentro do configure_logging
-        app_logger.info("🛠️ Verificando configurações básicas...")
-        app_logger.info("✅ Configurações válidas")
-
-        # Testar health check da API antes de subir o servidor
-        app_logger.info("🔥 Testando health check da API...")
-        flask_app = manager.flask_app
-        with flask_app.test_client() as client:
-            response = client.get(
-                "/api/health/",
-                headers={"X-API-Key": Config.API_KEY},
-            )
-            assert (
-                response.status_code == 200
-            ), f"Status inválido: {response.status_code}"
-            data = response.get_json()
-            assert data["status"] == "healthy", f"Status inválido: {data.get('status')}"
-            assert (
-                data["environment"] == Config.ENV
-            ), f"Ambiente incorreto: {data.get('environment')}"
-        app_logger.info("✅ Testes prévios concluídos")
-
-        # Registra sinais de encerramento gracioso
-        atexit.register(manager.graceful_shutdown)
-        signal.signal(signal.SIGINT, lambda s, f: manager.graceful_shutdown())
-        signal.signal(signal.SIGTERM, lambda s, f: manager.graceful_shutdown())
-
-        # Inicia DB antes de tudo
-        init_db()
-        app_logger.info("Banco de dados inicializado")
-
-        # Inicia todos os workers
-        manager.start_workers()
-
-        # Iniciar Flask em thread
-        flask_thread = Thread(target=manager.run_flask_server, daemon=True)
-        flask_thread.start()
-        manager.worker_threads.append(flask_thread)
-
-        # Disparar o LocalTunnel em background
-        start_localtunnel()
-        app_logger.info("✅ Túnel iniciado (monitoramento automático ativado)")
-
-        # Loop de monitoramento
-        while True:
-            if not flask_thread.is_alive():
-                raise RuntimeError("Servidor Flask parou inesperadamente")
-            time.sleep(5)
-
-    except (RuntimeError, ConnectionError, AssertionError, EnvironmentError) as e:
-        # Se manager.flask_app existir, usamos o logger; caso contrário, printar
-        if manager and manager.flask_app:
-            manager.flask_app.logger.critical("\nFalha crítica:\n%s\n", str(e))
+        # Bootstrap application
+        bootstrapper = ApplicationBootstrapper()
+        lifecycle = bootstrapper.bootstrap()
+        
+        # Initialize lifecycle
+        lifecycle.initialize()
+        
+        # Perform final health checks
+        logger = container.resolve(ILogger)
+        health_checker = container.resolve(IHealthChecker)
+        
+        health_results = health_checker.check_dependencies()
+        failed_checks = [name for name, healthy in health_results.items() if not healthy]
+        
+        if failed_checks:
+            logger.critical(f"❌ Health checks failed: {failed_checks}")
+            sys.exit(1)
+        
+        logger.info("✅ All health checks passed")
+        
+        # Start tunnel service
+        tunnel_service = container.resolve(ITunnelService)
+        tunnel_service.start()
+        
+        # Start background workers
+        lifecycle.start_workers()
+        
+        # Start Flask server in separate thread
+        flask_server = container.resolve(FlaskServerService)
+        server_thread = Thread(target=flask_server.start_server, daemon=True)
+        server_thread.start()
+        
+        logger.info("🎉 Application started successfully")
+        
+        # Run monitoring loop
+        lifecycle.run_monitoring_loop()
+        
+    except Exception as e:
+        logger = container.try_resolve(ILogger)
+        if logger:
+            logger.critical(f"💥 Application startup failed: {e}")
         else:
-            app_logger.critical(f"\nFalha crítica:\n{str(e)}\n")
+            print(f"CRITICAL: Application startup failed: {e}")
         sys.exit(1)
 
 
