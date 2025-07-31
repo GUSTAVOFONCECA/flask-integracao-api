@@ -258,7 +258,7 @@ def start_ticket_queue(queue_id: int) -> None:
     Caso contrário, mantém o ticket aguardando e atualiza last_checked.
     """
     # import local, só quando a função é invocada
-    from app.services.webhook_services import has_open_ticket_for_user_in_cert_dept
+    from app.services.digisac.digisac_services import has_open_ticket_for_user_in_cert_dept
 
     with get_db_connection() as conn:
         # 1) Busca os dados principais do ticket
@@ -571,7 +571,7 @@ def try_finalize_session(contact_number: str):
     - Todos comandos esperados foram recebidos OU
     - A sessão expirou
     """
-    from app.services.webhook_services import close_ticket_digisac
+    from app.services.digisac.digisac_services import close_ticket_digisac
 
     with get_db_connection() as conn:
         # Obtém sessão ativa

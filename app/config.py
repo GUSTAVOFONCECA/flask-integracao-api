@@ -28,6 +28,11 @@ class Config:
     # Ambiente de execução: 'development' ou 'production'
     ENV: str = os.getenv("FLASK_ENV", "production").lower()
 
+    # Diretórios
+    PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    SYNC_DATA_DIR = os.path.join(PROJECT_ROOT, "app", "database")
+    SYNC_LOG_DIR = os.path.join(PROJECT_ROOT, "logs")
+
     # Variáveis obrigatórias
     SECRET_KEY: str = os.getenv("SECRET_KEY", "")
     WEBHOOK_SECRET: str = os.getenv("WEBHOOK_SECRET", "")
@@ -56,9 +61,6 @@ class Config:
     CONTA_AZUL_PASSWORD: str = os.getenv("CONTA_AZUL_PASSWORD", "")
     CONTA_AZUL_CONTA_BANCARIA_UUID: str = os.getenv(
         "CONTA_AZUL_CONTA_BANCARIA_UUID", ""
-    )
-    CHROMEDRIVER_PATH: str = os.path.join(
-        os.getcwd(), "chromedriver-win64", "chromedriver.exe"
     )
     TUNNEL_PUBLIC_IP: str = None
 

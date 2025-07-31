@@ -10,7 +10,7 @@ import base64
 import requests
 from app.config import Config
 from app.services.conta_azul.conta_azul_auto_auth import automate_auth
-from app.services.renewal_services import get_pending, update_pending
+from app.services.renewal_services import get_pending
 from app.utils.utils import standardize_phone_number, debug
 
 
@@ -237,7 +237,7 @@ def get_token_expiry_delay() -> Optional[float]:
     return max(delay, 0)
 
 
-def get_auth_headers() -> dict:
+def get_auth_headers_conta_azul() -> dict:
     """
     Retorna os headers de autenticação:
      1) tenta is_authenticated() (que chama refresh_tokens() internamente)
@@ -418,7 +418,7 @@ def build_sale_certif_digital_params(deal_type: str) -> dict:
 @debug
 def create_sale(sale_payload: dict) -> dict:
     url = f"{API_BASE_URL}/v1/venda"
-    headers = get_auth_headers()
+    headers = get_auth_headers_conta_azul()
 
     try:
         # ADICIONAR LOG DA REQUISIÇÃO
@@ -447,7 +447,7 @@ def create_sale(sale_payload: dict) -> dict:
 def get_sale_details(sale_id: str) -> dict:
     """Obtém detalhes completos de uma venda pelo ID"""
     url = f"{API_BASE_URL}/v1/venda/{sale_id}"
-    headers = get_auth_headers()
+    headers = get_auth_headers_conta_azul()
 
     try:
         logger.debug(f"GET {url}")
@@ -466,7 +466,7 @@ def get_sale_details(sale_id: str) -> dict:
 def get_fin_event_billings(fin_event_id: str) -> list:
     """Obtém as parcelas de um evento financeiro"""
     url = f"{API_BASE_URL}/v1/financeiro/eventos-financeiros/{fin_event_id}/parcelas"
-    headers = get_auth_headers()
+    headers = get_auth_headers_conta_azul()
 
     try:
         logger.debug(f"GET {url}")
@@ -488,7 +488,7 @@ def generate_billing(parcel_id: str, due_date: datetime) -> dict:
     Função só pode ser utilizada se a conta for uma conta Conta Azul PJ
     """
     url = f"{API_BASE_URL}/v1/financeiro/eventos-financeiros/contas-a-receber/gerar-cobranca"
-    headers = get_auth_headers()
+    headers = get_auth_headers_conta_azul()
 
     payload = {
         "conta_bancaria": str(Config.CONTA_AZUL_CONTA_BANCARIA_UUID),
@@ -518,7 +518,7 @@ def generate_billing(parcel_id: str, due_date: datetime) -> dict:
 def get_sale_pdf(sale_id: str) -> bytes:
     """Obtém PDF de uma venda da Conta Azul"""
     url = f"{API_BASE_URL}/v1/venda/{sale_id}/imprimir"
-    headers = get_auth_headers()
+    headers = get_auth_headers_conta_azul()
 
     try:
         logger.debug(f"GET {url}")

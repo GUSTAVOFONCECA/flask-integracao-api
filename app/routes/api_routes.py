@@ -6,7 +6,7 @@ API routes for data retrieval and processing.
 
 from flask import Blueprint, jsonify
 from app.config import Config
-from app.services.webhook_services import validate_api_key
+from app.services.bitrix24.bitrix_services import validate_api_key
 
 api_bp = Blueprint("api", __name__)
 

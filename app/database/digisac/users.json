@@ -1,0 +1,1147 @@
+[
+  {
+    "timetable": null,
+    "id": "00392352-e585-4d3d-87c7-e41698b97f24",
+    "name": "Vitoria Sales",
+    "email": "fiscal5@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-05-19T16:03:34.117Z",
+    "updatedAt": "2025-07-30T21:04:01.167Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "domain": "https://logicassessoria.digisac.chat/api/v1",
+      "fromApp": true,
+      "expoPushToken": "ExponentPushToken[FsqA8tC1HA3NSCr6G_8D35]"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "offline",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "offline"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": true,
+    "internalChatToken": "30168d4d6bdb54c4c5871539b0f65e4191dfc974b147bd0777cd15a52dd47a16a3e2b4cc6876c3ea574ba5823b276d83e197ea8271f6a053b19ffb4d9469c3d57fcfbdb22365241f8d4993d5b99c80c56eb80463f092111bc9c67469af1507235327f5563d4e38010365891925c2243125e85cd3cec45c2e401513e0041a523be29cb7a308618d1099450af883f028b116fbe72003dee2f3879a0d78663a45233b69560fd7",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1.5
+    }
+  },
+  {
+    "timetable": null,
+    "id": "b96f1fec-df31-48e9-ba75-2392979e5ea8",
+    "name": "Lucas Moreira",
+    "email": "lucas.moreira@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-06-07T19:53:37.532Z",
+    "updatedAt": "2025-07-31T17:56:08.020Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "domain": "https://logicassessoria.digisac.chat/api/v1",
+      "fromApp": true,
+      "expoPushToken": "ExponentPushToken[2MOcdAEvC9GV8ppTAwTHva]",
+      "sentResetPasswordAt": "2025-04-03T16:42:52.484Z"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "online",
+    "clientsStatus": {
+      "app": "online",
+      "web": "offline"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": true,
+    "internalChatToken": "539057d72084d6e6b75891c2e8d20e00a6ac39d8eac9f437de05c96444d4abaf0aab9652ef5749a0d2d0ea70c2ce7c232c6bb5f744421a9ac3f25b1760ebd6f52f0a8d54d73af222b7c97f0707ccf7c0fca7a1a7afb58ed2ef13aa0438222eb28f357b28538eff718c51aa8d7e7a4e75ab6d04e53f9e49d3b8652e196048cbd3dd3370a6db4557a0e6a47732ddc658cc352fe066848d2f0c9af9ab61c3ed0e54c1292daae2adf9c2c464e0019c2317d9f31d093facebf4f2707a0f778b323fbe9d9f220e7533092b06fa92d339577735fff2fc9b1dbd9834f9b506ec3570e01f1b354fb4543ae8f0af00780b5811d74c8ed3af14c13b56f625bc74fa06dfa3c7177a69e9c60d05a1f7ac87c9fcecd2521c616d56bde83dc89a6f9af55f56cecbf39326dc0f5eadafa4bb77341e0211198f322ea191d76442a6536882814ed26dcedfcca6e26e07cef34f57b68b01f7b2",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1
+    }
+  },
+  {
+    "timetable": null,
+    "id": "928615a5-d758-4f9e-b933-fc24744f362d",
+    "name": "Narhjara - BPO",
+    "email": "narhjara.bpo@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-06-07T19:54:24.682Z",
+    "updatedAt": "2024-11-26T17:24:01.079Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": "2023-07-26T18:13:59.310Z",
+    "data": {},
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "offline",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "offline"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": true,
+    "internalChatToken": "ccbf1446dc42a7c8e0b285b3ab18b9dc8853ca7b2414eb2b75a054adedbe200d4e62a0fa2597f99f84d905d72e44b1544d8d38704413ea2bed6c34d6d0105d8acfd43f99f7773119cb8f362c1c19f9fae65d453bde3661ba45336dd7c8b0184c413993babad77adb8830b38ee1f64b88d789586ee10fffaa2e0a2192b5e868be7a5d44f7a38c4c07a05bc57f1bb469ce73a3fea960277a102dcdf5b11b2ff6a54e0aaf18e4f42451d98ef327fa0d0d952fa5d8cf26342c2e23469aa908f22e982fb12439ef6b2e0d4fbb5fcd3ca4634a24ec8f2c4fb1cd21489eab71254dc0ea24dee8e77a3dee76984174ce1bf414313779429a46d0c91e6d6448827c508f3eeac2bc42ca60d2d36277b8229ff84fcbae04534f4c2c85cdbe183176f0c6a19540b74d404b45604161d62f2ce3975c6eb97175e2a7e78e04b996b6b4f7b43a1520b2dd333e0866a6e10ac9366d808ba6",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {}
+  },
+  {
+    "timetable": null,
+    "id": "d3f0a4d3-062f-4dfc-ba47-7ab5f6e42c87",
+    "name": "Gustavo Marinho Abrão",
+    "email": "saiu@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-05-19T18:27:51.514Z",
+    "updatedAt": "2025-06-05T21:13:36.828Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": "2025-06-02T13:29:33.161Z",
+    "data": {
+      "expoPushToken": null
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "offline",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "offline"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": true,
+    "internalChatToken": "0e038e13af144e47ab3467e4fb77372b06e5955c2b5cb6c8da6c095a0c5d2d100aeede146b5e2cd901899b385baee5d0545cb087c0678faaf1337fa706562ff35f42287446c92fb851e3badc6927a5e686bd3c1f825ec6a60c09b80dc323d79c82f0bb07659c2afb92bdd6e97b0ecf1116f2feb711e366240247ca90ccf073ab21b8188a99f43d6e3900a124015181b57efdec8e302490ccc59e8025628c74555212ebec5d2711a0aac9b532f098c6fdbf740b38eb34b95c207253ac7b523e7e107187ea08be3bee88c7fdacdc3b9a71ca6ea8a22ff704208fd5d89de6a92ef7c706368d489b24497f700983a369366d9df0da39b0a457c2b62125deb9de39b6d4b6977678f7e02a6a003198baeefd2087f222e1cb0abc02ffb6334e399f980c18d3b4e992856f920de1fea536074c2dfebfb0cc0246f7d7cfea9a90b233f8c88c5ee192a85cbb7f",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1
+    }
+  },
+  {
+    "timetable": null,
+    "id": "2a6e06e6-5fb0-406c-bccb-3a861a31c3bb",
+    "name": "Karina",
+    "email": "karina.santos@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2025-01-20T12:33:06.982Z",
+    "updatedAt": "2025-07-31T18:15:43.503Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "expoPushToken": null,
+      "sentResetPasswordAt": "2025-01-20T19:45:33.683Z"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "online",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "online"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": false,
+    "internalChatToken": "b0495875e3cc0df471bfe81f2dba8061088042471bead5165bac5ba3cce5ded8992efc303d6ffceb26037d344bd72b5ec28db0c19821303486af3b75ea338238a03c3816f91e0212a610a6f88fdf3d05753abc6a1eaaefe50ee1cf0ac1996a15ff54e1cc453b9fcbfead622e48292cfe60201d644cab68d5926e21ae6b5f18962bea997219c45c92b9e00dbfd509a498d21f53a411559eb35e395a933ade50e9c78b18463a",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {}
+  },
+  {
+    "timetable": null,
+    "id": "6fe73284-217d-45e3-8c2b-607502aedcf3",
+    "name": "Carlos Mingute",
+    "email": "fiscal1@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-06-07T19:55:33.323Z",
+    "updatedAt": "2025-07-31T18:10:35.272Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "expoPushToken": null,
+      "sentResetPasswordAt": "2024-09-30T18:32:58.698Z"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "online",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "online"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": false,
+    "internalChatToken": "aaa7b6ba81b4cd09b68c286eb2074c3ff80d22b5df4a5f4e93e32d8f833f6bc690a9b8a311af2dc6936790bc6ce430382a70ecdad813d5ae5dff9895ce3d4f73a6f0ab3d24ee1f4f6c063152b2e29058633b77c9ebfdd12037192a643fc31f6241d0aceed4443bb0daf13262e7835e6e9a8dbde4446d4ea6573790c88157a622729d81e39979d01e2cbf04ca0aac6cbaa8b218429c2d614142a18997b0e63783456165bc3b",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1
+    }
+  },
+  {
+    "timetable": null,
+    "id": "84071e54-0e98-4dfa-a40b-6159e7cbe045",
+    "name": "Emailton Fraga- departamento pessoal",
+    "email": "emailton.fraga@logicassessoria.com.br",
+    "phoneNumber": null,
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-06-07T19:57:05.296Z",
+    "updatedAt": "2025-07-31T18:13:53.058Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "expoPushToken": null,
+      "sentResetPasswordAt": "2025-07-07T16:49:51.596Z"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "online",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "online"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": true,
+    "internalChatToken": "3709ae97a3131cef7a76632805570cd82ac9241ec7259552c4718e5e1718007c0a44e029b2c1ca1da6cef27d7f11f38aaa0bf0fc349cfe9a57c7faffef5dd8c07612f9353e5b60e4fd6fb5d6897fb31dc13371e88d238d6e45501d257212add54900780bfd97a473e6663195ad53baeefe09906be2af50382d835ced84a31da04da91532f928beab9b393a8b9f8def2aa6280852d69d085d0ca39e1f2a011ca5c10f748bcd",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1
+    }
+  },
+  {
+    "timetable": null,
+    "id": "e38abc43-d045-4010-8b7a-caaca4b08216",
+    "name": "Mayara Matias de Araujo",
+    "email": "paralegal2@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-06-07T19:59:07.916Z",
+    "updatedAt": "2025-07-31T18:18:42.895Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "expoPushToken": null,
+      "sentResetPasswordAt": "2025-04-14T18:57:34.268Z"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "away",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "away"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": true,
+    "internalChatToken": "e416d40e47129241bc22a57e620c398d2cd5b58b84d51f0017e032d668829b0494826bc3f9650fcfb9fb5bb20f6c5d2082cc6a932f90f4c2ad7ca176609f772477c16db1c76f5a2de71e7da2d3add90c9efaa4332406b76cb3cf03debace11f48da15a63dc216723eb58b6beaca09ad1b179287b8c9278dc761f8bb82fef75213826a529033f1241bc059a83f377133befc22dd2f052119ceb7b5e2b3fd3a16669ef6b3bf8",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1
+    }
+  },
+  {
+    "timetable": null,
+    "id": "c5d946c2-7489-4950-a89f-231cbf8823a9",
+    "name": "Wanessa",
+    "email": "wanessa@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-05-19T16:03:56.280Z",
+    "updatedAt": "2025-07-31T17:54:37.403Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "expoPushToken": null,
+      "sentResetPasswordAt": "2025-07-09T11:51:19.944Z"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "online",
+    "clientsStatus": {
+      "app": "online",
+      "web": "online"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": false,
+    "internalChatToken": "05177b651f89b42ccd35efaf445227006178feeae088e41b475b3793d5927e1134f9b1622195b9e51e7f83bfc0fc71ce528386b44d06ee43551ed5b6c957ff66591ddbc01acdb7f970b37bc2862962b700cae52ad760ae9599280f2ac190f4cf858c7214fa93dcb13b5e7b7df81ff9ae2e296f9f1c0704200b512cb066eb0ae92322fa8c73eec68704f0e75e9c765a5a4717e4a503a53229258c02de2e67c72d0598923acec322cfc76d438834eb1a9ebcd065a93a0ec1d47ccf48c1a6a97686b7e1c5bb0b08f185d5aeccfc92ac29e912ed7d4f343224375f1f6e95a1ef94eef82a5d21198e831539298c1c59e22ff565bed51ddf1f993c7673460fefa6fdf053c01ff9536f421f0cf691ff10b88dd2f6ab41d4e0d89f3ec5532d862b18e339a886e4c10cb7e94d07cc118cd872a85d233f53c0c0199bfd1c8b65695952f5946db4cc614f866f2f79bb",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1
+    }
+  },
+  {
+    "timetable": null,
+    "id": "60d832b3-01a2-4fec-94aa-7cb8124adbb4",
+    "name": "Kaynã- DEPARTAMENTO FINANCEIRO",
+    "email": "financeiro@logicassessoria.com.br",
+    "phoneNumber": null,
+    "branch": null,
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2025-07-31T16:15:59.397Z",
+    "updatedAt": "2025-07-31T17:57:39.917Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {},
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "away",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "away"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": false,
+    "internalChatToken": "7124d2956b49f8c757bc892a99addde017e04da87fa56006d10c20e9c983e65bf500c796040d91cbb7185a0c5ebec3a3fb0e5a2531b487a5f4ea242427586f591aa195244cb8c3620cb6544be3d501e818014d25b11566d32edf00f51f567da986ae98c45aa5a66a748fba043c468c0fe6dd66aafbbc078384d81de2e998e1315d2044f10342cb5c54fb11951a4b8b0bb22859256bbb3b54c381dfe7024a4c488fd7f81daa5da63cd5e75ba8e55f6a9f4cfc4442c216bb3e25bbf8bdd1690b4d4cfa6f83b6be60856df5400a1fea0e9c802e7bfec9d52fde8e51937b891b094432bf518ba99c8785a75619c8441fcff5aef941fa0bbd8c712555efc7364d9aaa44a704232ef74141c0d37740a173c3d8814e623403f39402a65a3e614b2e02b0b429cbc0f0c576f98f7c09a499d25551dd2bf8ecffe6acc9e0fc1ac886b89e7b6aa67a35acdb356b83f252c2182e",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {}
+  },
+  {
+    "timetable": null,
+    "id": "99a78b28-1803-4413-8b28-18f804729844",
+    "name": "Ingrity Rodrigues",
+    "email": "fiscal4@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2025-02-03T18:07:59.102Z",
+    "updatedAt": "2025-07-31T18:04:03.083Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "domain": "https://logicassessoria.digisac.chat/api/v1",
+      "fromApp": false,
+      "expoPushToken": null
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "away",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "away"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": false,
+    "internalChatToken": "b41c0a4db19e07e6971acb67fc2d72560e7f35a96f5e645db09f4d83ab0a6c9de272a4ae6f39877b2125fabd4deec202fe92593e6b357c3d22f30d289c0a2e04c9421e27fc03fd3d59de260811c554295e13981a958d55306c3237451e6dab34736e09c9cfad4da5a7b3ee9ce8e7c65e4c5ccecb55aaebd4f8c0e326ab89175b12776586207bf3c0de8d3d1c40af4312f1e507fa3bd101fdde4a747b972aceecde6f72d59f",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1
+    }
+  },
+  {
+    "timetable": null,
+    "id": "f87f9275-8e3d-42a0-9e97-3b7b31c1cd77",
+    "name": "Lucia Silva",
+    "email": "contabil3@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-06-07T19:52:52.084Z",
+    "updatedAt": "2025-07-31T18:09:23.119Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "sentResetPasswordAt": "2024-05-14T19:13:53.266Z"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "online",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "online"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": true,
+    "internalChatToken": "f31fdff1fdefdb462fc7c0422e03e920929bc71ebe1b3df009142920688f421141d05b16483aacbb41fb1b03b26345adc00b59d753d587f5f1988e4871d717f28f15e5a0f6a29292b1e85851513ccab2dd0806641b5b5c571f065d424766eb7e03bf84d96eb75cdd452bb63f6b81eef392f35bee64964b1b90ff2349a549a7efe51d903063fa311b447c6cb8214b5467bf8fd567ecd1da0b07179d917da7733e2237203cb8",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1
+    }
+  },
+  {
+    "timetable": null,
+    "id": "fd3cbb01-f434-411b-9c50-f489cb82b482",
+    "name": "Michelle França ",
+    "email": "contabil2@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-07-26T18:15:47.163Z",
+    "updatedAt": "2025-07-31T12:28:01.271Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "expoPushToken": null,
+      "sentResetPasswordAt": "2024-06-18T11:11:21.174Z"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "offline",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "offline"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": true,
+    "internalChatToken": "c7d5c5c7ffbcd0eacdb0b022b7874da008d0180bd65bd6b6c6ce6da752ed8a3dc8ea4dac81fa8feefaafdeee751eecbc3ab00da6fb1dc546da90f05075675b36cb1423596f393db8e9a53ef0e37885e7fb7d119c78920499d00b2ca42d66076001215fe3ecfafccde147ea746f80883d933bfd7cb1093ab79b3d766823fe7790f294c8b83bd344d0df8c7c13eacdd11dbfc98883dffa78a79964f1c4fcd158485f5833c4",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1.5
+    }
+  },
+  {
+    "timetable": null,
+    "id": "084c1ff0-9f7c-4dd2-a044-afed587cd983",
+    "name": "Danillo",
+    "email": "danillologic@gmail.com",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-06-07T19:56:37.488Z",
+    "updatedAt": "2025-03-18T14:02:01.268Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": "2025-03-18T13:01:29.669Z",
+    "data": {
+      "expoPushToken": null
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "offline",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "offline"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": true,
+    "internalChatToken": "9a10cb9205b02b4d7d1beab2da70b684c05682a13d36eff00d771e50b68f98d299619df455afa987cc4cd85e489740f641a0523237d5bf112962aaa82765c03204f2bd27e0069e5cd8099d7245876327c65894994a5aa84621d48022258b4ebd2bfd4ab061ceb2f6127e6236233b1432ac73b5dd550e9d788c01008a38f5f265b21f54d2f79c2308babfc020791a6e741ae2509775910d5e23b386b2c33c8e3572085c28281f0e519125b251a6ce29491b0d00e864e6f0b7528b7d3e2b2b62c69671828d45ec5883dbc72a4633c1416b1cbd7d81e74d8243bc7b62227cb299d2bfc236c6421c322688b3bc27c9e67d84bec34862aa3c430bd55e0ee12ec33d44480ea8cccc69af7f86d35e918bb575297f9850258770d51a4c15512d8739562ada8cad26208a4911f9c864d7299cf531fd6bfa3a2c0481fe09b2e4936827621467c2",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {}
+  },
+  {
+    "timetable": null,
+    "id": "3aa2fa1b-9bcf-450f-8bb8-ddc204558aaf",
+    "name": "Alderk Ferreira",
+    "email": "alderk.ferreira@logicassessoria.com.br",
+    "phoneNumber": null,
+    "branch": null,
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-06-09T13:07:30.576Z",
+    "updatedAt": "2025-07-31T18:14:50.811Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "domain": "https://logicassessoria.digisac.chat/api/v1",
+      "fromApp": true,
+      "expoPushToken": null,
+      "sentResetPasswordAt": "2025-05-12T20:29:53.766Z"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "online",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "online"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": true,
+    "internalChatToken": "7878c97e4505d0a98db20fb93fa4252970a062426f12ef150100cb2db979fd4e16fa79d2d8173ecfd26a7e42b55c88b5d97d2cd2be55dd579054ef05a44f638cd7986db43df65e35e48c1ee651d486ea0ba30d946f19005fc04c9f249dcad506a0527133633c0872d154c77cfe9005722a1556569951f8d31f5036c5f86175e7b028d22f315634458008bb2d421305a52ad2f04b13fc5daa515b481b42b34d6dc81c66765b",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1
+    }
+  },
+  {
+    "timetable": null,
+    "id": "7488fb9e-56c2-4e65-8263-aeae7f9ee8a0",
+    "name": "Simey Jardim - DP Logic ",
+    "email": "simey.jardim@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-05-26T19:33:19.830Z",
+    "updatedAt": "2025-05-27T16:58:01.441Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": "2025-05-27T16:52:14.811Z",
+    "data": {
+      "expoPushToken": null
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "offline",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "offline"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": true,
+    "internalChatToken": "cedb2cbb7a67a3b4fed9315ea5dfa30cf3fcef849f899a39fd71320309008b853790d2087f67f1ddddfae7b5167c2dbd307cacb03812afbb592c2ebd412f747b94f1e565ae896bd43c4c136012707cc854574192a45fa987ae461f524ec79386405636816cfd8b5178c5c6847dc17ab260228aea2e95248387ee73fa7cfb243a71c5a2b88bf6feaea9189f6ecb9be9cf9421c67e56a81600be13ffbeeebf2933b620418784",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1
+    }
+  },
+  {
+    "timetable": null,
+    "id": "c62179db-9956-42ad-844b-77b669a55834",
+    "name": "Samuel Salles",
+    "email": "samuel.salles@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2025-05-20T17:27:53.739Z",
+    "updatedAt": "2025-07-31T13:53:01.408Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "expoPushToken": null,
+      "sentResetPasswordAt": "2025-05-26T13:12:36.789Z"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "offline",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "offline"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": false,
+    "internalChatToken": "19cba05e1832fac21c7a5e59a1ee6da5de3145ca4255da159483101d3434e1bd59c53e29e491763d9b77d9221f1ca5060039b29641740a6365b24f1ec63df0cdb704135338e301d476f4cfbc3996b9761346f20339b1490efc9b9361a0b0f8ba423d18dd2f1c982a3409d0fa68c6b42f87464b22e890880388ba6b40e58b792d6223a6ef88f34cc472d8f536bea80eba03ee27eb4b9bc833fdbaadba6de3a0c4a309f9ae85",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1
+    }
+  },
+  {
+    "timetable": null,
+    "id": "abf27835-5c76-4559-8cf7-78fa2cb1f6b3",
+    "name": "Gleyce Kelly",
+    "email": "fiscal2@logicassessoria.com.br",
+    "phoneNumber": null,
+    "branch": null,
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-05-19T15:39:43.020Z",
+    "updatedAt": "2025-07-31T18:15:23.296Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "domain": "https://logicassessoria.digisac.chat/api/v1",
+      "fromApp": false,
+      "expoPushToken": null,
+      "sentResetPasswordAt": "2025-01-07T19:39:58.734Z"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "away",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "away"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": false,
+    "internalChatToken": "b225bb4ed06f847e7b200afa069fd8cb541631ad285a4ad31c787b6ff1503ff0ae9c0e6aef0e59162d0e528589b550c44cdeb1a78ec72f9435af3522c39621cf653492635ec261cd0c5321f9997789f067f6c5b7832704a29405d25aeedc67f712ef379461aa4f14495498a9d75a86919f7193f5498760e138d98460cb3d3589c307e022090b36770c85e44b68ed5e90e996cb539abbcf73212060bfbeddef41e9ab443775",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1
+    }
+  },
+  {
+    "timetable": null,
+    "id": "00f37d6e-2426-4a5f-a899-03f8cdc51a50",
+    "name": "Adeilza Araújo - departamento pessoal",
+    "email": "adeilza.araujo@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2025-07-07T17:25:10.736Z",
+    "updatedAt": "2025-07-31T18:18:29.096Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {},
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "online",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "online"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": false,
+    "internalChatToken": "7fd7985a5b46c9187e46701ba2221c03899f2bf86da9fa99e34810e69be9a8cd36db38fe98101ae1229c7b3fbda1b1e74b47f73edc6d1fa7d3d69588e75cc5d2395977c36c6744e5c046d8421b550083492e1f76611a3becfc2a9332959cc6df5ff97ee6fb5c3bbfc976586c273910fd9363cb58642b218cb4b07c1e724404b6c732ba84ce97d8110df77a7fe17fd6f09e56f182b04bd987f4075600fb9ac17714967ef9a5",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {}
+  },
+  {
+    "timetable": null,
+    "id": "570f2092-9795-4639-9247-2eee03844115",
+    "name": "Tais Rocha ",
+    "email": "dp@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-06-07T19:57:34.312Z",
+    "updatedAt": "2025-07-31T18:05:17.650Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "expoPushToken": null
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "away",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "away"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": false,
+    "internalChatToken": "f9d2bbee9d88e3255ee4e41dd477f0b7b9748bcce887581683456024d979b1fc809df77efe046c23987d7f47da6ee66bb4f00ab008680d78669dba7ff38ff597cfe070e13d5fb9debf4b9f725b6f6000b04b82b3415a5ce1943c0ea4a402e24a55cfcf59edd8f60cc3812dfd6d6482ad426519238dc8dade2f74f68e437eb1629bb8b1dcb8bf4e6bf974ccf66b038013a15a255f5fd23e80fc67a1b0c28531909558eea4",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1
+    }
+  },
+  {
+    "timetable": null,
+    "id": "8ee520d5-20d3-4b2c-b4d4-dcce3073c6a6",
+    "name": "Matheus Lisboa",
+    "email": "bpofinanceiro@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-09-29T11:23:09.891Z",
+    "updatedAt": "2025-06-02T13:35:01.664Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": "2025-06-02T13:29:20.670Z",
+    "data": {
+      "domain": "https://logicassessoria.digisac.chat/api/v1",
+      "fromApp": false,
+      "expoPushToken": null,
+      "sentResetPasswordAt": "2024-02-26T14:57:11.234Z"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "offline",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "offline"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": false,
+    "internalChatToken": "f9db5d368e3b2f27976b68ee5f0851fce4d47e7f41fc29062372de4ba0f25ac4aad943be5f2eeb827f4f4771d703f587826a5e5d0d1981f5bb2cb449c9e01a8150a3088d3080a664c89fbe1c11e577e76fe970361207a457412443306417741f9a43116bd33795ba3aaad732094359415292f637535a81ecdb457a439149d48efacba0a54fc32323389d7d34b8bf5860dffc6a7acedcee1394addd9f5216b2aa6dc76a99",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1.5
+    }
+  },
+  {
+    "timetable": null,
+    "id": "2ce10eec-f847-4b2f-ba0e-be9bbbd3d916",
+    "name": "Camilla Gonçalves-",
+    "email": "contabil4@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-06-07T19:49:52.579Z",
+    "updatedAt": "2025-07-31T18:16:52.542Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "domain": "https://logicassessoria.digisac.chat/api/v1",
+      "fromApp": false,
+      "expoPushToken": null,
+      "sentResetPasswordAt": "2024-09-18T17:35:20.415Z"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "online",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "online"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": true,
+    "internalChatToken": "31042af877d06470a53aa3b45566683208499c679a17b9db9dcb19ba5592e3b052c4b72efa2da7b327cc4a63e112fba70422e5c30f90efce18365cf5ea0baaaa73b5abdf525c89d8b28f414a06c6d2cca5292729940f4dfb236be830a650e60d18ee987fa24c23a143fc3802f50ad3188b11ea2f9bb49bb3de8f3e12c53fedc164a8550c42b12671b112e888fd29b472acbaad22beaff36ff540fb5d24bdcc1094cbf3beee",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1
+    }
+  },
+  {
+    "timetable": null,
+    "id": "af0e2ad5-585e-4ab3-a021-232d3a7fdf15",
+    "name": "digisac",
+    "email": "contabilidade@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2024-03-08T13:15:02.591Z",
+    "updatedAt": "2025-06-06T21:05:44.393Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "expoPushToken": null,
+      "sentResetPasswordAt": "2025-05-20T12:15:18.013Z"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "offline",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "offline"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": false,
+    "internalChatToken": "759eadaa7848b252d24fe64570d6b101f117f30676d3c4df4475cc197eb560037218290d611cf2b68b31ae9720e56cf64b3e09b201529bb2c933eb71d48a6d260cca4cda1f141e719dbd57d88debb5bdc5d279337328d60a9911438bc3e81e20063280b7e5ad388b1e37be2f8b6db2f49ed23de3dcbdcbbf4adf32babb4791fb8f2e340a02fe9d6b158b4a1e40cd86c5c24d95c8db9b36cb4eaa4bb025ffad38510c6aa439974b453f982d683394c3c5afab86f45c769f59248b109765012a331c9bde5f0c6a7d09e2aab3afe0355fe3d023caccd8746f55c71a4e8c3080871678bed27b08cd147235233376199f1ea0e0d1486d10c21bc1e35c5fa171780343adb684674cec8d795f712d5a395e0f9708e4eab43e1294f5721505ace125c9ce9e8204569ad35403ee6d11befcb60a6071a5a16567877ded6e601350c2591c18bfbe0ca4d1fbd2f6e9886398dd71d3cb",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1
+    }
+  },
+  {
+    "timetable": null,
+    "id": "4ead8aa6-2cf2-44ed-9c5f-b5e65ecfee8e",
+    "name": "Gabriela",
+    "email": "gabriela.santos@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-11-23T17:04:41.945Z",
+    "updatedAt": "2025-07-31T17:47:01.860Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "expoPushToken": null,
+      "sentResetPasswordAt": "2025-05-13T17:55:30.948Z"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "offline",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "offline"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": false,
+    "internalChatToken": "ec563e4eae66281b56c4035386017f3c674afe0c0c3a3e6f180660c077c2e766637fc4925686e7a315f17cf382b691c778f57e78d6504739ad086ade0338da50531a280f790cdee2fbec8915bc35b2f01eb47418230b76095e842b52e21d5949b7e8284b141c73616f984121315122e644c74796e124fd6cd8df4ea5eb0b5b469d4275af671b2b31f6cc433db320f282fa5ac4eefcab0a7f9c9c6cd30c33220b0a0c04507a",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 2
+    }
+  },
+  {
+    "timetable": null,
+    "id": "1cec1418-7e00-4200-98bb-517819b955e3",
+    "name": "Rodrigo",
+    "email": "rodrigo@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-06-13T16:18:41.228Z",
+    "updatedAt": "2025-04-09T20:38:27.426Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "domain": "https://logicassessoria.digisac.chat/api/v1",
+      "fromApp": false,
+      "expoPushToken": "ExponentPushToken[J6flIAP-9Uw9eupwH_1x8V]"
+    },
+    "isFirstLogin": true,
+    "timetableId": null,
+    "status": "offline",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "offline"
+    },
+    "language": null,
+    "isActiveInternalChat": false,
+    "internalChatToken": "b5607560610e76ad96035c85918fab5c85225c50b8107b29db4adf8350815ad079ff727a3780d3fcebda654dc388d71b95decf1d4cb1050026121d0369183d412e3af3e005c3982426a803de8326d419e717a353ceae20d6e69d8ffd63063573562feb7349e33c003ad957faa95140fef638f98caac39b4660d5f5ae18478f187a30596be7243289c1f43764e55b65599a8a0597604a7ef43a8f73f8fab35bee22cf8cca214724dd8ed7adb07a5538882d4ba34aa7466c139b497ff442513a218ceb56770b95c2ecd8bd2b7f48d28da77f535a7008328e50558224daeb087ea5594c95bee89449e7280dceee7fe4c9cba3abba57ec134db1b58d5d559ec1a4ac24b88b868acae2d7336750fd9ab6156df497825d12f686a7b70984961c50f68dc5edf132627c6d07d4a43c2a9859e692c4529cd7e968f9bf843791592dcac83d8f35cc8513cfcafa8efc",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1.5
+    }
+  },
+  {
+    "timetable": null,
+    "id": "2bb6c92d-45f0-4183-a9cb-1f255c517d99",
+    "name": "Ana Luiza Cordeiro",
+    "email": "fiscal3@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2025-06-05T21:13:55.295Z",
+    "updatedAt": "2025-07-30T21:04:01.170Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "expoPushToken": null,
+      "sentResetPasswordAt": "2025-06-05T21:14:14.812Z"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "offline",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "offline"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": false,
+    "internalChatToken": "101a7f4c164c7433f6dcf3a56d9bcb0d1cee2d5076e596fc34497748443b3d5ae20d16af0a5e5b38e01b629dcc7e9ee954e52294221f2091cd4051a65fcbde388209cd46fa68f18bc4dad63696d3b841b5ec4e389e1439bf9d51f0ab056f74f75387c3c08ff3103db38b733c6bde248e02a6c70919e5173a47e85f938fc8f47ad30cd897bd38a9928bb830c3e5d0c6440ede07adcdf13f144ea20f4d1be8d340be1aac41b5",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {}
+  },
+  {
+    "timetable": null,
+    "id": "af8f3dc8-5dd2-493c-92ac-6c6d7ba7cdba",
+    "name": "Gustavo Fonseca",
+    "email": "gustavo.fonseca@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2025-01-20T12:39:23.234Z",
+    "updatedAt": "2025-07-31T18:06:04.281Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "expoPushToken": null,
+      "sentResetPasswordAt": "2025-01-31T11:22:04.452Z"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "away",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "away"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": false,
+    "internalChatToken": "268c5f2fe155049a38d5ffb4429c0cd05381b98c5f486d9763ccc40c3e975f1226d80bb15d6ee456ea5149d8c37e261bfe60b06767f9e34b87a6b5aecefe803d60b9c508fefee7900abcad6e5fb6c8d46bcf335e473feacf58d0c69dfb0e70eeb04b09e124c8c4861e4ff9d006a0b0bb6fcde96c77a8a3746f4bab5ce21969437b92ddefcbd7bda350bc6a110dcf587e2c3da6963b48ba49dc4e3097bfcc434a41b1a01b2119194907d5bd4eec9127f4845b9d6ae17ec35911c76dd8d1ad14763b0517241b2ed88268eeab81eb416f19321c5933c29281df39c3e052cb95c97c54c5bd5bc1df3fa73e0ea5789cf2db50154404e88503c83779057442ec06340487b27898d80560874b732fd39eb6b44267b77a148a3b0729e33b3e368e04c5b5c5b5110771f0b132a720712e5eb8154b75547de342154de5eeed00f9de1aa5f3837f062c5b6ae7fc390876a294970013dafb",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1
+    }
+  },
+  {
+    "timetable": null,
+    "id": "15b8f5fc-100f-4ff7-b4dc-e109c2c77f27",
+    "name": "Caciane Sousa",
+    "email": "cobranca2@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2024-09-17T14:01:15.201Z",
+    "updatedAt": "2025-07-22T20:25:01.507Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "expoPushToken": null,
+      "sentResetPasswordAt": "2024-09-17T14:09:00.311Z"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "offline",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "offline"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": false,
+    "internalChatToken": "3ae4934e78c0c4bb17e799b7e4676a3bb5a1d0ced10ec1aa861349c15012eab357323d7d7e8ced3883d78558296d066fc4e0d40cd572387090acdd2e2f7e79c07d281359ec75b9d3fccd6d7a89220489e021cea143e8ba2909b284176105a7cacdba724274a8092dfd110618dba5cbd331422eeef4397c8861459bfbdf8c10a0761edb0b4160afa3e6509d577641d1cfe2b916d750976f973860a873292d4eb45ae0b8b99b",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1
+    }
+  },
+  {
+    "timetable": null,
+    "id": "0657484a-3ba9-4e70-a11c-42c2d737049a",
+    "name": "Naara Libna",
+    "email": "fiscal@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-05-19T16:02:24.012Z",
+    "updatedAt": "2025-07-31T18:18:18.244Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "domain": "https://logicassessoria.digisac.chat/api/v1",
+      "fromApp": false,
+      "expoPushToken": null,
+      "sentResetPasswordAt": "2024-10-03T13:41:36.083Z"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "online",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "online"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": true,
+    "internalChatToken": "e2f619267af71b7e82b1d839d3460820748dcf5022a513eb6306a7a209ab421633d952d97b0bc89cd012434701c870dc41ca5408695b3e7947417f6a879b9b0ed9397f2012478853a77fd737f01494f13aa47e730a9ed3199107375848c427d09e75fd20c39c56206342b2ff1c31f9effcee8cdff94830da8a8f45b21bd86d94510906c00a3a3ecdbdf15f6197d644779c55f6ba7f725934c366a1e3d3cf0d9ccfd9ea97",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1
+    }
+  },
+  {
+    "timetable": null,
+    "id": "384048b5-e08b-43d5-805b-b9142a8e5ff9",
+    "name": "Emily",
+    "email": "societario@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-06-07T19:58:38.825Z",
+    "updatedAt": "2025-07-31T17:17:54.653Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "domain": "https://logicassessoria.digisac.chat/api/v1",
+      "fromApp": false,
+      "expoPushToken": "ExponentPushToken[RTPwqDMXWT3fJvCdr1UPmo]"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "offline",
+    "clientsStatus": {
+      "app": "online",
+      "web": "offline"
+    },
+    "language": null,
+    "isActiveInternalChat": false,
+    "internalChatToken": "d1e31e79ab8f424be82c4b69c3fe153fe77790c3c12051ea4f8461554696f92acd24ff353716da7437e218c6ebe9e8c0eda349ef48893aa81c4b552f3e02848bd594e264efac8b0246510757a3cf6618062e4653882c7416c8064070351497e2e08946e6c2b91c5a308c795cd99830b187072db6509b3fc6c35bcaa134fe51c27a6ae655dd6c7b043ccafd0a4e6835f07b4a0b3131c8ef06aa8bcc36081c324b0dd4ef7d423899ec0186034386fd67a648975b14cf4a28508cb9d6f76848671dfb0b78219bd4590c53594ff2d1ba50ff34906490e8b703c603fc1d740f82a551b071a4e418ebe6e1e29c73f80bc3b520158fe8ad35a5eda27e934abbc5686f644413dbfef413b71a54d50ac98a0c0c43ad944518f00560532f6881b3da8093c5b13f8a6719c92e161c8a2fc8d493a3c5537f9cecb239ec501793e1b10d97b34b21ca78afbdf0b6f5366a960d8b",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1
+    }
+  },
+  {
+    "timetable": null,
+    "id": "1bef1944-8b02-4c8e-84fa-535f176edabd",
+    "name": "Daiane Dias",
+    "email": "paralegal1@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-06-07T19:59:32.088Z",
+    "updatedAt": "2025-03-18T13:24:01.145Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": "2025-03-18T12:23:54.433Z",
+    "data": {
+      "domain": "https://logicassessoria.digisac.chat/api/v1/",
+      "fromApp": false,
+      "expoPushToken": null,
+      "sentResetPasswordAt": "2024-08-29T12:08:03.944Z"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "offline",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "offline"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": true,
+    "internalChatToken": "db281cee629b538cd5547abd649c9a5809f0fc04d39d8981588a9654c313ac095caaddfcf26eb851358bb70c2cdb81b012133ac561a5fa0cba855e64af7deb7f22476f60b18463161623cac3cd1d19fd74a272446489d2a159ef970a83caed088b59390ebf9f8a55f707512804344afdfaecdcd89ef25012698647b5aba5e156fe526112585f58c6d7bec7cd2ae3a5fd289f350482742aa91d39686059fd7017c15aa07f91433d86cc190da24981d185b46a257c9b811a7c622f91600aabd7d7e1ae69d50efa37c6241f0283daad4c4870db9ff0f80ecfd3b915bc6c21ae6ba63ddeea2581e6dbbed5b1f67d103eeb243164e27d2b823d0fac1f957c32857c2cad84baa58121e210963735043b43389e582045fa73bd2273bfd76fd90de7a665a411afc51f6ec153968e5f0002f959d580272ba519c7d73a87f07fc1ec93acf7edb1d3b9bf7f74e114ab858c2472",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1
+    }
+  },
+  {
+    "timetable": null,
+    "id": "3332504b-8bd9-4dba-a8f5-8add5aec2329",
+    "name": "Paula  ",
+    "email": "contato@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-05-19T18:55:10.184Z",
+    "updatedAt": "2025-07-31T18:08:56.774Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "expoPushToken": null,
+      "sentResetPasswordAt": "2025-01-20T16:25:45.822Z"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "online",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "online"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": false,
+    "internalChatToken": "c07f3d13668c85ae6bd3b9757869f961744f781e41c5136410666ced9feef1634e77173ad18280f33cd7c02fe9b71981e09c37040a253cc3160fdecfdb593364ff7430315122d7c2b20209c377240944e6c5ce2255c2920e33fea3ed2fab15ec6eb574ff149bd9407c1be89cda2cdf58ea9de8dd25cfc33f528e1fce4c8b881bac0a349290d8ecf71714e7a44aa44cd35350da8f33d39dbaeb355f74c0a957ed35a96b23",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1
+    }
+  },
+  {
+    "timetable": null,
+    "id": "056a201a-e26b-4e27-8b88-098126ab2d04",
+    "name": "Gustavo Prates - Estagiário Contábil",
+    "email": "gustavo.prates@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2024-06-07T11:36:18.458Z",
+    "updatedAt": "2025-07-31T17:26:01.441Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": null,
+    "data": {
+      "expoPushToken": null,
+      "sentResetPasswordAt": "2025-03-18T11:35:53.742Z"
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "offline",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "offline"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": false,
+    "internalChatToken": "4902c203a4cb7a1bd61be01967251c194035d60f33dc245395f2dad68d2873d377b77057dcdfead3afec05f663685d670cdc9e6c31bcb625a9358ef8e8c1437fcac7d6467dc0ae7c92394d7551327c477a72bf8d794cbad1d9888ccf601acf4b4a16c7c5b93d644b7cacf58908b2943599e4649fc8b1f0205e7c9f1733dd7e7d294b761bb58b47f3359bae20a61c0582956c991a5f97b879f22ac929ab9af09af7780070c0",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {
+      "audioSpeed": 1.5
+    }
+  },
+  {
+    "timetable": null,
+    "id": "7ac8aba6-d9fa-4fbf-a314-5a28f58c31d4",
+    "name": "Raiza",
+    "email": "paralegal@logicassessoria.com.br",
+    "phoneNumber": "",
+    "branch": "",
+    "isSuperAdmin": false,
+    "isClientUser": false,
+    "createdAt": "2023-06-14T17:36:08.199Z",
+    "updatedAt": "2025-05-27T16:58:01.451Z",
+    "deletedAt": null,
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "archivedAt": "2025-05-27T16:52:01.962Z",
+    "data": {
+      "expoPushToken": null
+    },
+    "isFirstLogin": false,
+    "timetableId": null,
+    "status": "offline",
+    "clientsStatus": {
+      "app": "offline",
+      "web": "offline"
+    },
+    "language": "pt-BR",
+    "isActiveInternalChat": true,
+    "internalChatToken": "2a01ea12d18918c3458bc20f8302598ad9e75dd0cfa9066c901602c311f1e3cba642d526ef8e0daa110fd753adf61df388cee5a8a16db2a6f316218b2454606cb08cfff2b0d603166857f96f602c9ff8d75151aa1ebfa97dff8c5681fe78986f01f72c06f83d5144088cedf3733ca42c69075ab3d3ca6dce61ec285a64b0235d52b0dbd2489058b18a07793d2078365a0dacd6ff3c914a0d893cd8fd758003ab0e55c371dc",
+    "otpAuthActive": false,
+    "passwordExpiresAt": null,
+    "preferences": {}
+  }
+]

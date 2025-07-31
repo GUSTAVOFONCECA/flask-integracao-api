@@ -1,184 +1,488 @@
-{
-  "itens": [
-    {
-      "id": "8ede2335-9a05-48dc-aed2-fd7be969d955",
-      "id_servico": 381078950,
-      "codigo": "",
-      "descricao": "13º HONORARIOS",
-      "preco": 0,
-      "custo": 0,
-      "status": "INATIVO",
-      "tipo_servico": "PRESTADO",
-      "codigo_cnae": "",
-      "lei_116": "",
-      "codigo_municipio_servico": "",
-      "id_externo": "",
-      "lista_cenario_tributario": [],
-      "natureza_operacional": {
-        "id": ""
-      }
-    },
-    {
-      "id": "99e22dca-d4bd-48ce-8a48-9afe6d5ebded",
-      "id_servico": 353604321,
-      "codigo": "",
-      "descricao": "ABERTURA DE EMPRESA",
-      "preco": 0,
-      "custo": 0,
-      "status": "ATIVO",
-      "tipo_servico": "PRESTADO",
-      "codigo_cnae": "",
-      "lei_116": "",
-      "codigo_municipio_servico": "",
-      "id_externo": "",
-      "lista_cenario_tributario": [],
-      "natureza_operacional": {
-        "id": ""
-      }
-    },
-    {
-      "id": "79fafa3e-931c-4254-94c9-ad116a480906",
-      "id_servico": 355105058,
-      "codigo": "",
-      "descricao": "ABERTURA DE FILIAIS",
-      "preco": 0,
-      "custo": 0,
-      "status": "ATIVO",
-      "tipo_servico": "PRESTADO",
-      "codigo_cnae": "",
-      "lei_116": "",
-      "codigo_municipio_servico": "",
-      "id_externo": "",
-      "lista_cenario_tributario": [],
-      "natureza_operacional": {
-        "id": ""
-      }
-    },
-    {
-      "id": "f7e5524f-28fe-4dd8-a576-ca3f33b90953",
-      "id_servico": 356653398,
-      "codigo": "",
-      "descricao": "ABERTURA MEI",
-      "preco": 0,
-      "custo": 0,
-      "status": "ATIVO",
-      "tipo_servico": "PRESTADO",
-      "codigo_cnae": "",
-      "lei_116": "",
-      "codigo_municipio_servico": "",
-      "id_externo": "",
-      "lista_cenario_tributario": [],
-      "natureza_operacional": {
-        "id": ""
-      }
-    },
-    {
-      "id": "e07f1cd9-373a-454d-a4d3-f7fbf4bb18d3",
-      "id_servico": 384741231,
-      "codigo": "",
-      "descricao": "ADMINISTRACAO DE CARTEIRA - LOTEAMENTO",
-      "preco": 0,
-      "custo": 0,
-      "status": "ATIVO",
-      "tipo_servico": "",
-      "codigo_cnae": "",
-      "lei_116": "",
-      "codigo_municipio_servico": "",
-      "id_externo": "",
-      "lista_cenario_tributario": [],
-      "natureza_operacional": {
-        "id": ""
-      }
-    },
-    {
-      "id": "944abc6b-252b-4652-8400-523879fc772c",
-      "id_servico": 352913663,
-      "codigo": "",
-      "descricao": "ALTERAÇÃO CONTRATUAL",
-      "preco": 0,
-      "custo": 0,
-      "status": "ATIVO",
-      "tipo_servico": "PRESTADO",
-      "codigo_cnae": "",
-      "lei_116": "",
-      "codigo_municipio_servico": "",
-      "id_externo": "",
-      "lista_cenario_tributario": [],
-      "natureza_operacional": {
-        "id": ""
-      }
-    },
-    {
-      "id": "6ede25e3-3c25-48b7-af36-496196ef7514",
-      "id_servico": 357219091,
-      "codigo": "",
-      "descricao": "BAIXA DA EMPRESA",
-      "preco": 0,
-      "custo": 0,
-      "status": "ATIVO",
-      "tipo_servico": "PRESTADO",
-      "codigo_cnae": "",
-      "lei_116": "",
-      "codigo_municipio_servico": "",
-      "id_externo": "",
-      "lista_cenario_tributario": [],
-      "natureza_operacional": {
-        "id": ""
-      }
-    },
-    {
-      "id": "586d5eb2-23aa-47ff-8157-fd85de8b9932",
-      "id_servico": 352320176,
-      "codigo": "",
-      "descricao": "CERTIFICADO DIGITAL PF",
-      "preco": 0,
-      "custo": 0,
-      "status": "ATIVO",
-      "tipo_servico": "PRESTADO",
-      "codigo_cnae": "",
-      "lei_116": "",
-      "codigo_municipio_servico": "",
-      "id_externo": "",
-      "lista_cenario_tributario": [],
-      "natureza_operacional": {
-        "id": ""
-      }
-    },
-    {
-      "id": "0b4f9a8b-01bb-4a89-93b3-7f56210bc75d",
-      "id_servico": 351494840,
-      "codigo": "",
-      "descricao": "CERTIFICADO DIGITAL PJ",
-      "preco": 0,
-      "custo": 0,
-      "status": "ATIVO",
-      "tipo_servico": "PRESTADO",
-      "codigo_cnae": "",
-      "lei_116": "",
-      "codigo_municipio_servico": "",
-      "id_externo": "",
-      "lista_cenario_tributario": [],
-      "natureza_operacional": {
-        "id": ""
-      }
-    },
-    {
-      "id": "b21b2586-2292-460d-9901-78f86d12058f",
-      "id_servico": 356782514,
-      "codigo": "",
-      "descricao": "DECLARAÇÃO DE IRPF",
-      "preco": 0,
-      "custo": 0,
-      "status": "ATIVO",
-      "tipo_servico": "",
-      "codigo_cnae": "",
-      "lei_116": "",
-      "codigo_municipio_servico": "",
-      "id_externo": "",
-      "lista_cenario_tributario": [],
-      "natureza_operacional": {
-        "id": ""
-      }
+[
+  {
+    "id": "8ede2335-9a05-48dc-aed2-fd7be969d955",
+    "id_servico": 381078950,
+    "codigo": "",
+    "descricao": "13º HONORARIOS",
+    "preco": 0,
+    "custo": 0,
+    "status": "INATIVO",
+    "tipo_servico": "PRESTADO",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
     }
-  ]
-}
+  },
+  {
+    "id": "99e22dca-d4bd-48ce-8a48-9afe6d5ebded",
+    "id_servico": 353604321,
+    "codigo": "",
+    "descricao": "ABERTURA DE EMPRESA",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "PRESTADO",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "79fafa3e-931c-4254-94c9-ad116a480906",
+    "id_servico": 355105058,
+    "codigo": "",
+    "descricao": "ABERTURA DE FILIAIS",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "PRESTADO",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "1a74a829-c106-4702-ad80-5d1fb2a75ef8",
+    "id_servico": 445792375,
+    "codigo": "",
+    "descricao": "ABERTURA DE HOLDING",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "f7e5524f-28fe-4dd8-a576-ca3f33b90953",
+    "id_servico": 356653398,
+    "codigo": "",
+    "descricao": "ABERTURA MEI",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "PRESTADO",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "e07f1cd9-373a-454d-a4d3-f7fbf4bb18d3",
+    "id_servico": 384741231,
+    "codigo": "",
+    "descricao": "ADMINISTRACAO DE CARTEIRA - LOTEAMENTO",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "944abc6b-252b-4652-8400-523879fc772c",
+    "id_servico": 352913663,
+    "codigo": "",
+    "descricao": "ALTERAÇÃO CONTRATUAL",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "PRESTADO",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "6ede25e3-3c25-48b7-af36-496196ef7514",
+    "id_servico": 357219091,
+    "codigo": "",
+    "descricao": "BAIXA DA EMPRESA",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "PRESTADO",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "586d5eb2-23aa-47ff-8157-fd85de8b9932",
+    "id_servico": 352320176,
+    "codigo": "",
+    "descricao": "CERTIFICADO DIGITAL PF",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "PRESTADO",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "0b4f9a8b-01bb-4a89-93b3-7f56210bc75d",
+    "id_servico": 351494840,
+    "codigo": "",
+    "descricao": "CERTIFICADO DIGITAL PJ",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "PRESTADO",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "d134b3ac-7e23-4fcc-baae-3b89aca42242",
+    "id_servico": 444781992,
+    "codigo": "",
+    "descricao": "CERTIFICADO PF - MODELO A3",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "b21b2586-2292-460d-9901-78f86d12058f",
+    "id_servico": 356782514,
+    "codigo": "",
+    "descricao": "DECLARAÇÃO DE IRPF",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "6e705573-e409-4e6f-b131-9910bd3a269f",
+    "id_servico": 369027218,
+    "codigo": "",
+    "descricao": "DESENQUADRAMENTO",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "PRESTADO",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "25ebd31d-167c-4440-ba46-f11e3772ee92",
+    "id_servico": 386077422,
+    "codigo": "",
+    "descricao": "FISCAL",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "PRESTADO",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "d13f68b1-4907-42c7-8cf7-6a9b2f27189b",
+    "id_servico": 419671076,
+    "codigo": "",
+    "descricao": "Honorário de Encerramento Contábil - 13º",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "PRESTADO",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "74927884-d788-4b49-857b-c077c25dba1f",
+    "id_servico": 444091915,
+    "codigo": "",
+    "descricao": "MENTORIA / CONSULTORIA",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "8dc562b7-35ef-42c9-96f1-4136e7c61141",
+    "id_servico": 447560549,
+    "codigo": "",
+    "descricao": "MÚTUO ENTRE EMPRESA",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "28bad97c-9e09-42ed-8371-b099e766dd2e",
+    "id_servico": 391973655,
+    "codigo": "",
+    "descricao": "PLANEJAMENTO SOCIETARIO",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "PRESTADO",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "9371b1f7-0f6e-47b2-b497-3bc68ab81f90",
+    "id_servico": 391958641,
+    "codigo": "",
+    "descricao": "PLANEJAMENTO TRIBUTARIO",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "PRESTADO",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "c147ebd6-72cb-411c-b6bb-0ad6c5e378e4",
+    "id_servico": 435774434,
+    "codigo": "",
+    "descricao": "Recibos Portal do Empregado",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "60214600-16ca-4fdd-9d92-278a0c1e0783",
+    "id_servico": 354381295,
+    "codigo": "",
+    "descricao": "REGULARIAZAÇÃO E BAIXA DA EMPRESA",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "6a39b4fe-6cc0-4083-bd9d-a3d143719388",
+    "id_servico": 352003794,
+    "codigo": "",
+    "descricao": "REGULARIZAÇÃO CNPJ",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "921e7fde-0317-4190-b451-acd1827b443f",
+    "id_servico": 357222734,
+    "codigo": "",
+    "descricao": "REGULARIZAÇÃO MEI",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "PRESTADO",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "136299a2-9f63-4709-9122-5c0240036fbe",
+    "id_servico": 351496350,
+    "codigo": "",
+    "descricao": "SERVIÇOS CONTABEIS",
+    "preco": 0,
+    "custo": 0,
+    "status": "INATIVO",
+    "tipo_servico": "PRESTADO",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "49beeb28-0045-4fbf-a000-83f1dceb6eb5",
+    "id_servico": 354357988,
+    "codigo": "",
+    "descricao": "SERVIÇOS CONTABEIS",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "PRESTADO",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "4132e1d2-d6cb-4273-8319-6f4319a50445",
+    "id_servico": 356363536,
+    "codigo": "",
+    "descricao": "SERVIÇO - SISTEMA CONTA AZUL",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  },
+  {
+    "id": "422eea44-51f6-4cc9-9823-d5684a6b2f8f",
+    "id_servico": 350537264,
+    "codigo": "",
+    "descricao": "TARIFA DE BOLETO",
+    "preco": 0,
+    "custo": 0,
+    "status": "ATIVO",
+    "tipo_servico": "",
+    "codigo_cnae": "",
+    "lei_116": "",
+    "codigo_municipio_servico": "",
+    "id_externo": "",
+    "lista_cenario_tributario": [],
+    "natureza_operacional": {
+      "id": ""
+    }
+  }
+]

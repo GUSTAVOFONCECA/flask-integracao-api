@@ -1,0 +1,7 @@
+# Rodando todas as sincronizações com os tamanhos de página padrão (CA=10, DS=40)
+flask sync all
+
+# Rodando todas as sincronizações com tamanhos personalizados:
+#   - Conta Azul: 20 itens por página
+#   - Digisac:    100 itens por página
+flask sync all --ca-page-size 20 --ds-page-size 100

@@ -9,9 +9,7 @@ from app.services.conta_azul.conta_azul_services import (
     extract_billing_info,
     handle_sale_creation_certif_digital,
 )
-from app.services.webhook_services import (
-    verify_webhook_signature,
-    add_comment_crm_timeline,
+from app.services.digisac.digisac_services import (
     interpret_certification_response,
     build_send_billing_message,
     build_transfer_to_certification,
@@ -19,14 +17,18 @@ from app.services.webhook_services import (
     build_form_agendamento,
     build_billing_certification_pdf,
     send_processing_notification,
+    _get_contact_number_by_id,
+    queue_if_open_ticket_route,
+    close_ticket_digisac,
+)
+from app.services.bitrix24.bitrix_services import (
+    add_comment_crm_timeline,
+    verify_webhook_signature,
     update_company_process_cnpj,
     get_cnpj_receita,
     post_destination_api,
     update_crm_item,
     update_deal_item,
-    _get_contact_number_by_id,
-    queue_if_open_ticket_route,
-    close_ticket_digisac,
 )
 from app.services.renewal_services import (
     get_pending,
@@ -38,7 +40,7 @@ from app.services.renewal_services import (
     add_pending_message,
     process_pending_messages,
     set_processing_status,
-    get_or_create_session
+    get_or_create_session,
 )
 from app.utils.utils import respond_with_200_on_exception, standardize_phone_number
 
@@ -265,6 +267,7 @@ def _process_digisac_message(spa_id: int, user_message: str):
     logger.info(f"Ação detectada: {action} (Estado atual: {current_status})")
     if action in ["renew", "info", "refuse"]:
         from app.services.renewal_services import record_command, try_finalize_session
+
         record_command(pending["contact_number"])
         try_finalize_session(pending["contact_number"])
 

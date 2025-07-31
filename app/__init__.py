@@ -7,6 +7,7 @@ Inicializa o app
 from flask import Flask
 from app.config import Config, configure_logging
 from app.routes import api_routes, webhook_routes, conta_azul_routes
+from app.cli.sync_commands import sync_cli
 
 
 def create_app() -> Flask:
@@ -48,6 +49,7 @@ def create_app() -> Flask:
     # Configuração avançada
     _register_blueprints(app)
     _perform_post_configuration(app)
+    _configure_cli_commands(app)
 
     return app
 
@@ -58,12 +60,17 @@ def _configure_app(app: Flask) -> None:
     configure_logging(app)
 
 
+def _configure_cli_commands(app: Flask) -> None:
+    """Configura comandos CLI no Flask para sincronização de databases."""
+    app.cli.add_command(sync_cli)
+
+
 def _register_blueprints(app: Flask) -> None:
     """Registra todos os blueprints de rotas."""
     blueprints = [
         (api_routes.api_bp, "/api"),
         (webhook_routes.webhook_bp, "/webhooks"),
-        (conta_azul_routes.conta_azul_bp, "/conta-azul"),  # Novo blueprint
+        (conta_azul_routes.conta_azul_bp, "/conta-azul"),
     ]
 
     for blueprint, url_prefix in blueprints:

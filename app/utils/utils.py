@@ -1,4 +1,4 @@
-# app/utils.py
+# app/utils/utils.py
 
 import datetime
 import os
@@ -15,7 +15,6 @@ from selenium.webdriver.common.by import By
 
 
 logger = logging.getLogger(__name__)
-
 
 def retry_with_backoff(
     retries: int = 3,

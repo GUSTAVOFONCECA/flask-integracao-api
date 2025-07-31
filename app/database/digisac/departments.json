@@ -1,0 +1,128 @@
+[
+  {
+    "id": "80dfa1e7-2ecd-40c6-bb62-5b0dcc8b99fd",
+    "name": "Suporte",
+    "archivedAt": "2023-06-06T14:25:50.860Z",
+    "createdAt": "2023-05-19T15:39:42.760Z",
+    "updatedAt": "2023-06-06T14:25:50.891Z",
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "distributionId": null
+  },
+  {
+    "id": "d9fe4658-1ad6-43ba-a00e-cf0b998852c2",
+    "name": "Grupos (Sem BOT)",
+    "archivedAt": null,
+    "createdAt": "2023-06-12T13:00:27.767Z",
+    "updatedAt": "2023-06-12T13:00:27.767Z",
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "distributionId": null
+  },
+  {
+    "id": "5155593c-6c89-4a0f-9049-9e09862a5a2f",
+    "name": " Imposto de Renda ",
+    "archivedAt": null,
+    "createdAt": "2025-03-10T13:57:10.583Z",
+    "updatedAt": "2025-03-10T14:23:31.865Z",
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "distributionId": null
+  },
+  {
+    "id": "db9ffa6a-04dc-4177-afcd-7bdfa9d726ce",
+    "name": "Comercial",
+    "archivedAt": null,
+    "createdAt": "2023-06-13T16:18:57.720Z",
+    "updatedAt": "2025-04-09T14:04:54.046Z",
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "distributionId": "c341ee2d-eca2-443e-bc18-7b60266eade5"
+  },
+  {
+    "id": "0908fecf-cef9-4273-894f-f593feaca097",
+    "name": "BPO Financeiro",
+    "archivedAt": null,
+    "createdAt": "2023-09-29T11:22:33.752Z",
+    "updatedAt": "2025-04-09T14:04:54.046Z",
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "distributionId": "c341ee2d-eca2-443e-bc18-7b60266eade5"
+  },
+  {
+    "id": "a6330540-8fc8-49e8-b532-13b432a950a1",
+    "name": "Recepção",
+    "archivedAt": null,
+    "createdAt": "2023-05-19T15:57:54.313Z",
+    "updatedAt": "2025-04-09T14:04:54.046Z",
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "distributionId": "c341ee2d-eca2-443e-bc18-7b60266eade5"
+  },
+  {
+    "id": "5e2722df-5556-478d-9134-192183aa45d5",
+    "name": "Departamento Pessoal",
+    "archivedAt": null,
+    "createdAt": "2023-06-06T14:26:03.093Z",
+    "updatedAt": "2025-04-09T14:04:54.046Z",
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "distributionId": "c341ee2d-eca2-443e-bc18-7b60266eade5"
+  },
+  {
+    "id": "2601368e-2229-46ff-98bb-eb1da55d92df",
+    "name": "Financeiro",
+    "archivedAt": null,
+    "createdAt": "2023-06-06T14:27:00.478Z",
+    "updatedAt": "2025-04-09T14:04:54.046Z",
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "distributionId": "c341ee2d-eca2-443e-bc18-7b60266eade5"
+  },
+  {
+    "id": "db0a3cb9-a029-4e18-ae2c-a23df9d851b4",
+    "name": "Fiscal",
+    "archivedAt": null,
+    "createdAt": "2023-05-19T15:57:42.062Z",
+    "updatedAt": "2025-04-09T14:04:54.046Z",
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "distributionId": "c341ee2d-eca2-443e-bc18-7b60266eade5"
+  },
+  {
+    "id": "322da04b-2f00-4f63-b3bb-3a7c27b22ca7",
+    "name": "Paralegal & Societário",
+    "archivedAt": null,
+    "createdAt": "2023-06-06T14:26:14.131Z",
+    "updatedAt": "2025-04-09T14:04:54.046Z",
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "distributionId": "c341ee2d-eca2-443e-bc18-7b60266eade5"
+  },
+  {
+    "id": "05ec028c-174c-46ee-b0a1-d0439a07a108",
+    "name": "Contábil",
+    "archivedAt": null,
+    "createdAt": "2023-06-06T14:26:33.687Z",
+    "updatedAt": "2025-04-09T14:04:54.046Z",
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "distributionId": "c341ee2d-eca2-443e-bc18-7b60266eade5"
+  },
+  {
+    "id": "154521dc-71c0-4117-a697-bd978cd442aa",
+    "name": "Certificado Digital",
+    "archivedAt": null,
+    "createdAt": "2025-05-27T13:36:47.888Z",
+    "updatedAt": "2025-05-27T13:36:47.888Z",
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "distributionId": null
+  },
+  {
+    "id": "eddf3ea0-0e48-42f2-8c08-d30f009f5763",
+    "name": "Grupo Fiscal (Sem BOT)",
+    "archivedAt": null,
+    "createdAt": "2025-02-11T18:51:24.121Z",
+    "updatedAt": "2025-05-28T13:58:18.231Z",
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "distributionId": null
+  },
+  {
+    "id": "e8ed9178-0946-4b88-b8b7-8a0c22027571",
+    "name": " Administrativo & Integração",
+    "archivedAt": null,
+    "createdAt": "2025-01-21T14:02:10.176Z",
+    "updatedAt": "2025-04-08T16:36:56.762Z",
+    "accountId": "64bc5bd2-52b2-49df-86f0-00d67993278a",
+    "distributionId": null
+  }
+]
