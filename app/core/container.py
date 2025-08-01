@@ -110,3 +110,44 @@ def inject(interface: Type[T]) -> Callable:
         return wrapper
 
     return decorator
+
+
+def setup_container() -> None:
+    """Setup dependency injection container"""
+    from app.core.service_factory import create_service_factory
+    from app.core.config_provider import EnvironmentConfigProvider
+    from app.core.interfaces import (
+        IConfigProvider, IAuthenticationService, IMessageService,
+        ITicketService, IContactService, ISaleService, IBillingService
+    )
+    
+    # Register configuration provider
+    config = EnvironmentConfigProvider()
+    container.register_instance(IConfigProvider, config)
+    
+    # Create service factory
+    factory = create_service_factory()
+    
+    # Register Digisac services
+    container.register_factory(
+        IAuthenticationService, 
+        lambda: factory.create_digisac_auth_service()
+    )
+    container.register_factory(
+        IMessageService,
+        lambda: factory.create_digisac_message_service()
+    )
+    container.register_factory(
+        ITicketService,
+        lambda: factory.create_digisac_ticket_service()
+    )
+    
+    # Register Conta Azul services (with different names to avoid conflicts)
+    container.register_factory(
+        ISaleService,
+        lambda: factory.create_conta_azul_sale_service()
+    )
+    container.register_factory(
+        IBillingService,
+        lambda: factory.create_conta_azul_billing_service()
+    )

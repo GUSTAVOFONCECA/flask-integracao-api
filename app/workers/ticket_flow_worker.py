@@ -1,79 +1,155 @@
 # app/worker/ticket_flow_worker
+"""
+Ticket Flow Worker following SOLID principles.
+Implements Single Responsibility and Dependency Inversion.
+"""
+
 import time
-import logging
 import json
-from flask import current_app
-from app.services.renewal_services import (
-    get_waiting_ticket_queue,
-    start_ticket_queue,
-    update_retry_count_ticket_queue,
-)
-from app.routes.webhook_routes import (
-    envia_comunicado_para_cliente_certif_digital_digisac,
-    resposta_certificado_digisac,
-    cobranca_gerada,
-    envio_cobranca,
-    envia_form_agendamento_digisac,
-)
+import logging
+from typing import Protocol, Dict, Any, Callable
+from abc import ABC, abstractmethod
+
+from app.core.interfaces import IWorker, ILogger
 from app.utils.utils import debug
 
-logger = logging.getLogger(__name__)
 
-WORKER_INTERVAL_SECONDS = 60  # segundos
+class ITicketQueueService(Protocol):
+    """Interface for ticket queue operations"""
+
+    def get_waiting_tickets(self) -> list:
+        """Get waiting tickets from queue"""
+        ...
+
+    def start_ticket(self, queue_id: int) -> None:
+        """Start processing a ticket"""
+        ...
+
+    def update_retry_count(self, queue_id: int) -> None:
+        """Update retry count for a ticket"""
+        ...
 
 
-# Map nome (str no DB)->função
-# (serve para na hora de desempacotar a str do DB, relacionar ao callable no python)
-ROUTE_REGISTRY = {
-    "envia_comunicado_para_cliente_certif_digital_digisac": envia_comunicado_para_cliente_certif_digital_digisac,
-    "resposta_certificado_digisac": resposta_certificado_digisac,
-    "cobranca_gerada": cobranca_gerada,
-    "envio_cobranca": envio_cobranca,
-    "envia_form_agendamento_digisac": envia_form_agendamento_digisac,
-}
+class IRouteHandler(Protocol):
+    """Interface for route handlers"""
+
+    def execute(self, args: Dict[str, Any], form: Dict[str, Any]) -> None:
+        """Execute the route handler"""
+        ...
 
 
-@debug
-def process_queue_item(row: dict):
-    queue_id = row["id"]
-    func_name = row["func_name"]
-    args_json = row["func_args"]
+class TicketFlowWorker(IWorker):
+    """
+    Worker responsible for processing ticket flow queue.
+    Follows Single Responsibility Principle.
+    """
 
-    handler = ROUTE_REGISTRY.get(func_name)
-    if not handler:
-        logger.error("Rota %s não registrada no ROUTE_REGISTRY", func_name)
-        update_retry_count_ticket_queue(queue_id)
-        return
+    def __init__(
+        self,
+        queue_service: ITicketQueueService,
+        route_registry: Dict[str, IRouteHandler],
+        logger: ILogger,
+        interval_seconds: int = 60,
+    ):
+        self._queue_service = queue_service
+        self._route_registry = route_registry
+        self._logger = logger
+        self._interval_seconds = interval_seconds
+        self._running = False
 
-    params = json.loads(args_json)
-    args = params.get("args", {})
-    form = params.get("form", {})
-    try:
-        # chama o handler **direto**, passando os params como query_string
-        # (ele vai ler request.args internamente via test_request_context)
-        # mas você pode simular chamando handler(**{}) se extrair tudo por código
-        with current_app.test_request_context(
-            path="/",  # ou simplesmente '/', query_string=params
+    @debug
+    def start(self) -> None:
+        """Start the ticket flow worker"""
+        self._running = True
+        self._logger.info(
+            f"🔁 Starting ticket flow worker (interval: {self._interval_seconds}s)"
+        )
+
+        while self._running:
+            try:
+                self._process_queue()
+            except Exception as e:
+                self._logger.error(f"Error in ticket flow worker: {e}")
+
+            time.sleep(self._interval_seconds)
+
+    def stop(self) -> None:
+        """Stop the ticket flow worker"""
+        self._running = False
+        self._logger.info("🛑 Ticket flow worker stopped")
+
+    @debug
+    def _process_queue(self) -> None:
+        """Process waiting tickets in the queue"""
+        waiting_tickets = self._queue_service.get_waiting_tickets()
+
+        for ticket in waiting_tickets:
+            try:
+                self._process_ticket(ticket)
+            except Exception as e:
+                queue_id = ticket.get("id")
+                self._logger.error(f"Error processing ticket {queue_id}: {e}")
+                if queue_id:
+                    self._queue_service.update_retry_count(queue_id)
+
+    @debug
+    def _process_ticket(self, ticket: Dict[str, Any]) -> None:
+        """Process a single ticket"""
+        queue_id = ticket["id"]
+        func_name = ticket["func_name"]
+        args_json = ticket["func_args"]
+
+        handler = self._route_registry.get(func_name)
+        if not handler:
+            self._logger.error(f"Handler {func_name} not found in registry")
+            self._queue_service.update_retry_count(queue_id)
+            return
+
+        try:
+            params = json.loads(args_json)
+            args = params.get("args", {})
+            form = params.get("form", {})
+
+            handler.execute(args, form)
+            self._queue_service.start_ticket(queue_id)
+
+            self._logger.info(f"Successfully processed ticket {queue_id}")
+
+        except json.JSONDecodeError as e:
+            self._logger.error(f"Invalid JSON in ticket {queue_id}: {e}")
+            self._queue_service.update_retry_count(queue_id)
+        except Exception as e:
+            self._logger.error(f"Error executing handler for ticket {queue_id}: {e}")
+            self._queue_service.update_retry_count(queue_id)
+
+
+class RouteHandlerAdapter(IRouteHandler):
+    """
+    Adapter for legacy route handlers.
+    Implements Adapter Pattern.
+    """
+
+    def __init__(self, handler_func: Callable, app_context):
+        self._handler_func = handler_func
+        self._app_context = app_context
+
+    def execute(self, args: Dict[str, Any], form: Dict[str, Any]) -> None:
+        """Execute the adapted route handler"""
+        with self._app_context.test_request_context(
+            path="/",
             method="POST",
             query_string=args,
             data=form,
         ):
-            handler()
-        start_ticket_queue(queue_id)
-        logger.info("Worker: fila %s processada com sucesso", queue_id)
-    except Exception as e:
-        logger.error("Worker: erro processando fila %s: %s", queue_id, e)
-        update_retry_count_ticket_queue(queue_id)
+            self._handler_func()
 
 
-@debug
-def run_ticket_flow_worker():
-    logger.info(
-        "🔁 Iniciando loop do ticket flow worker (intervalo de %ss).",
-        WORKER_INTERVAL_SECONDS,
-    )
-    while True:
-        rows = get_waiting_ticket_queue()
-        for row in rows:
-            process_queue_item(row)
-        time.sleep(WORKER_INTERVAL_SECONDS)
+# Factory function for creating ticket flow worker
+def create_ticket_flow_worker(
+    queue_service: ITicketQueueService,
+    route_registry: Dict[str, IRouteHandler],
+    logger: ILogger,
+    interval_seconds: int = 60,
+) -> TicketFlowWorker:
+    """Factory function for creating ticket flow worker"""
+    return TicketFlowWorker(queue_service, route_registry, logger, interval_seconds)

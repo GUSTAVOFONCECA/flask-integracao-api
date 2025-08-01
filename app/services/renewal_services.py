@@ -1,108 +1,237 @@
 # app/services/renewal_services.py
+"""
+Renewal Services following SOLID principles.
+Implements Single Responsibility, Open/Closed, and Dependency Inversion.
+"""
+
 import logging
-import sqlite3
 import json
 import time
 import random
 from datetime import datetime, timedelta
-from typing import Optional, Callable
+from typing import Optional, Dict, Any, List, Protocol
+from abc import ABC, abstractmethod
+
 from app.database.database import get_db_connection
 from app.utils.utils import standardize_phone_number, debug
 
+
 logger = logging.getLogger(__name__)
 
-SESSION_TIMEOUT_MINUTES = 30
+
+# Domain Models
+class PendingRenewal:
+    """Domain model for pending renewal"""
+
+    def __init__(
+        self,
+        company_name: str,
+        document: str,
+        contact_number: str,
+        contact_name: str,
+        deal_type: str,
+        spa_id: int,
+        status: str,
+        created_at: Optional[datetime] = None,
+        last_interaction: Optional[datetime] = None,
+        is_processing: bool = False,
+    ):
+        self.company_name = company_name
+        self.document = document
+        self.contact_number = standardize_phone_number(contact_number)
+        self.contact_name = contact_name
+        self.deal_type = deal_type
+        self.spa_id = spa_id
+        self.status = status
+        self.created_at = created_at or datetime.now()
+        self.last_interaction = last_interaction
+        self.is_processing = is_processing
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary"""
+        return {
+            "company_name": self.company_name,
+            "document": self.document,
+            "contact_number": self.contact_number,
+            "contact_name": self.contact_name,
+            "deal_type": self.deal_type,
+            "spa_id": self.spa_id,
+            "status": self.status,
+            "created_at": self.created_at,
+            "last_interaction": self.last_interaction,
+            "is_processing": self.is_processing,
+        }
 
 
-# Funções principais
-@debug
-def add_pending(
-    company_name: str,
-    document: str,
-    contact_number: str,
-    contact_name: str,
-    deal_type: str,
-    spa_id: int,
-    status: str,
-) -> str:
-    std_number = standardize_phone_number(contact_number)
-    try:
-        with get_db_connection() as conn:
-            conn.execute(
-                """
-                INSERT INTO certif_pending_renewals (
-                    company_name, document, contact_number, contact_name, deal_type, spa_id, status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                ON CONFLICT(spa_id) DO UPDATE SET
-                    company_name = excluded.company_name,
-                    document = excluded.document,
-                    contact_number = excluded.contact_number,
-                    contact_name = excluded.contact_name,
-                    deal_type = excluded.deal_type,
-                    status = excluded.status
-                """,
-                (
-                    company_name,
-                    document,
-                    std_number,
-                    contact_name,
-                    deal_type,
-                    spa_id,
-                    status,
-                ),
-            )
-            conn.commit()
-        return std_number
-    except Exception as e:
-        logger.error(f"Erro ao adicionar pendência: {str(e)}")
-        raise
+class ContactSession:
+    """Domain model for contact session"""
 
+    def __init__(
+        self,
+        contact_number: str,
+        expected_commands: int,
+        received_commands: int = 0,
+        status: str = "active",
+        created_at: Optional[datetime] = None,
+        session_id: Optional[int] = None,
+    ):
+        self.contact_number = standardize_phone_number(contact_number)
+        self.expected_commands = expected_commands
+        self.received_commands = received_commands
+        self.status = status
+        self.created_at = created_at or datetime.now()
+        self.session_id = session_id
 
-@debug
-def update_pending(spa_id: int, status: str, **kwargs) -> bool:
-    if not isinstance(spa_id, int):
-        try:
-            spa_id = int(spa_id)
-        except (ValueError, TypeError):
-            logger.error(f"ID do SPA inválido: {spa_id}")
+    def is_complete(self) -> bool:
+        """Check if session is complete"""
+        return self.received_commands >= self.expected_commands
+
+    def is_expired(self, timeout_minutes: int = 30) -> bool:
+        """Check if session is expired"""
+        if not self.created_at:
             return False
 
-    update_fields = {"status": status, "last_interaction": datetime.now()}
-    update_fields.update(kwargs)
-
-    set_clauses = [f"{field} = ?" for field in update_fields.keys()]
-    params = list(update_fields.values())
-    params.append(spa_id)
-
-    sql = (
-        f"UPDATE certif_pending_renewals SET {', '.join(set_clauses)} WHERE spa_id = ?"
-    )
-
-    try:
-        with get_db_connection() as conn:
-            cur = conn.execute(sql, tuple(params))
-            conn.commit()
-            return cur.rowcount > 0
-    except Exception as e:
-        logger.error(f"Erro ao atualizar SPA {spa_id}: {e}")
-        raise
+        elapsed = datetime.now() - self.created_at
+        return elapsed >= timedelta(minutes=timeout_minutes)
 
 
-@debug
-def get_pending(
-    contact_number: str = None, spa_id: int = None, context_aware: bool = False
-) -> Optional[dict]:
-    if not any([contact_number, spa_id]):
-        raise ValueError("Necessário contact_number ou spa_id")
+# Repository Interfaces
+class IPendingRenewalRepository(Protocol):
+    """Repository interface for pending renewals"""
 
-    with get_db_connection() as conn:
-        if spa_id:
-            row = conn.execute(
-                "SELECT * FROM certif_pending_renewals WHERE spa_id = ?", (int(spa_id),)
-            ).fetchone()
-            return dict(row) if row else None
+    def add(self, renewal: PendingRenewal) -> str:
+        """Add pending renewal"""
+        ...
 
+    def update(self, spa_id: int, **kwargs) -> bool:
+        """Update pending renewal"""
+        ...
+
+    def get_by_contact(
+        self, contact_number: str, context_aware: bool = False
+    ) -> Optional[PendingRenewal]:
+        """Get pending renewal by contact"""
+        ...
+
+    def get_by_spa_id(self, spa_id: int) -> Optional[PendingRenewal]:
+        """Get pending renewal by SPA ID"""
+        ...
+
+    def get_all_by_contact(self, contact_number: str) -> List[PendingRenewal]:
+        """Get all pending renewals by contact"""
+        ...
+
+
+class ISessionRepository(Protocol):
+    """Repository interface for sessions"""
+
+    def create_session(self, session: ContactSession) -> ContactSession:
+        """Create new session"""
+        ...
+
+    def get_active_session(self, contact_number: str) -> Optional[ContactSession]:
+        """Get active session"""
+        ...
+
+    def update_session(self, session: ContactSession) -> bool:
+        """Update session"""
+        ...
+
+    def get_expired_sessions(self, timeout_minutes: int) -> List[ContactSession]:
+        """Get expired sessions"""
+        ...
+
+
+class IMessageQueueRepository(Protocol):
+    """Repository interface for message queue"""
+
+    def add_message(self, spa_id: int, payload: Dict[str, Any]) -> int:
+        """Add message to queue"""
+        ...
+
+    def get_pending_messages(self, spa_id: int) -> List[Dict[str, Any]]:
+        """Get pending messages"""
+        ...
+
+    def mark_message_processed(self, message_id: int) -> bool:
+        """Mark message as processed"""
+        ...
+
+
+# Repository Implementations
+class SQLitePendingRenewalRepository(IPendingRenewalRepository):
+    """SQLite implementation of pending renewal repository"""
+
+    @debug
+    def add(self, renewal: PendingRenewal) -> str:
+        """Add pending renewal"""
+        try:
+            with get_db_connection() as conn:
+                conn.execute(
+                    """
+                    INSERT INTO certif_pending_renewals (
+                        company_name, document, contact_number, contact_name, 
+                        deal_type, spa_id, status
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(spa_id) DO UPDATE SET
+                        company_name = excluded.company_name,
+                        document = excluded.document,
+                        contact_number = excluded.contact_number,
+                        contact_name = excluded.contact_name,
+                        deal_type = excluded.deal_type,
+                        status = excluded.status
+                    """,
+                    (
+                        renewal.company_name,
+                        renewal.document,
+                        renewal.contact_number,
+                        renewal.contact_name,
+                        renewal.deal_type,
+                        renewal.spa_id,
+                        renewal.status,
+                    ),
+                )
+                conn.commit()
+            return renewal.contact_number
+        except Exception as e:
+            logger.error(f"Error adding pending renewal: {str(e)}")
+            raise
+
+    @debug
+    def update(self, spa_id: int, **kwargs) -> bool:
+        """Update pending renewal"""
+        if not isinstance(spa_id, int):
+            try:
+                spa_id = int(spa_id)
+            except (ValueError, TypeError):
+                logger.error(f"Invalid SPA ID: {spa_id}")
+                return False
+
+        update_fields = {"last_interaction": datetime.now()}
+        update_fields.update(kwargs)
+
+        set_clauses = [f"{field} = ?" for field in update_fields.keys()]
+        params = list(update_fields.values())
+        params.append(spa_id)
+
+        sql = f"UPDATE certif_pending_renewals SET {', '.join(set_clauses)} WHERE spa_id = ?"
+
+        try:
+            with get_db_connection() as conn:
+                cur = conn.execute(sql, tuple(params))
+                conn.commit()
+                return cur.rowcount > 0
+        except Exception as e:
+            logger.error(f"Error updating SPA {spa_id}: {e}")
+            raise
+
+    @debug
+    def get_by_contact(
+        self, contact_number: str, context_aware: bool = False
+    ) -> Optional[PendingRenewal]:
+        """Get pending renewal by contact"""
         std_number = standardize_phone_number(contact_number)
+
         query = """
             SELECT * FROM certif_pending_renewals
             WHERE contact_number = ?
@@ -116,490 +245,318 @@ def get_pending(
                 """
                 CASE WHEN last_interaction IS NULL THEN 0 ELSE 1 END, 
                 last_interaction ASC
-            """
+                """
             )
         else:
             final_query = query.format("created_at DESC")
 
-        row = conn.execute(final_query, (std_number,)).fetchone()
-        return dict(row) if row else None
-
-
-# Funções de processamento e filas
-@debug
-def is_contact_processing(spa_id: int) -> bool:
-    with get_db_connection() as conn:
-        row = conn.execute(
-            "SELECT is_processing FROM certif_pending_renewals WHERE spa_id = ?",
-            (spa_id,),
-        ).fetchone()
-        return row and row["is_processing"] == 1
-
-
-@debug
-def set_processing_status(spa_id: int, status: bool):
-    with get_db_connection() as conn:
-        conn.execute(
-            "UPDATE certif_pending_renewals SET is_processing = ? WHERE spa_id = ?",
-            (1 if status else 0, spa_id),
-        )
-        conn.commit()
-
-
-# Adicionar nova função para enfileirar mensagens
-@debug
-def add_pending_message(spa_id: int, payload: dict) -> int:
-    with get_db_connection() as conn:
-        cur = conn.execute(
-            "INSERT INTO pending_messages (spa_id, payload) VALUES (?, ?)",
-            (spa_id, json.dumps(payload)),
-        )
-        conn.commit()
-        return cur.lastrowid
-
-
-# Nova função para processar fila
-@debug
-def process_pending_messages(spa_id: int, handler: Callable[[int, str], None]):
-    with get_db_connection() as conn:
-        rows = conn.execute(
-            "SELECT id, payload FROM pending_messages "
-            "WHERE spa_id = ? AND processed = 0 "
-            "ORDER BY created_at ASC",
-            (spa_id,),
-        ).fetchall()
-
-        for row in rows:
-            payload = json.loads(row["payload"])
-            # Marca como processado ANTES de disparar o handler
-            conn.execute(
-                "UPDATE pending_messages SET processed = 1 WHERE id = ?",
-                (row["id"],),
-            )
-            conn.commit()
-
-            # Extrai a mensagem e chama o handler injetado
-            text = payload.get("data", {}).get("message", {}).get("text", "")
-            handler(spa_id, text)
-
-
-@debug
-def get_next_pending_message(spa_id: int) -> Optional[dict]:
-    with get_db_connection() as conn:
-        row = conn.execute(
-            "SELECT id, payload FROM pending_messages "
-            "WHERE spa_id = ? AND processed = 0 "
-            "ORDER BY created_at ASC LIMIT 1",
-            (spa_id,),
-        ).fetchone()
-        return dict(row) if row else None
-
-
-@debug
-def is_ticket_flow_queued(
-    spa_id: int,
-    contact_number: str,
-    func_name: str,
-    func_args: str,
-    statuses: tuple = ("waiting",),
-) -> bool:
-    """Retorna True se já houver um ticket com os mesmos parâmetros e status em `statuses`."""
-    with get_db_connection() as conn:
-        row = conn.execute(
-            f"""
-            SELECT 1 FROM ticket_flow_queue
-            WHERE spa_id = ?
-              AND contact_number = ?
-              AND func_name = ?
-              AND func_args = ?
-              AND status IN ({','.join('?' for _ in statuses)})
-            LIMIT 1
-            """,
-            (spa_id, contact_number, func_name, func_args, *statuses),
-        ).fetchone()
-        return row is not None
-
-
-@debug
-def insert_ticket_flow_queue(
-    spa_id: str, contact_number: str, func_name: str, func_args: str
-) -> None:
-    """Insere ticket na fila de espera se não houver um igual já pendente."""
-    try:
-        # padroniza números, strings, etc, se preciso
-        if is_ticket_flow_queued(spa_id, contact_number, func_name, func_args):
-            logger.info(
-                "Ticket já enfileirado para SPA %s, função %s. Ignorando inserção.",
-                spa_id,
-                func_name,
-            )
-            return
-
         with get_db_connection() as conn:
-            conn.execute(
+            row = conn.execute(final_query, (std_number,)).fetchone()
+            if row:
+                return self._row_to_renewal(dict(row))
+            return None
+
+    @debug
+    def get_by_spa_id(self, spa_id: int) -> Optional[PendingRenewal]:
+        """Get pending renewal by SPA ID"""
+        with get_db_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM certif_pending_renewals WHERE spa_id = ?", (int(spa_id),)
+            ).fetchone()
+            if row:
+                return self._row_to_renewal(dict(row))
+            return None
+
+    @debug
+    def get_all_by_contact(self, contact_number: str) -> List[PendingRenewal]:
+        """Get all pending renewals by contact"""
+        std_number = standardize_phone_number(contact_number)
+        with get_db_connection() as conn:
+            rows = conn.execute(
                 """
-                INSERT INTO ticket_flow_queue
-                  (spa_id, contact_number, func_name, func_args)
-                VALUES (?, ?, ?, ?)
+                SELECT * FROM certif_pending_renewals 
+                WHERE contact_number = ? 
+                AND status NOT IN ('customer_retention', 'scheduling_form_sent') 
+                ORDER BY created_at ASC
                 """,
-                (spa_id, contact_number, func_name, func_args),
+                (std_number,),
+            ).fetchall()
+            return [self._row_to_renewal(dict(row)) for row in rows]
+
+    def _row_to_renewal(self, row: Dict[str, Any]) -> PendingRenewal:
+        """Convert database row to PendingRenewal object"""
+        return PendingRenewal(
+            company_name=row["company_name"],
+            document=row["document"],
+            contact_number=row["contact_number"],
+            contact_name=row["contact_name"],
+            deal_type=row["deal_type"],
+            spa_id=row["spa_id"],
+            status=row["status"],
+            created_at=row.get("created_at"),
+            last_interaction=row.get("last_interaction"),
+            is_processing=bool(row.get("is_processing", 0)),
+        )
+
+
+class SQLiteSessionRepository(ISessionRepository):
+    """SQLite implementation of session repository"""
+
+    @debug
+    def create_session(self, session: ContactSession) -> ContactSession:
+        """Create new session"""
+        with get_db_connection() as conn:
+            cur = conn.execute(
+                """
+                INSERT INTO contact_sessions 
+                (contact_number, expected_commands, received_commands, status, created_at) 
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (
+                    session.contact_number,
+                    session.expected_commands,
+                    session.received_commands,
+                    session.status,
+                    session.created_at,
+                ),
             )
             conn.commit()
-    except sqlite3.OperationalError as e:
-        logger.error("Erro ao enfileirar SPA %s: %s", spa_id, e)
-        raise
+            session.session_id = cur.lastrowid
+            return session
 
-
-@debug
-def start_ticket_queue(queue_id: int) -> None:
-    """
-    Tenta avançar o ticket para 'started' (concluído), mas apenas se
-    não houver mais ticket aberto para este contato no departamento.
-    Caso contrário, mantém o ticket aguardando e atualiza last_checked.
-    """
-    # import local, só quando a função é invocada
-    from app.services.digisac.digisac_services import has_open_ticket_for_user_in_cert_dept
-
-    with get_db_connection() as conn:
-        # 1) Busca os dados principais do ticket
-        row = conn.execute(
-            """
-            SELECT contact_number
-            FROM ticket_flow_queue
-            WHERE id = ?
-            """,
-            (queue_id,),
-        ).fetchone()
-
-        if not row:
-            logger.error("start_ticket_queue: ticket %s não encontrado", queue_id)
-            return
-
-        contact_number = row["contact_number"]
+    @debug
+    def get_active_session(self, contact_number: str) -> Optional[ContactSession]:
+        """Get active session"""
         std_number = standardize_phone_number(contact_number)
-
-        # 2) Verifica se o cliente ainda tem ticket aberto
-        if has_open_ticket_for_user_in_cert_dept(std_number):
-            # Se ainda estiver aberto, só atualiza o último check e retorna
-            conn.execute(
+        with get_db_connection() as conn:
+            row = conn.execute(
                 """
-                UPDATE ticket_flow_queue
-                SET last_checked = CURRENT_TIMESTAMP
+                SELECT * FROM contact_sessions 
+                WHERE contact_number = ? AND status = 'active'
+                """,
+                (std_number,),
+            ).fetchone()
+            if row:
+                return self._row_to_session(dict(row))
+            return None
+
+    @debug
+    def update_session(self, session: ContactSession) -> bool:
+        """Update session"""
+        with get_db_connection() as conn:
+            cur = conn.execute(
+                """
+                UPDATE contact_sessions 
+                SET received_commands = ?, status = ?
                 WHERE id = ?
                 """,
-                (queue_id,),
+                (session.received_commands, session.status, session.session_id),
             )
             conn.commit()
-            logger.info(
-                "start_ticket_queue: ticket %s mantido na fila pois ainda existe ticket aberto",
-                queue_id,
-            )
-            return
+            return cur.rowcount > 0
 
-        # 3) Se não houver mais ticket aberto, marca como started
-        conn.execute(
-            """
-            UPDATE ticket_flow_queue
-            SET status = 'started',
-                   last_checked = CURRENT_TIMESTAMP
-            WHERE id = ?
-            """,
-            (queue_id,),
-        )
-        conn.commit()
-        logger.info(
-            "start_ticket_queue: ticket %s marcado como 'started' (fluxo concluído)",
-            queue_id,
-        )
-
-
-@debug
-def update_last_checked_ticket_queue(queue_id: str) -> None:
-    """Update atributo last_checked da tabela ticket_flow_queue"""
-    with get_db_connection() as conn:
-        conn.execute(
-            """
-            UPDATE ticket_flow_queue 
-            SET last_checked = ? 
-            WHERE id = ?
-            """,
-            (datetime.now(), queue_id),
-        )
-        conn.commit()
-
-
-@debug
-def update_retry_count_ticket_queue(queue_id: str) -> None:
-    """Update atributo retry_count da tabela ticket_flow_queue"""
-    with get_db_connection() as conn:
-        conn.execute(
-            """
-            UPDATE ticket_flow_queue
-            SET last_checked = ?, retry_count = retry_count + 1
-            WHERE id = ?
-            """,
-            (datetime.now(), queue_id),
-        )
-        conn.commit()
-
-
-@debug
-def get_waiting_ticket_queue() -> Optional[dict]:
-    """Verifica os fluxos de certificação digital que estão em espera"""
-    with get_db_connection() as conn:
-        rows = conn.execute(
-            """
-            SELECT id, spa_id, contact_number, func_name, func_args, retry_count
-            FROM ticket_flow_queue 
-            WHERE status = 'waiting'
-            """
-        ).fetchall()
-        return [dict(row) for row in rows]
-
-
-@debug
-def mark_message_processed(
-    spa_id: int, message_id: str, event_type: str, payload: dict
-) -> bool:
-    """Armazena payload completo em vez de hash"""
-    try:
-        payload_json = json.dumps(payload)
+    @debug
+    def get_expired_sessions(self, timeout_minutes: int) -> List[ContactSession]:
+        """Get expired sessions"""
+        cutoff = datetime.now() - timedelta(minutes=timeout_minutes)
         with get_db_connection() as conn:
-            conn.execute(
-                "INSERT INTO message_events (spa_id, message_id, event_type, payload) "
-                "VALUES (?, ?, ?, ?)",
-                (spa_id, message_id, event_type, payload_json),
-            )
-            conn.commit()
-            return True
-    except sqlite3.IntegrityError:
-        logger.warning(f"Message_id duplicado: {message_id} para SPA {spa_id}")
+            rows = conn.execute(
+                """
+                SELECT * FROM contact_sessions
+                WHERE status = 'active' AND created_at <= ?
+                """,
+                (cutoff,),
+            ).fetchall()
+            return [self._row_to_session(dict(row)) for row in rows]
+
+    def _row_to_session(self, row: Dict[str, Any]) -> ContactSession:
+        """Convert database row to ContactSession object"""
+        return ContactSession(
+            contact_number=row["contact_number"],
+            expected_commands=row["expected_commands"],
+            received_commands=row["received_commands"],
+            status=row["status"],
+            created_at=row.get("created_at"),
+            session_id=row.get("id"),
+        )
+
+
+# Service Classes
+class PendingRenewalService:
+    """Service for managing pending renewals"""
+
+    def __init__(self, repository: IPendingRenewalRepository):
+        self._repository = repository
+
+    @debug
+    def add_pending(
+        self,
+        company_name: str,
+        document: str,
+        contact_number: str,
+        contact_name: str,
+        deal_type: str,
+        spa_id: int,
+        status: str,
+    ) -> str:
+        """Add pending renewal"""
+        renewal = PendingRenewal(
+            company_name=company_name,
+            document=document,
+            contact_number=contact_number,
+            contact_name=contact_name,
+            deal_type=deal_type,
+            spa_id=spa_id,
+            status=status,
+        )
+        return self._repository.add(renewal)
+
+    @debug
+    def update_pending(self, spa_id: int, status: str, **kwargs) -> bool:
+        """Update pending renewal"""
+        update_data = {"status": status}
+        update_data.update(kwargs)
+        return self._repository.update(spa_id, **update_data)
+
+    @debug
+    def get_pending(
+        self,
+        contact_number: str = None,
+        spa_id: int = None,
+        context_aware: bool = False,
+    ) -> Optional[Dict[str, Any]]:
+        """Get pending renewal"""
+        if not any([contact_number, spa_id]):
+            raise ValueError("Required contact_number or spa_id")
+
+        if spa_id:
+            renewal = self._repository.get_by_spa_id(spa_id)
+        else:
+            renewal = self._repository.get_by_contact(contact_number, context_aware)
+
+        return renewal.to_dict() if renewal else None
+
+
+class SessionManager:
+    """Service for managing contact sessions"""
+
+    def __init__(
+        self,
+        session_repository: ISessionRepository,
+        renewal_repository: IPendingRenewalRepository,
+        timeout_minutes: int = 30,
+    ):
+        self._session_repository = session_repository
+        self._renewal_repository = renewal_repository
+        self._timeout_minutes = timeout_minutes
+
+    @debug
+    def get_or_create_session(self, contact_number: str) -> Dict[str, Any]:
+        """Get or create session for contact"""
+        std_number = standardize_phone_number(contact_number)
+
+        # Try to get existing session
+        session = self._session_repository.get_active_session(std_number)
+        if session:
+            return session.__dict__
+
+        # Create new session
+        expected_commands = self._count_pending_renewals(std_number)
+        session = ContactSession(
+            contact_number=std_number, expected_commands=expected_commands
+        )
+
+        created_session = self._session_repository.create_session(session)
+        return created_session.__dict__
+
+    @debug
+    def record_command(self, contact_number: str) -> bool:
+        """Record a renewal command"""
+        std_number = standardize_phone_number(contact_number)
+        session = self._session_repository.get_active_session(std_number)
+
+        if session:
+            session.received_commands += 1
+            return self._session_repository.update_session(session)
+
         return False
 
-
-@debug
-def is_message_processed(message_id: str) -> bool:
-    """Verifica se mensagem já foi processada"""
-    with get_db_connection() as conn:
-        row = conn.execute(
-            "SELECT 1 FROM message_events WHERE message_id = ?", (message_id,)
-        ).fetchone()
-        return row is not None
-
-
-@debug
-def has_recent_notification(
-    spa_id: int, notification_type: str, minutes: int = 5
-) -> bool:
-    time_threshold = datetime.now() - timedelta(minutes=minutes)
-    with get_db_connection() as conn:
-        row = conn.execute(
-            "SELECT 1 FROM message_events "
-            "WHERE spa_id = ? AND event_type = ? AND created_at >= ?",
-            (spa_id, notification_type, time_threshold),
-        ).fetchone()
-        return row is not None
-
-
-@debug
-def is_message_in_queue(spa_id: int, message_id: str) -> bool:
-    with get_db_connection() as conn:
-        row = conn.execute(
-            "SELECT 1 FROM pending_messages "
-            "WHERE spa_id = ? AND payload LIKE ? AND processed = 0",
-            (spa_id, f'%"id":"{message_id}"%'),
-        ).fetchone()
-        return row is not None
-
-
-@debug
-def is_message_processed_or_queued(spa_id: int, message_id: str) -> bool:
-    return is_message_processed(message_id) or is_message_in_queue(spa_id, message_id)
-
-
-@debug
-def get_contact_number_by_spa_id(spa_id: int) -> Optional[str]:
-    with get_db_connection() as conn:
-        row = conn.execute(
-            "SELECT contact_number FROM certif_pending_renewals WHERE spa_id = ?",
-            (spa_id,),
-        ).fetchone()
-        return row["contact_number"] if row else None
-
-
-@debug
-def mark_notification_event(spa_id: int, notification_type: str):
-    message_id = f"notif-{int(time.time())}-{random.randint(1000,9999)}"
-    with get_db_connection() as conn:
-        conn.execute(
-            "INSERT INTO message_events (spa_id, message_id, event_type, payload_hash) "
-            "VALUES (?, ?, ?, ?)",
-            (spa_id, message_id, notification_type, "notification"),
+    @debug
+    def check_expired_sessions(self) -> List[Dict[str, Any]]:
+        """Check for expired sessions"""
+        expired_sessions = self._session_repository.get_expired_sessions(
+            self._timeout_minutes
         )
-        conn.commit()
+        return [session.__dict__ for session in expired_sessions]
 
+    @debug
+    def finalize_session(self, contact_number: str) -> bool:
+        """Finalize session if conditions are met"""
+        from app.services.digisac.digisac_services import close_ticket_digisac
 
-@debug
-def get_active_spa_id(contact_number: str) -> Optional[int]:
-    """Obtém o SPA_ID ativo para um número"""
-    std_number = standardize_phone_number(contact_number)
-    with get_db_connection() as conn:
-        row = conn.execute(
-            "SELECT spa_id FROM certif_pending_renewals "
-            "WHERE contact_number = ? AND status NOT IN ('complete', 'expired') "
-            "ORDER BY last_interaction DESC LIMIT 1",
-            (std_number,),
-        ).fetchone()
-        return row["spa_id"] if row else None
-
-
-@debug
-def get_all_pending_by_contact(contact_number: str) -> list[dict]:
-    std_number = standardize_phone_number(contact_number)
-    with get_db_connection() as conn:
-        rows = conn.execute(
-            "SELECT * FROM certif_pending_renewals "
-            "WHERE contact_number = ? AND status NOT IN ('customer_retention', 'scheduling_form_sent') "
-            "ORDER BY created_at ASC",
-            (std_number,),
-        ).fetchall()
-        return [dict(row) for row in rows]
-
-
-@debug
-def try_lock_processing(spa_id: int) -> bool:
-    with get_db_connection() as conn:
-        row = conn.execute(
-            "SELECT is_processing FROM certif_pending_renewals WHERE spa_id = ?",
-            (spa_id,),
-        ).fetchone()
-        if row and row["is_processing"] == 0:
-            conn.execute(
-                "UPDATE certif_pending_renewals SET is_processing = 1 WHERE spa_id = ?",
-                (spa_id,),
-            )
-            conn.commit()
-            return True
-    return False
-
-
-@debug
-def get_expected_commands(contact_number: str) -> int:
-    """
-    Conta quantos spa_ids pendentes existem para o contato.
-    Retorna o número de comandos de renovação esperados.
-    """
-    std_number = standardize_phone_number(contact_number)
-    with get_db_connection() as conn:
-        cur = conn.execute(
-            "SELECT COUNT(*) as cnt FROM certif_pending_renewals "
-            "WHERE contact_number = ? AND status = 'pending'",
-            (std_number,),
-        )
-        return cur.fetchone()["cnt"]
-
-
-@debug
-def get_or_create_session(contact_number: str) -> dict:
-    std_number = standardize_phone_number(contact_number)
-    # Primeiro tenta get
-    now = datetime.now()
-    with get_db_connection() as conn:
-        row = conn.execute(
-            "SELECT * FROM contact_sessions "
-            "WHERE contact_number = ? AND status = 'active'",
-            (std_number,),
-        ).fetchone()
-        if row:
-            return dict(row)
-
-        # Cria nova session
-        expected = get_expected_commands(std_number)
-        conn.execute(
-            "INSERT INTO contact_sessions "
-            "(contact_number, expected_commands, created_at) VALUES (?, ?, ?)",
-            (std_number, expected, now),
-        )
-        conn.commit()
-        sess_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
-
-        return {
-            "id": sess_id,
-            "contact_number": std_number,
-            "expected_commands": expected,
-            "received_commands": 0,
-            "created_at": now,
-            "status": "active",
-        }
-
-
-@debug
-def record_command(contact_number: str):
-    """Registra um comando de renovação recebido"""
-    std_number = standardize_phone_number(contact_number)
-    with get_db_connection() as conn:
-        conn.execute(
-            "UPDATE contact_sessions "
-            "SET received_commands = received_commands + 1 "
-            "WHERE contact_number = ? AND status = 'active'",
-            (std_number,),
-        )
-        conn.commit()
-
-
-@debug
-def check_expired_contact_sessions():
-    now = datetime.now()
-    cutoff = now - timedelta(minutes=SESSION_TIMEOUT_MINUTES)
-
-    with get_db_connection() as conn:
-        rows = conn.execute(
-            """
-            SELECT contact_number FROM contact_sessions
-            WHERE status = 'active' AND created_at <= ?
-            """,
-            (cutoff,),
-        ).fetchall()
-
-        return [dict(row) for row in rows]
-
-
-@debug
-def try_finalize_session(contact_number: str):
-    """
-    Tenta finalizar a sessão e encerrar o ticket se:
-    - Todos comandos esperados foram recebidos OU
-    - A sessão expirou
-    """
-    from app.services.digisac.digisac_services import close_ticket_digisac
-
-    with get_db_connection() as conn:
-        # Obtém sessão ativa
-        session = conn.execute(
-            "SELECT * FROM contact_sessions "
-            "WHERE contact_number = ? AND status = 'active'",
-            (contact_number,),
-        ).fetchone()
+        std_number = standardize_phone_number(contact_number)
+        session = self._session_repository.get_active_session(std_number)
 
         if not session:
-            return
+            return False
 
-        session = dict(session)
-        now = datetime.now()
-        elapsed = now - datetime.strptime(session["created_at"], "%Y-%m-%d %H:%M:%S.%f")
+        # Check if session should be finalized
+        should_finalize = session.is_complete() or session.is_expired(
+            self._timeout_minutes
+        )
 
-        # Verifica condições de encerramento
-        if session["received_commands"] >= session[
-            "expected_commands"
-        ] or elapsed >= timedelta(minutes=SESSION_TIMEOUT_MINUTES):
+        if should_finalize:
+            # Close ticket
+            close_ticket_digisac(std_number)
 
-            # Encerra o ticket
-            close_ticket_digisac(contact_number)
+            # Update session status
+            session.status = "completed"
+            success = self._session_repository.update_session(session)
 
-            # Atualiza status da sessão
-            conn.execute(
-                "UPDATE contact_sessions SET status = 'completed' WHERE id = ?",
-                (session["id"],),
-            )
-            conn.commit()
-            logger.info(f"Sessão finalizada para {contact_number}")
+            if success:
+                logger.info(f"Session finalized for {contact_number}")
+
+            return success
+
+        return False
+
+    def _count_pending_renewals(self, contact_number: str) -> int:
+        """Count pending renewals for contact"""
+        renewals = self._renewal_repository.get_all_by_contact(contact_number)
+        return len([r for r in renewals if r.status == "pending"])
+
+
+# Legacy function wrappers for backward compatibility
+def add_pending(*args, **kwargs):
+    """Legacy wrapper for add_pending"""
+    repository = SQLitePendingRenewalRepository()
+    service = PendingRenewalService(repository)
+    return service.add_pending(*args, **kwargs)
+
+
+def update_pending(*args, **kwargs):
+    """Legacy wrapper for update_pending"""
+    repository = SQLitePendingRenewalRepository()
+    service = PendingRenewalService(repository)
+    return service.update_pending(*args, **kwargs)
+
+
+def get_pending(*args, **kwargs):
+    """Legacy wrapper for get_pending"""
+    repository = SQLitePendingRenewalRepository()
+    service = PendingRenewalService(repository)
+    return service.get_pending(*args, **kwargs)
+
+
+# Factory functions
+def create_pending_renewal_service() -> PendingRenewalService:
+    """Factory for creating pending renewal service"""
+    repository = SQLitePendingRenewalRepository()
+    return PendingRenewalService(repository)
+
+
+def create_session_manager() -> SessionManager:
+    """Factory for creating session manager"""
+    session_repo = SQLiteSessionRepository()
+    renewal_repo = SQLitePendingRenewalRepository()
+    return SessionManager(session_repo, renewal_repo)
