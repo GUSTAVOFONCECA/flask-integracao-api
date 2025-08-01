@@ -7,7 +7,7 @@ from flask import Flask
 
 from .core.interfaces import IFlaskAppFactory, IConfigProvider, ILogger
 from .core.container import container
-from .routes import api_routes, webhook_routes, conta_azul_routes
+from .routes import _webhook_routes, api_routes, conta_azul_routes
 from .cli.sync_commands import sync_cli
 
 
@@ -59,7 +59,7 @@ class FlaskAppFactory(IFlaskAppFactory):
         """Register all application blueprints"""
         blueprints = [
             (api_routes.api_bp, "/api"),
-            (webhook_routes.webhook_bp, "/webhooks"),
+            (_webhook_routes.webhook_bp, "/webhooks"),
             (conta_azul_routes.conta_azul_bp, "/conta-azul"),
         ]
 

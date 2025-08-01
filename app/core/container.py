@@ -5,7 +5,7 @@ Implements Dependency Inversion and Single Responsibility.
 """
 
 import logging
-from typing import Any, Dict, Type, TypeVar, Callable, Optional
+from typing import Any, Dict, Type, TypeVar, Callable, Optional, Protocol
 from abc import ABC, abstractmethod
 
 logger = logging.getLogger(__name__)
@@ -13,33 +13,44 @@ logger = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
-class IDependencyContainer(ABC):
-    """Interface for dependency injection container"""
+class IServiceRegistry(Protocol):
+    """Interface for service registration - ISP compliant"""
 
-    @abstractmethod
     def register_instance(self, interface: Type[T], instance: T) -> None:
         """Register a singleton instance"""
-        pass
+        ...
 
-    @abstractmethod
     def register_factory(self, interface: Type[T], factory: Callable[[], T]) -> None:
         """Register a factory function"""
-        pass
+        ...
 
-    @abstractmethod
     def register_type(self, interface: Type[T], implementation: Type[T]) -> None:
         """Register a type mapping"""
-        pass
+        ...
 
-    @abstractmethod
+
+class IServiceResolver(Protocol):
+    """Interface for service resolution - ISP compliant"""
+
     def resolve(self, interface: Type[T]) -> T:
         """Resolve an instance of the interface"""
-        pass
+        ...
 
-    @abstractmethod
+    def try_resolve(self, interface: Type[T]) -> Optional[T]:
+        """Try to resolve an instance without raising exception"""
+        ...
+
     def has_registration(self, interface: Type[T]) -> bool:
         """Check if interface is registered"""
-        pass
+        ...
+
+
+class IDependencyContainer(IServiceRegistry, IServiceResolver, Protocol):
+    """Main container interface combining registry and resolver"""
+
+    def clear_registrations(self) -> None:
+        """Clear all registrations"""
+        ...
 
 
 class DependencyInjectionError(Exception):
@@ -48,100 +59,224 @@ class DependencyInjectionError(Exception):
     pass
 
 
-class DependencyContainer(IDependencyContainer):
-    """
-    Dependency injection container implementation.
-    Follows Single Responsibility Principle.
-    """
+class CircularDependencyDetector:
+    """SRP: Single responsibility for detecting circular dependencies"""
+
+    def __init__(self):
+        self._resolving: set = set()
+
+    def check_circular_dependency(self, interface: Type) -> None:
+        """Check for circular dependency"""
+        if interface in self._resolving:
+            raise DependencyInjectionError(
+                f"Circular dependency detected for {interface.__name__}"
+            )
+
+    def start_resolution(self, interface: Type) -> None:
+        """Mark interface as being resolved"""
+        self._resolving.add(interface)
+
+    def end_resolution(self, interface: Type) -> None:
+        """Mark interface resolution as complete"""
+        self._resolving.discard(interface)
+
+    def clear(self) -> None:
+        """Clear all tracking"""
+        self._resolving.clear()
+
+
+class ServiceValidator:
+    """SRP: Single responsibility for validating services"""
+
+    @staticmethod
+    def is_valid_interface(interface: Type) -> bool:
+        """Check if interface is valid"""
+        return interface is not None and isinstance(interface, type)
+
+    @staticmethod
+    def is_valid_implementation(implementation: Type) -> bool:
+        """Check if implementation is valid"""
+        return (
+            implementation is not None
+            and isinstance(implementation, type)
+            and callable(implementation)
+        )
+
+    @staticmethod
+    def is_valid_factory(factory: Callable) -> bool:
+        """Check if factory is valid"""
+        return factory is not None and callable(factory)
+
+
+class ServiceInstanceStore:
+    """SRP: Single responsibility for storing service instances"""
 
     def __init__(self):
         self._instances: Dict[Type, Any] = {}
+
+    def get_instance(self, interface: Type[T]) -> Optional[T]:
+        """Get cached instance"""
+        return self._instances.get(interface)
+
+    def store_instance(self, interface: Type[T], instance: T) -> None:
+        """Store instance"""
+        self._instances[interface] = instance
+
+    def has_instance(self, interface: Type) -> bool:
+        """Check if instance exists"""
+        return interface in self._instances
+
+    def clear(self) -> None:
+        """Clear all instances"""
+        self._instances.clear()
+
+
+class ServiceFactoryStore:
+    """SRP: Single responsibility for storing service factories"""
+
+    def __init__(self):
         self._factories: Dict[Type, Callable] = {}
+
+    def get_factory(self, interface: Type[T]) -> Optional[Callable[[], T]]:
+        """Get factory for interface"""
+        return self._factories.get(interface)
+
+    def store_factory(self, interface: Type[T], factory: Callable[[], T]) -> None:
+        """Store factory"""
+        self._factories[interface] = factory
+
+    def has_factory(self, interface: Type) -> bool:
+        """Check if factory exists"""
+        return interface in self._factories
+
+    def clear(self) -> None:
+        """Clear all factories"""
+        self._factories.clear()
+
+
+class ServiceTypeStore:
+    """SRP: Single responsibility for storing service type mappings"""
+
+    def __init__(self):
         self._types: Dict[Type, Type] = {}
-        self._resolving: set = set()  # Circular dependency detection
+
+    def get_implementation(self, interface: Type[T]) -> Optional[Type[T]]:
+        """Get implementation type for interface"""
+        return self._types.get(interface)
+
+    def store_type_mapping(self, interface: Type[T], implementation: Type[T]) -> None:
+        """Store type mapping"""
+        self._types[interface] = implementation
+
+    def has_type_mapping(self, interface: Type) -> bool:
+        """Check if type mapping exists"""
+        return interface in self._types
+
+    def clear(self) -> None:
+        """Clear all type mappings"""
+        self._types.clear()
+
+
+class DependencyContainer(IDependencyContainer):
+    """
+    Dependency injection container implementation.
+    Follows Single Responsibility Principle by delegating to specialized components.
+    """
+
+    def __init__(self):
+        self._instance_store = ServiceInstanceStore()
+        self._factory_store = ServiceFactoryStore()
+        self._type_store = ServiceTypeStore()
+        self._validator = ServiceValidator()
+        self._circular_detector = CircularDependencyDetector()
 
     def register_instance(self, interface: Type[T], instance: T) -> None:
         """Register a singleton instance"""
-        if not self._is_valid_interface(interface):
+        if not self._validator.is_valid_interface(interface):
             raise DependencyInjectionError(f"Invalid interface: {interface}")
 
-        self._instances[interface] = instance
+        self._instance_store.store_instance(interface, instance)
         logger.debug(f"Registered instance for {interface.__name__}")
 
     def register_factory(self, interface: Type[T], factory: Callable[[], T]) -> None:
         """Register a factory function"""
-        if not self._is_valid_interface(interface):
+        if not self._validator.is_valid_interface(interface):
             raise DependencyInjectionError(f"Invalid interface: {interface}")
 
-        if not callable(factory):
+        if not self._validator.is_valid_factory(factory):
             raise DependencyInjectionError(f"Factory must be callable")
 
-        self._factories[interface] = factory
+        self._factory_store.store_factory(interface, factory)
         logger.debug(f"Registered factory for {interface.__name__}")
 
     def register_type(self, interface: Type[T], implementation: Type[T]) -> None:
         """Register a type mapping"""
-        if not self._is_valid_interface(interface):
+        if not self._validator.is_valid_interface(interface):
             raise DependencyInjectionError(f"Invalid interface: {interface}")
 
-        if not self._is_valid_implementation(implementation):
+        if not self._validator.is_valid_implementation(implementation):
             raise DependencyInjectionError(f"Invalid implementation: {implementation}")
 
-        self._types[interface] = implementation
+        self._type_store.store_type_mapping(interface, implementation)
         logger.debug(
             f"Registered type mapping {interface.__name__} -> {implementation.__name__}"
         )
 
     def resolve(self, interface: Type[T]) -> T:
         """Resolve an instance of the interface"""
-        if interface in self._resolving:
-            raise DependencyInjectionError(
-                f"Circular dependency detected for {interface.__name__}"
-            )
+        self._circular_detector.check_circular_dependency(interface)
 
         try:
-            self._resolving.add(interface)
+            self._circular_detector.start_resolution(interface)
             return self._resolve_internal(interface)
         finally:
-            self._resolving.discard(interface)
+            self._circular_detector.end_resolution(interface)
+
+    def try_resolve(self, interface: Type[T]) -> Optional[T]:
+        """Try to resolve an instance without raising exception"""
+        try:
+            return self.resolve(interface)
+        except DependencyInjectionError:
+            return None
 
     def has_registration(self, interface: Type[T]) -> bool:
         """Check if interface is registered"""
         return (
-            interface in self._instances
-            or interface in self._factories
-            or interface in self._types
+            self._instance_store.has_instance(interface)
+            or self._factory_store.has_factory(interface)
+            or self._type_store.has_type_mapping(interface)
         )
 
     def clear_registrations(self) -> None:
         """Clear all registrations (useful for testing)"""
-        self._instances.clear()
-        self._factories.clear()
-        self._types.clear()
-        self._resolving.clear()
+        self._instance_store.clear()
+        self._factory_store.clear()
+        self._type_store.clear()
+        self._circular_detector.clear()
         logger.debug("Cleared all registrations")
 
     def _resolve_internal(self, interface: Type[T]) -> T:
-        """Internal resolution logic"""
+        """Internal resolution logic - OCP compliant"""
         # Check for singleton instance
-        if interface in self._instances:
-            return self._instances[interface]
+        instance = self._instance_store.get_instance(interface)
+        if instance is not None:
+            return instance
 
         # Check for factory
-        if interface in self._factories:
-            factory = self._factories[interface]
+        factory = self._factory_store.get_factory(interface)
+        if factory is not None:
             instance = factory()
             # Cache as singleton
-            self._instances[interface] = instance
+            self._instance_store.store_instance(interface, instance)
             return instance
 
         # Check for type mapping
-        if interface in self._types:
-            implementation = self._types[interface]
+        implementation = self._type_store.get_implementation(interface)
+        if implementation is not None:
             try:
                 instance = implementation()
                 # Cache as singleton
-                self._instances[interface] = instance
+                self._instance_store.store_instance(interface, instance)
                 return instance
             except Exception as e:
                 raise DependencyInjectionError(
@@ -152,100 +287,100 @@ class DependencyContainer(IDependencyContainer):
             f"No registration found for {interface.__name__}"
         )
 
-    def _is_valid_interface(self, interface: Type) -> bool:
-        """Check if interface is valid"""
-        return interface is not None and isinstance(interface, type)
 
-    def try_resolve(self, interface: Type[T]) -> Optional[T]:
-        """Try to resolve an instance without raising exception"""
+class ContainerConfigurationError(Exception):
+    """Error in container configuration"""
+
+    pass
+
+
+class ContainerConfigurator:
+    """SRP: Single responsibility for configuring the container"""
+
+    def __init__(self, container: IDependencyContainer):
+        self._container = container
+
+    def configure_core_services(self) -> None:
+        """Configure core services"""
         try:
-            return self.resolve(interface)
-        except DependencyInjectionError:
-            return None
+            self._register_config_provider()
+            self._register_logging_service()
+            logger.info("✅ Core services configured successfully")
+        except Exception as e:
+            logger.error(f"❌ Error configuring core services: {e}")
+            raise ContainerConfigurationError(
+                f"Core services configuration failed: {e}"
+            )
 
-    def _is_valid_implementation(self, implementation: Type) -> bool:
-        """Check if implementation is valid"""
-        return (
-            implementation is not None
-            and isinstance(implementation, type)
-            and callable(implementation)
+    def configure_external_services(self) -> None:
+        """Configure external API services"""
+        try:
+            self._register_external_services()
+            logger.info("✅ External services configured successfully")
+        except Exception as e:
+            logger.error(f"❌ Error configuring external services: {e}")
+            raise ContainerConfigurationError(
+                f"External services configuration failed: {e}"
+            )
+
+    def _register_config_provider(self) -> None:
+        """Register configuration provider"""
+        from app.core.config_provider import EnvironmentConfigProvider
+        from app.core.interfaces import IConfigProvider
+
+        config = EnvironmentConfigProvider()
+        self._container.register_instance(IConfigProvider, config)
+
+    def _register_logging_service(self) -> None:
+        """Register logging service"""
+        from app.core.logging_service import LoggingService
+        from app.core.interfaces import ILogger
+
+        config = self._container.resolve(IConfigProvider)
+        logging_service = LoggingService()
+        self._container.register_instance(ILogger, logging_service)
+
+    def _register_external_services(self) -> None:
+        """Register external API services using factories"""
+        # Register service factories instead of direct dependencies
+        self._container.register_factory(
+            "digisac_auth", lambda: self._create_digisac_auth_service()
         )
+        self._container.register_factory(
+            "conta_azul_auth", lambda: self._create_conta_azul_auth_service()
+        )
+
+    def _create_digisac_auth_service(self):
+        """Factory method for Digisac auth service"""
+        from app.services.digisac.authentication_service import DigisacAuthService
+
+        config = self._container.resolve(IConfigProvider)
+        return DigisacAuthService(config)
+
+    def _create_conta_azul_auth_service(self):
+        """Factory method for Conta Azul auth service"""
+        from app.services.conta_azul.authentication_service import ContaAzulAuthService
+
+        config = self._container.resolve(IConfigProvider)
+        return ContaAzulAuthService(config)
 
 
 # Global container instance
 container = DependencyContainer()
+configurator = ContainerConfigurator(container)
 
 
 def setup_container() -> None:
     """Setup dependency injection container"""
-    from app.core.service_factory import create_service_factory
-    from app.core.config_provider import EnvironmentConfigProvider
-    from app.core.logging_service import LoggingService
-    from app.core.interfaces import (
-        IConfigProvider,
-        ILogger,
-        IAuthenticationService,
-        IMessageService,
-        ITicketService,
-        IContactService,
-        ISaleService,
-        IBillingService,
-        ICRMService,
-        ITokenManager,
-    )
-
     try:
-        # Register configuration provider
-        config = EnvironmentConfigProvider()
-        container.register_instance(IConfigProvider, config)
-
-        # Register logging service
-        logging_service = LoggingService(config)
-        container.register_instance(ILogger, logging_service)
-
-        # Create service factory
-        factory = create_service_factory()
-
-        # Register Digisac services
-        container.register_factory(
-            "digisac_auth", lambda: factory.create_digisac_auth_service()
-        )
-        container.register_factory(
-            "digisac_message", lambda: factory.create_digisac_message_service()
-        )
-        container.register_factory(
-            "digisac_ticket", lambda: factory.create_digisac_ticket_service()
-        )
-        container.register_factory(
-            "digisac_contact", lambda: factory.create_digisac_contact_service()
-        )
-
-        # Register Conta Azul services
-        container.register_factory(
-            "conta_azul_auth", lambda: factory.create_conta_azul_auth_service()
-        )
-        container.register_factory(
-            "conta_azul_sale", lambda: factory.create_conta_azul_sale_service()
-        )
-        container.register_factory(
-            "conta_azul_billing", lambda: factory.create_conta_azul_billing_service()
-        )
-        container.register_factory(
-            "conta_azul_contact", lambda: factory.create_conta_azul_contact_service()
-        )
-
-        # Register Bitrix24 services
-        container.register_factory(
-            "bitrix24_crm", lambda: factory.create_bitrix24_crm_service()
-        )
-
-        # Register external services
-        container.register_factory("cnpj_client", lambda: factory.create_cnpj_client())
-
+        configurator.configure_core_services()
+        configurator.configure_external_services()
         logger.info("✅ Dependency injection container configured successfully")
-
+    except ContainerConfigurationError as e:
+        logger.error(f"❌ Container configuration failed: {e}")
+        raise
     except Exception as e:
-        logger.error(f"❌ Error setting up dependency container: {e}")
+        logger.error(f"❌ Unexpected error setting up container: {e}")
         raise
 
 
@@ -266,31 +401,25 @@ def register_service(interface: Type[T], implementation: Any) -> None:
         container.register_instance(interface, implementation)
 
 
-# Context manager for testing
+# Context manager for testing - follows SRP
 class ContainerTestContext:
     """Context manager for testing with temporary container state"""
 
-    def __init__(self):
-        self._backup_instances = {}
-        self._backup_factories = {}
-        self._backup_types = {}
+    def __init__(self, test_container: Optional[IDependencyContainer] = None):
+        self._test_container = test_container or DependencyContainer()
+        self._backup_container = None
 
-    def __enter__(self):
-        # Backup current state
-        self._backup_instances = container._instances.copy()
-        self._backup_factories = container._factories.copy()
-        self._backup_types = container._types.copy()
-        return self
+    def __enter__(self) -> IDependencyContainer:
+        # No need to backup since we're using a separate test container
+        return self._test_container
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        # Restore state
-        container._instances = self._backup_instances
-        container._factories = self._backup_factories
-        container._types = self._backup_types
+        # Clean up test container
+        self._test_container.clear_registrations()
 
     def register_mock(self, interface: Type[T], mock_instance: T) -> None:
         """Register a mock for testing"""
-        container.register_instance(interface, mock_instance)
+        self._test_container.register_instance(interface, mock_instance)
 
 
 def create_test_container() -> ContainerTestContext:
@@ -442,9 +571,9 @@ class ServiceFactory:
         """Create bitrix24 crm service"""
         return BitrixCrmService(self.config(), self.data_provider())
 
-    def create_cnpj_client(self) -> CnpjClient:
+    def create_cnpj_client(self) -> CNPJAPIClient:
         """Create CNPJ client"""
-        return CnpjClient(self.config())
+        return CNPJAPIClient(self.config())
 
     @singleton
     def session_worker(self) -> SessionWorker:

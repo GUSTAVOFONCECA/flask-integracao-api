@@ -21,6 +21,9 @@ from app.utils.validation import PhoneNumberValidator
 # Import Selenium utilities
 from app.utils.selenium_utils import SeleniumDiagnosticTool
 
+# Import phone utils
+from app.utils.phone_utils import standardize_phone_number
+
 # Re-export for backward compatibility
 standardize_phone_number = PhoneNumberValidator.standardize_phone_number
 save_page_diagnosis = SeleniumDiagnosticTool.save_page_diagnosis

@@ -3,7 +3,7 @@
 Pacote de rotas da aplicação.
 """
 from .api_routes import api_bp
-from .webhook_routes import webhook_bp
+from ._webhook_routes import webhook_bp
 from .conta_azul_routes import conta_azul_bp
 
 __all__ = [

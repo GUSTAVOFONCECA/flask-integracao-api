@@ -185,7 +185,7 @@ def create_route_registry(flask_app) -> Dict[str, IRouteHandler]:
 
     # Import at runtime to avoid circular imports
     def _import_and_create_handler():
-        from app.routes.webhook_routes import handle_renewal_request
+        from app.routes._webhook_routes import handle_renewal_request
 
         return RouteHandlerAdapter(handle_renewal_request, flask_app.app_context())
 
