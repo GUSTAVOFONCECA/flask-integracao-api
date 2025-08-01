@@ -111,6 +111,18 @@ class ServiceFactory:
         persons_file = os.path.join("app", "database", "conta_azul", "person.json")
         return ContaAzulContactService(persons_file)
 
+    def create_cnpj_client(self):
+        """Create CNPJ client service"""
+        from app.services.external.cnpj_client import CNPJAPIClient
+
+        return CNPJAPIClient()
+
+    def create_bitrix24_crm_service(self):
+        """Create Bitrix24 CRM service"""
+        from app.services.bitrix24.crm_service import BitrixCRMService
+
+        return BitrixCRMService(self.config)
+
 
 # Global factory instance
 def create_service_factory() -> ServiceFactory:

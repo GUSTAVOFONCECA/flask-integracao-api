@@ -81,3 +81,85 @@ class ServiceConfiguration:
     # Pricing
     CERT_PJ_PRICE = 185.0
     CERT_PF_PRICE = 130.0
+
+
+"""
+Configuration Provider following SOLID principles.
+Implements Single Responsibility and Dependency Inversion.
+"""
+
+import os
+import logging
+from typing import Dict, Any, Optional
+from abc import ABC, abstractmethod
+
+logger = logging.getLogger(__name__)
+
+
+class IConfigProvider(ABC):
+    """Interface for configuration providers"""
+
+    @abstractmethod
+    def get(self, key: str, default: Any = None) -> Any:
+        """Get configuration value"""
+        ...
+
+    @abstractmethod
+    def get_required(self, key: str) -> Any:
+        """Get required configuration value"""
+        ...
+
+    @abstractmethod
+    def items(self) -> Dict[str, Any]:
+        """Get all configuration items"""
+        ...
+
+
+class EnvironmentConfigProvider(IConfigProvider):
+    """
+    Environment-based configuration provider.
+    Follows Single Responsibility Principle.
+    """
+
+    def __init__(self):
+        self._config = {}
+        self._load_from_environment()
+
+    def get(self, key: str, default: Any = None) -> Any:
+        """Get configuration value"""
+        return self._config.get(key, default)
+
+    def get_required(self, key: str) -> Any:
+        """Get required configuration value"""
+        value = self._config.get(key)
+        if value is None:
+            raise ValueError(f"Required configuration key '{key}' not found")
+        return value
+
+    def items(self) -> Dict[str, Any]:
+        """Get all configuration items"""
+        return self._config.copy()
+
+    def _load_from_environment(self) -> None:
+        """Load configuration from environment variables"""
+        # Load common environment variables
+        env_vars = [
+            "DIGISAC_API_KEY",
+            "CONTA_AZUL_CLIENT_ID",
+            "CONTA_AZUL_CLIENT_SECRET",
+            "BITRIX24_WEBHOOK_URL",
+            "LOG_LEVEL",
+            "DEBUG",
+            "SECRET_KEY",
+        ]
+
+        for var in env_vars:
+            value = os.getenv(var)
+            if value is not None:
+                self._config[var.lower()] = value
+
+        # Set defaults
+        self._config.setdefault("log_level", "INFO")
+        self._config.setdefault("debug", False)
+
+        logger.debug(f"Loaded {len(self._config)} configuration items")

@@ -48,12 +48,12 @@ class ColorFormatter(logging.Formatter):
         return f"{color}{base}{self._COLORS['reset']}"
 
 
-class FlaskLogger(ILogger):
-    """
-    Flask-integrated logger implementing ILogger interface.
-    Follows Single Responsibility Principle for logging operations.
-    """
 
+class LoggingService(ILogger):
+    """
+    Logging service following Single Responsibility Principle.
+    Handles all logging configuration and operations.
+    """
     def __init__(self, config: IConfigProvider):
         self.config = config
         self._logger = None

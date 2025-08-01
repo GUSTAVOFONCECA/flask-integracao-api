@@ -149,7 +149,47 @@ def create_ticket_flow_worker(
     queue_service: ITicketQueueService,
     route_registry: Dict[str, IRouteHandler],
     logger: ILogger,
-    interval_seconds: int = 60,
+    interval_seconds: int = 30,
 ) -> TicketFlowWorker:
     """Factory function for creating ticket flow worker"""
     return TicketFlowWorker(queue_service, route_registry, logger, interval_seconds)
+
+
+def create_ticket_flow_worker_with_defaults(logger: ILogger) -> TicketFlowWorker:
+    """Factory function with default dependencies"""
+    from app.database.database import Database
+
+    class DefaultQueueService:
+        def get_waiting_tickets(self) -> list:
+            db = Database()
+            return db.get_waiting_tickets()
+
+        def start_ticket(self, queue_id: int) -> None:
+            db = Database()
+            db.start_ticket(queue_id)
+
+        def update_retry_count(self, queue_id: int) -> None:
+            db = Database()
+            db.update_retry_count(queue_id)
+
+    return TicketFlowWorker(
+        queue_service=DefaultQueueService(),
+        route_registry={},  # Empty registry for now
+        logger=logger,
+    )
+
+
+def create_route_registry(flask_app) -> Dict[str, IRouteHandler]:
+    """Create route registry with Flask route handlers"""
+    registry = {}
+
+    # Import at runtime to avoid circular imports
+    def _import_and_create_handler():
+        from app.routes.webhook_routes import handle_renewal_request
+
+        return RouteHandlerAdapter(handle_renewal_request, flask_app.app_context())
+
+    # Add route handlers as needed
+    registry["handle_renewal_request"] = _import_and_create_handler()
+
+    return registry

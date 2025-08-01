@@ -41,6 +41,8 @@ from app.services.renewal_services import (
     process_pending_messages,
     set_processing_status,
     get_or_create_session,
+    record_command,
+    try_finalize_session,
 )
 from app.utils.utils import respond_with_200_on_exception, standardize_phone_number
 
@@ -166,7 +168,7 @@ def envia_comunicado_para_cliente_certif_digital_digisac():
         logger.exception(f"Erro ao executar notificações SPA {spa_id}: {e}")
 
     # Atualizar estado e marca duplicação
-    update_pending(spa_id=spa_id, status="pending", last_interaction=datetime.now())
+    update_pending(spa_id, status="pending", last_interaction=datetime.now())
     mark_message_processed(
         spa_id=spa_id,
         message_id=webhook_id,
@@ -296,7 +298,7 @@ def _handle_renew_action(spa_id: int, pending: dict):
     try:
         # Atualiza status imediatamente no DB
         update_pending(
-            spa_id=spa_id,
+            spa_id,
             status="sale_creating",
             last_interaction=datetime.now(),
         )
@@ -314,9 +316,9 @@ def _handle_renew_action(spa_id: int, pending: dict):
         # Atualiza CRM com o novo stage e sale_id
         update_crm_item(137, spa_id, {"stageId": "DT137_36:UC_90X241"})
         update_pending(
-            spa_id=spa_id,
-            sale_id=sale_id,
+            spa_id,
             status="sale_created",
+            sale_id=sale_id,
             last_interaction=datetime.now(),
         )
 
@@ -324,7 +326,7 @@ def _handle_renew_action(spa_id: int, pending: dict):
         logger.error(f"Erro criando venda para SPA {spa_id}: {e}")
         # opcional: rollback de status ou incrementar retry_count
         update_pending(
-            spa_id=spa_id,
+            spa_id,
             status="pending",
             retry_count=pending.get("retry_count", 0) + 1,
             last_interaction=datetime.now(),
@@ -344,7 +346,7 @@ def _handle_info_action(spa_id: int, pending: dict):
 
     # Atualizar estado
     update_pending(
-        spa_id=spa_id,
+        spa_id,
         status="info_sent",
         last_interaction=datetime.now(),
     )
@@ -362,7 +364,7 @@ def _handle_refuse_action(spa_id: int):
 
     # Atualizar estado
     update_pending(
-        spa_id=spa_id,
+        spa_id,
         status="customer_retention",
         last_interaction=datetime.now(),
     )
@@ -379,6 +381,11 @@ def _send_invalid_response_notification(contact_number: str):
         send_processing_notification(contact_number)
     except Exception as e:
         logger.error(f"Erro ao enviar notificação: {str(e)}")
+
+
+def handle_renewal_request():
+    """Handle renewal request - wrapper for certificate alert webhook"""
+    return envia_comunicado_para_cliente_certif_digital_digisac()
 
 
 @webhook_bp.route("/cobranca-gerada", methods=["POST"])
@@ -406,7 +413,7 @@ def cobranca_gerada():
     try:
         info = extract_billing_info(contact_number)
         update_pending(
-            spa_id=pending.get("spa_id"),
+            pending.get("spa_id"),
             status="billing_generated",
             financial_event_id=info["financial_event_id"],
             last_interaction=datetime.now(),
@@ -468,7 +475,7 @@ def envio_cobranca():
         )
 
         update_pending(
-            spa_id=pending.get("spa_id"),
+            pending.get("spa_id"),
             status="billing_pdf_sent",
             last_interaction=datetime.now(),
         )
@@ -522,7 +529,7 @@ def envia_form_agendamento_digisac() -> dict:
 
         build_form_agendamento(contact_number, company_name, schedule_form_link)
         update_pending(
-            spa_id=spa_id,
+            spa_id,
             status="scheduling_form_sent",
             last_interaction=datetime.now(),
         )

@@ -66,20 +66,32 @@ def init_db():
             """
         )
 
-        # Tabela de eventos de mensagem (relacionada por spa_id)
+        # Tabela de eventos de mensagens (deduplicação)
         conn.execute(
             """
             CREATE TABLE IF NOT EXISTS message_events (
-                id           INTEGER PRIMARY KEY AUTOINCREMENT,
-                spa_id       INTEGER NOT NULL,
-                message_id   TEXT    NOT NULL,
-                event_type   TEXT    NOT NULL,
-                payload      TEXT    NOT NULL,
-                created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (spa_id)
-                REFERENCES certif_pending_renewals(spa_id)
-                ON UPDATE CASCADE
-                ON DELETE CASCADE
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                spa_id      INTEGER NOT NULL,
+                message_id  TEXT    NOT NULL UNIQUE,
+                event_type  TEXT    NOT NULL,
+                payload     TEXT,
+                processed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (spa_id) REFERENCES certif_pending_renewals(spa_id)
+            );
+            """
+        )
+
+        # Tabela de fila de mensagens
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS message_queue (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                spa_id      INTEGER NOT NULL,
+                payload     TEXT    NOT NULL,
+                processed   BOOLEAN DEFAULT 0,
+                queued_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                processed_at TIMESTAMP,
+                FOREIGN KEY (spa_id) REFERENCES certif_pending_renewals(spa_id)
             );
             """
         )

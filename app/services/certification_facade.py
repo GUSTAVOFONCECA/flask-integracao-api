@@ -5,7 +5,7 @@ Certification facade following Facade Pattern and SOLID principles.
 
 import logging
 import time
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 from app.core.interfaces import (
     IMessageService,
@@ -16,7 +16,7 @@ from app.core.interfaces import (
     ICRMService,
 )
 from app.core.config_provider import ServiceConfiguration
-from app.services.renewal_services import get_pending, update_pending_status
+from app.services.renewal_services import update_pending_status
 from app.utils.utils import debug
 
 

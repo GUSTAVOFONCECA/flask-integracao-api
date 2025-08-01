@@ -13,6 +13,9 @@ from app.core.interfaces import IWorker, ILogger
 from app.services.renewal_services import SessionManager
 from app.utils.utils import debug
 
+# Replaced ISessionService import with interface definition
+from typing import Protocol
+
 
 class ISessionService(Protocol):
     """Interface for session service operations"""

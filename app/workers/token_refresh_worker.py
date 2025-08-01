@@ -9,7 +9,9 @@ import logging
 from typing import Protocol
 from abc import ABC, abstractmethod
 
-from app.core.interfaces import IWorker, ILogger, ITokenManager
+from app.core.interfaces import ILogger
+from app.workers.session_worker import IScheduledWorker
+from app.core.interfaces import ITokenManager
 from app.utils.utils import debug
 
 

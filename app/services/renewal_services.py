@@ -527,25 +527,201 @@ class SessionManager:
 
 
 # Legacy function wrappers for backward compatibility
-def add_pending(*args, **kwargs):
+def add_pending(
+    company_name: str,
+    document: str,
+    contact_number: str,
+    contact_name: str,
+    deal_type: str,
+    spa_id: int,
+    status: str = "pending",
+) -> str:
     """Legacy wrapper for add_pending"""
     repository = SQLitePendingRenewalRepository()
     service = PendingRenewalService(repository)
-    return service.add_pending(*args, **kwargs)
+    return service.add_pending(
+        company_name, document, contact_number, contact_name, deal_type, spa_id, status
+    )
 
 
-def update_pending(*args, **kwargs):
+def update_pending(spa_id: int, **kwargs) -> bool:
     """Legacy wrapper for update_pending"""
     repository = SQLitePendingRenewalRepository()
     service = PendingRenewalService(repository)
-    return service.update_pending(*args, **kwargs)
+    status = kwargs.get("status", "pending")
+    return service.update_pending(spa_id, status, **kwargs)
 
 
-def get_pending(*args, **kwargs):
+def update_pending_status(spa_id: int, status: str, **kwargs) -> bool:
+    """Update pending renewal status"""
+    repository = SQLitePendingRenewalRepository()
+    service = PendingRenewalService(repository)
+    return service.update_pending(spa_id, status, **kwargs)
+
+
+def get_pending(
+    contact_number: str = None, spa_id: int = None, context_aware: bool = False
+) -> Optional[Dict[str, Any]]:
     """Legacy wrapper for get_pending"""
     repository = SQLitePendingRenewalRepository()
     service = PendingRenewalService(repository)
-    return service.get_pending(*args, **kwargs)
+    return service.get_pending(contact_number, spa_id, context_aware)
+
+
+def get_all_pending_by_contact(contact_number: str) -> List[Dict[str, Any]]:
+    """Get all pending renewals by contact - legacy wrapper"""
+    repository = SQLitePendingRenewalRepository()
+    renewals = repository.get_all_by_contact(contact_number)
+    return [renewal.to_dict() for renewal in renewals]
+
+
+def is_message_processed_or_queued(spa_id: int, message_id: str) -> bool:
+    """Check if message is already processed or queued"""
+    try:
+        with get_db_connection() as conn:
+            result = conn.execute(
+                "SELECT COUNT(*) FROM message_events WHERE spa_id = ? AND message_id = ?",
+                (spa_id, message_id),
+            ).fetchone()
+            return result[0] > 0
+    except Exception as e:
+        logger.error(f"Error checking message processed status: {e}")
+        return False
+
+
+def mark_message_processed(
+    spa_id: int, message_id: str, event_type: str, payload: str
+) -> bool:
+    """Mark message as processed"""
+    try:
+        with get_db_connection() as conn:
+            conn.execute(
+                """
+                INSERT OR IGNORE INTO message_events 
+                (spa_id, message_id, event_type, payload, processed_at) 
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (spa_id, message_id, event_type, payload, datetime.now()),
+            )
+            conn.commit()
+            return True
+    except Exception as e:
+        logger.error(f"Error marking message as processed: {e}")
+        return False
+
+
+def try_lock_processing(spa_id: int) -> bool:
+    """Try to acquire processing lock"""
+    try:
+        with get_db_connection() as conn:
+            # Check if already processing
+            result = conn.execute(
+                "SELECT is_processing FROM certif_pending_renewals WHERE spa_id = ?",
+                (spa_id,),
+            ).fetchone()
+
+            if not result:
+                return False
+
+            if result[0]:  # Already processing
+                return False
+
+            # Acquire lock
+            cur = conn.execute(
+                "UPDATE certif_pending_renewals SET is_processing = 1 WHERE spa_id = ? AND is_processing = 0",
+                (spa_id,),
+            )
+            conn.commit()
+            return cur.rowcount > 0
+    except Exception as e:
+        logger.error(f"Error acquiring processing lock: {e}")
+        return False
+
+
+def set_processing_status(spa_id: int, is_processing: bool) -> bool:
+    """Set processing status"""
+    try:
+        with get_db_connection() as conn:
+            conn.execute(
+                "UPDATE certif_pending_renewals SET is_processing = ? WHERE spa_id = ?",
+                (1 if is_processing else 0, spa_id),
+            )
+            conn.commit()
+            return True
+    except Exception as e:
+        logger.error(f"Error setting processing status: {e}")
+        return False
+
+
+def add_pending_message(spa_id: int, payload: Dict[str, Any]) -> bool:
+    """Add message to pending queue"""
+    try:
+        with get_db_connection() as conn:
+            conn.execute(
+                """
+                INSERT INTO message_queue (spa_id, payload, queued_at) 
+                VALUES (?, ?, ?)
+                """,
+                (spa_id, json.dumps(payload), datetime.now()),
+            )
+            conn.commit()
+            return True
+    except Exception as e:
+        logger.error(f"Error adding pending message: {e}")
+        return False
+
+
+def process_pending_messages(spa_id: int, processor_func) -> bool:
+    """Process all pending messages for SPA"""
+    try:
+        with get_db_connection() as conn:
+            messages = conn.execute(
+                """
+                SELECT id, payload FROM message_queue 
+                WHERE spa_id = ? AND processed = 0 
+                ORDER BY queued_at ASC
+                """,
+                (spa_id,),
+            ).fetchall()
+
+            for msg_id, payload_str in messages:
+                try:
+                    payload = json.loads(payload_str)
+                    message_text = (
+                        payload.get("data", {}).get("message", {}).get("text", "")
+                    )
+                    processor_func(spa_id, message_text)
+
+                    # Mark as processed
+                    conn.execute(
+                        "UPDATE message_queue SET processed = 1 WHERE id = ?", (msg_id,)
+                    )
+                except Exception as e:
+                    logger.error(f"Error processing message {msg_id}: {e}")
+
+            conn.commit()
+            return True
+    except Exception as e:
+        logger.error(f"Error processing pending messages: {e}")
+        return False
+
+
+def get_or_create_session(contact_number: str) -> Dict[str, Any]:
+    """Get or create session - legacy wrapper"""
+    session_manager = create_session_manager()
+    return session_manager.get_or_create_session(contact_number)
+
+
+def record_command(contact_number: str) -> bool:
+    """Record command - legacy wrapper"""
+    session_manager = create_session_manager()
+    return session_manager.record_command(contact_number)
+
+
+def try_finalize_session(contact_number: str) -> bool:
+    """Try to finalize session - legacy wrapper"""
+    session_manager = create_session_manager()
+    return session_manager.finalize_session(contact_number)
 
 
 # Factory functions
@@ -560,3 +736,37 @@ def create_session_manager() -> SessionManager:
     session_repo = SQLiteSessionRepository()
     renewal_repo = SQLitePendingRenewalRepository()
     return SessionManager(session_repo, renewal_repo)
+
+
+def get_waiting_ticket_flows() -> List[Dict[str, Any]]:
+    """Get waiting ticket flows from queue"""
+    with get_db_connection() as conn:
+        cursor = conn.execute(
+            """
+            SELECT * FROM ticket_flow_queue 
+            WHERE status = 'waiting' AND retry_count < 5
+            ORDER BY created_at ASC
+            """
+        )
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def insert_ticket_flow_queue(
+    spa_id: int, contact_number: str, func_name: str, func_args: str
+) -> None:
+    """Insert a ticket flow into the queue"""
+    try:
+        with get_db_connection() as conn:
+            conn.execute(
+                """
+                INSERT INTO ticket_flow_queue 
+                (spa_id, contact_number, func_name, func_args, status, created_at)
+                VALUES (?, ?, ?, ?, 'waiting', CURRENT_TIMESTAMP)
+                """,
+                (spa_id, contact_number, func_name, func_args),
+            )
+            conn.commit()
+            logger.info(f"Inserted ticket flow for SPA {spa_id}, function {func_name}")
+    except Exception as e:
+        logger.error(f"Error inserting ticket flow: {e}")
+        raise

@@ -63,6 +63,17 @@ class Config(IConfigProvider):
         """Get configuration value by key"""
         return getattr(self, key, default)
 
+    def get_required(self, key: str) -> Any:
+        """Get required configuration value"""
+        value = self.get(key)
+        if value is None:
+            raise EnvironmentError(f"Required configuration '{key}' not found")
+        return value
+
+    def has(self, key: str) -> bool:
+        """Check if configuration key exists"""
+        return hasattr(self, key) and getattr(self, key) is not None
+
     def validate(self) -> None:
         """Validate required configuration values"""
         required_fields = ["SECRET_KEY", "WEBHOOK_SECRET", "API_KEY"]

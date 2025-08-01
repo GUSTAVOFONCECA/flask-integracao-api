@@ -3,172 +3,172 @@
 Application lifecycle management following SOLID principles.
 """
 
+import logging
 import signal
-import sys
-import atexit
-from typing import List, Optional
-from threading import Thread
-import time
+import threading
+from typing import List
+from concurrent.futures import ThreadPoolExecutor
 
-from .interfaces import IWorker, ILogger, IService
-from .container import container
+from app.core.interfaces import IService, IWorker, IHealthChecker
+
+logger = logging.getLogger(__name__)
 
 
 class ApplicationLifecycle:
     """
-    Manages application startup, running, and shutdown phases.
-    Follows Single Responsibility Principle.
+    Application lifecycle manager following Single Responsibility Principle.
+    Manages startup, shutdown, and monitoring of application components.
     """
 
     def __init__(self):
-        self._workers: List[IWorker] = []
-        self._services: List[IService] = []
-        self._threads: List[Thread] = []
-        self._logger: Optional[ILogger] = None
-        self._shutdown_requested = False
+        self.services: List[IService] = []
+        self.workers: List[IWorker] = []
+        self.health_checker: IHealthChecker = None
+        self.is_running = False
+        self.shutdown_event = threading.Event()
 
-    def register_worker(self, worker: IWorker) -> "ApplicationLifecycle":
-        """Register a background worker"""
-        self._workers.append(worker)
-        return self
+        # Register signal handlers
+        signal.signal(signal.SIGINT, self._signal_handler)
+        signal.signal(signal.SIGTERM, self._signal_handler)
 
-    def register_service(self, service: IService) -> "ApplicationLifecycle":
-        """Register a service"""
-        self._services.append(service)
-        return self
+    def register_service(self, service: IService) -> None:
+        """Register a service for lifecycle management"""
+        self.services.append(service)
+        logger.debug(f"Registered service: {service.__class__.__name__}")
+
+    def register_worker(self, worker: IWorker) -> None:
+        """Register a worker for lifecycle management"""
+        self.workers.append(worker)
+        logger.debug(f"Registered worker: {worker.__class__.__name__}")
+
+    def set_health_checker(self, health_checker: IHealthChecker) -> None:
+        """Set health checker"""
+        self.health_checker = health_checker
 
     def initialize(self) -> None:
-        """Initialize all services and setup signal handlers"""
-        self._logger = container.try_resolve(ILogger)
+        """Initialize all registered components"""
+        logger.info("🔄 Initializing application components...")
 
-        # Initialize all services
-        for service in self._services:
+        # Initialize services
+        for service in self.services:
             try:
-                service.initialize()
-                if self._logger:
-                    self._logger.info(
-                        f"✅ Service {service.__class__.__name__} initialized"
-                    )
+                if hasattr(service, "initialize"):
+                    service.initialize()
+                logger.debug(f"✅ Initialized service: {service.__class__.__name__}")
             except Exception as e:
-                if self._logger:
-                    self._logger.error(
-                        f"❌ Failed to initialize {service.__class__.__name__}: {e}"
-                    )
+                logger.error(
+                    f"❌ Failed to initialize service {service.__class__.__name__}: {e}"
+                )
                 raise
 
-        # Setup signal handlers
-        self._setup_signal_handlers()
-
-        if self._logger:
-            self._logger.info("🚀 Application lifecycle initialized")
+        logger.info("✅ All components initialized successfully")
 
     def start_workers(self) -> None:
-        """Start all registered workers in separate threads"""
-        for worker in self._workers:
-            thread = Thread(
-                target=self._run_worker_safe,
-                args=(worker,),
-                daemon=True,
-                name=worker.__class__.__name__,
-            )
-            thread.start()
-            self._threads.append(thread)
+        """Start all registered workers"""
+        logger.info("🚀 Starting background workers...")
 
-            if self._logger:
-                self._logger.info(f"🧵 Worker {worker.__class__.__name__} started")
+        for worker in self.workers:
+            try:
+                worker.start()
+                logger.debug(f"✅ Started worker: {worker.__class__.__name__}")
+            except Exception as e:
+                logger.error(
+                    f"❌ Failed to start worker {worker.__class__.__name__}: {e}"
+                )
+                # Continue with other workers
+
+        logger.info("✅ All workers started successfully")
 
     def run_monitoring_loop(self) -> None:
         """Run main monitoring loop"""
-        if self._logger:
-            self._logger.info("🔄 Starting monitoring loop")
+        self.is_running = True
+        logger.info("🔍 Starting monitoring loop...")
 
-        while not self._shutdown_requested:
-            try:
-                # Check worker health
-                for worker in self._workers:
-                    if not worker.is_healthy():
-                        if self._logger:
-                            self._logger.warning(
-                                f"⚠️ Worker {worker.__class__.__name__} is unhealthy"
-                            )
+        try:
+            while not self.shutdown_event.is_set():
+                self._perform_health_checks()
 
-                # Check thread health
-                for thread in self._threads:
-                    if not thread.is_alive():
-                        if self._logger:
-                            self._logger.error(
-                                f"❌ Thread {thread.name} died unexpectedly"
-                            )
-                        raise RuntimeError(f"Critical thread {thread.name} stopped")
+                # Wait for 30 seconds or shutdown signal
+                if self.shutdown_event.wait(timeout=30):
+                    break
 
-                time.sleep(5)
-
-            except KeyboardInterrupt:
-                self._shutdown_requested = True
-            except Exception as e:
-                if self._logger:
-                    self._logger.error(f"💥 Monitoring loop error: {e}")
-                raise
+        except KeyboardInterrupt:
+            logger.info("🛑 Received shutdown signal")
+        except Exception as e:
+            logger.error(f"❌ Error in monitoring loop: {e}")
+        finally:
+            self.shutdown()
 
     def shutdown(self) -> None:
         """Graceful shutdown of all components"""
-        if self._logger:
-            self._logger.info("🛑 Starting graceful shutdown...")
+        if not self.is_running:
+            return
 
-        self._shutdown_requested = True
+        logger.info("🛑 Initiating graceful shutdown...")
+        self.is_running = False
+        self.shutdown_event.set()
 
-        # Stop workers
-        for worker in self._workers:
-            try:
-                worker.stop()
-                if self._logger:
-                    self._logger.info(f"✅ Worker {worker.__class__.__name__} stopped")
-            except Exception as e:
-                if self._logger:
-                    self._logger.error(
-                        f"❌ Error stopping worker {worker.__class__.__name__}: {e}"
-                    )
+        # Stop workers first
+        self._stop_workers()
 
         # Cleanup services
-        for service in self._services:
-            try:
-                service.cleanup()
-                if self._logger:
-                    self._logger.info(
-                        f"✅ Service {service.__class__.__name__} cleaned up"
-                    )
-            except Exception as e:
-                if self._logger:
-                    self._logger.error(
-                        f"❌ Error cleaning up service {service.__class__.__name__}: {e}"
-                    )
+        self._cleanup_services()
 
-        if self._logger:
-            self._logger.info("👋 Application shutdown complete")
+        logger.info("✅ Graceful shutdown completed")
 
-        sys.exit(0)
+    def _perform_health_checks(self) -> None:
+        """Perform health checks on components"""
+        if not self.health_checker:
+            return
 
-    def _run_worker_safe(self, worker: IWorker) -> None:
-        """Safely run a worker with error handling"""
         try:
-            worker.start()
+            health_status = self.health_checker.check_health()
+            if not health_status.get("healthy", False):
+                logger.warning(f"⚠️ Health check failed: {health_status}")
         except Exception as e:
-            if self._logger:
-                self._logger.error(
-                    f"💥 Worker {worker.__class__.__name__} crashed: {e}"
+            logger.error(f"❌ Health check error: {e}")
+
+    def _stop_workers(self) -> None:
+        """Stop all workers"""
+        logger.info("🛑 Stopping workers...")
+
+        with ThreadPoolExecutor(max_workers=len(self.workers)) as executor:
+            futures = []
+
+            for worker in self.workers:
+                future = executor.submit(self._stop_worker_safely, worker)
+                futures.append(future)
+
+            # Wait for all workers to stop
+            for future in futures:
+                try:
+                    future.result(timeout=10)
+                except Exception as e:
+                    logger.error(f"❌ Error stopping worker: {e}")
+
+    def _stop_worker_safely(self, worker: IWorker) -> None:
+        """Safely stop a worker"""
+        try:
+            worker.stop()
+            logger.debug(f"✅ Stopped worker: {worker.__class__.__name__}")
+        except Exception as e:
+            logger.error(f"❌ Error stopping worker {worker.__class__.__name__}: {e}")
+
+    def _cleanup_services(self) -> None:
+        """Cleanup all services"""
+        logger.info("🧹 Cleaning up services...")
+
+        for service in reversed(self.services):  # Reverse order for cleanup
+            try:
+                if hasattr(service, "cleanup"):
+                    service.cleanup()
+                logger.debug(f"✅ Cleaned up service: {service.__class__.__name__}")
+            except Exception as e:
+                logger.error(
+                    f"❌ Error cleaning up service {service.__class__.__name__}: {e}"
                 )
-            raise
 
-    def _setup_signal_handlers(self) -> None:
-        """Setup signal handlers for graceful shutdown"""
-
-        def signal_handler(signum, frame):
-            if self._logger:
-                self._logger.info(
-                    f"📡 Received signal {signum}, initiating shutdown..."
-                )
-            self.shutdown()
-
-        signal.signal(signal.SIGINT, signal_handler)
-        signal.signal(signal.SIGTERM, signal_handler)
-        atexit.register(self.shutdown)
+    def _signal_handler(self, signum, frame):
+        """Handle shutdown signals"""
+        logger.info(f"🔔 Received signal {signum}")
+        self.shutdown_event.set()
